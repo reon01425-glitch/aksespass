@@ -84,6 +84,20 @@ Nilai sama persis dengan tabel A dan B. Bentuk integrasi ke Tailwind mengikuti v
 }
 ```
 
+### D. Preferensi Tampilan Pengguna [Usulan] (Prompt 9)
+
+Preferensi disimpan pada cookie `aksespass_pref` (HttpOnly, SameSite=Lax) dan dipasang pada elemen `<html>` di server untuk mencegah kedipan visual:
+1. **Mode Kontras Tinggi (`data-contrast="high"`):**
+   * Latar belakang kanvas murni putih (`#FFFFFF`), menggantikan `bg-page` (`#ECFEFF`).
+   * Seluruh teks utama dan sekunder dipaksa menggunakan `text-main` (`#164E63`) untuk rasio kontras maksimal (~9:1).
+   * Border input form ditingkatkan menjadi 2 px (`border-cyan-800`).
+   * Menghilangkan warna latar dekoratif halus (tetap mempertahankan semantik warna status `StatusBanner`).
+2. **Pilihan Ukuran Teks (`data-text-size="100|150|200"`):**
+   * `100`: Skala standar (font-size 100% / 16 px basis).
+   * `150`: Skala 1,5× (font-size 150% / 24 px basis).
+   * `200`: Skala 2,0× (font-size 200% / 32 px basis).
+   * Seluruh tata letak fleksibel dan bebas *horizontal scroll* pada layar 320 px untuk seluruh tingkat pembesaran.
+
 ---
 
 ## 3. Aturan Tipografi & Skala Modular (Atkinson Hyperlegible Next)

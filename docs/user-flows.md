@@ -45,19 +45,24 @@ Pasien memulai dari splash screen, menyesuaikan aksesibilitas, mendaftar, lalu m
 - **Aksi Alternatif:** [Lewati] memakai pengaturan bawaan; dapat diubah kapan saja di [P22].
 - **Navigasi:** → [P3].
 - **US:** P-01 (aksesibilitas formulir), nonfungsional.
+- **Catatan implementasi (Prompt 9):** Bahasa hari ini hanya Indonesia sederhana. Pengaturan teks-ke-suara ditunda (bagian KomunikaCare); langkah 3 hanya memuat informasi dukungan pembaca layar sistem (TalkBack/VoiceOver).
 
 ### [P3] Daftar atau Masuk
 - **Tampilan:** satu kolom nomor HP, [Kirim kode], lalu kolom kode verifikasi (OTP). Tautan [Masuk dengan bantuan pendamping]. Kotak persetujuan opsional terpisah: izinkan kunjungan saya dihitung dalam statistik anonim fasilitas.
 - **Aksi Utama:** pasien memasukkan kontak, menerima kode, memasukkan kode. Akun baru dibuat otomatis bila belum ada.
 - **Aksi Alternatif atau Error:** kode salah atau kedaluwarsa → pesan sederhana dan opsi kirim ulang. Lupa akses → pemulihan lewat kontak yang sama atau lewat pendamping yang tertaut.
-- **Navigasi:** akun baru → [P5]; akun lama → [P4].
+- **Navigasi:** akun baru → [P4] (dengan ajakan "Isi Paspor"); akun lama → [P4].
 - **US:** P-01.
+- **Catatan implementasi (Prompt 9):**
+  - Alur lupa akses/pemulihan dan aktivasi akun lewat undangan ditunda.
+  - Penyesuaian alur: akun baru mendarat di [P4] dengan ajakan utama "Isi Paspor" (bukan langsung melompat ke [P5]), agar tombol [Keluar] tetap terjangkau dan pengguna memiliki orientasi beranda yang jelas.
 
 ### [P4] Beranda Pasien
-- **Tampilan:** kartu status paspor (lengkap atau belum), tombol utama besar [Mulai Kunjungan], menu: Paspor Saya, Kartu Cetak, Kontrol Akses, Pendamping, Akun. Jika ada draft, banner [Lanjutkan draft paspor].
-- **Aksi Utama:** pasien memilih menu atau [Mulai Kunjungan].
-- **Navigasi:** [Mulai Kunjungan] → [P9]; Paspor Saya → [P5]; Kartu Cetak → [P7]; Kontrol Akses → [P18]; Pendamping → [P21]; Akun → [P22].
+- **Tampilan:** kartu status paspor (lengkap atau belum), tombol utama besar [Mulai Kunjungan] (jika paspor lengkap) atau [Isi Paspor] (jika belum diisi), menu: Paspor Saya, Kartu Cetak, Kontrol Akses, Pendamping, Akun. Jika ada draft, banner [Lanjutkan draft paspor].
+- **Aksi Utama:** pasien memilih menu atau [Mulai Kunjungan] / [Isi Paspor].
+- **Navigasi:** [Mulai Kunjungan] → [P9]; [Isi Paspor] / Paspor Saya → [P5]; Kartu Cetak → [P7]; Kontrol Akses → [P18]; Pendamping → [P21]; Akun → [P22].
 - **US:** P-02, P-03 (pintu masuk).
+- **Catatan implementasi (Prompt 9):** Menu "Kartu Cetak" dan "Akun" belum ditampilkan hari ini (di luar cakupan Prompt 9). Tombol [Keluar] tersedia di bagian bawah menu.
 
 ### [P5] Editor MyCare Passport
 Satu kelompok kebutuhan per layar, dengan indikator langkah (misalnya 2 dari 5).

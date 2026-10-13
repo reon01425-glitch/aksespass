@@ -293,8 +293,11 @@ export async function verifyOtp(
         audit_subject_id: existing.audit_subject_id,
       };
     } else {
-      // 3. User baru: hanya peran patient atau companion yang dapat mendaftar mandiri
-      const intendedRole = options?.intendedRole ?? "patient";
+      // 3. User baru: hanya peran patient atau companion yang dapat mendaftar mandiri bila intendedRole diisi
+      const intendedRole = options?.intendedRole;
+      if (!intendedRole) {
+        throw new Error("Tidak dapat masuk. Hubungi admin fasilitas.");
+      }
       if (intendedRole !== "patient" && intendedRole !== "companion") {
         throw new Error(
           "Pendaftaran mandiri hanya diizinkan untuk pasien atau pendamping. Hubungi admin fasilitas."

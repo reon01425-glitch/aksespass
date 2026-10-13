@@ -372,6 +372,26 @@ describe("Autentikasi, Sesi Bertanda Tangan, Guard, OTP Tiruan, dan RLS (Bagian 
         /pendaftaran mandiri hanya diizinkan untuk pasien atau pendamping/i
       );
     });
+
+    it("verify tanpa intendedRole untuk nomor tak dikenal tidak membuat akun (jumlah baris users via URL admin sama sebelum/sesudah)", async () => {
+      const unknownPhone = "+620000000098";
+      const beforeRes = await adminClient.query<{ count: string }>(
+        "SELECT count(*) FROM users;"
+      );
+      const countBefore = parseInt(beforeRes.rows[0].count, 10);
+
+      const req = await requestOtp(unknownPhone);
+      await expect(
+        verifyOtp(unknownPhone, req.devOtp!)
+      ).rejects.toThrow(/tidak dapat masuk\. hubungi admin fasilitas/i);
+
+      const afterRes = await adminClient.query<{ count: string }>(
+        "SELECT count(*) FROM users;"
+      );
+      const countAfter = parseInt(afterRes.rows[0].count, 10);
+
+      expect(countAfter).toBe(countBefore);
+    });
   });
 
   describe("8. Penolakan Akun Petugas Nonaktif dan Diundang", () => {

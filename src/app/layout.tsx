@@ -1,5 +1,12 @@
 import type { Metadata } from "next";
 import { Atkinson_Hyperlegible_Next } from "next/font/google";
+import { cookies } from "next/headers";
+import dynamic from "next/dynamic";
+import {
+  DEFAULT_PREFERENCES,
+  PREFERENCE_COOKIE_NAME,
+  parsePreferenceCookie,
+} from "@/lib/preferences";
 import "./globals.css";
 
 const atkinson = Atkinson_Hyperlegible_Next({
@@ -10,13 +17,13 @@ const atkinson = Atkinson_Hyperlegible_Next({
   adjustFontFallback: false,
 });
 
+export const instant = false;
+
 export const metadata: Metadata = {
   title: "AKSESPASS",
   description:
     "Sampaikan kebutuhan layanan kesehatan dengan kontrol persetujuan di tangan pasien.",
 };
-
-import dynamic from "next/dynamic";
 
 const DevAuditPanel =
   process.env.NODE_ENV === "development"
@@ -27,14 +34,20 @@ const DevAuditPanel =
       )
     : () => null;
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const prefRaw = cookieStore.get(PREFERENCE_COOKIE_NAME)?.value;
+  const preferences = parsePreferenceCookie(prefRaw) ?? DEFAULT_PREFERENCES;
+
   return (
     <html
       lang="id"
+      data-text-size={preferences.textSize}
+      data-contrast={preferences.contrast}
       className={`${atkinson.variable} ${atkinson.className} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-page text-main font-normal">

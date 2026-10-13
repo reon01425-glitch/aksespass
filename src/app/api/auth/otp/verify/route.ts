@@ -25,22 +25,28 @@ export const POST = wrapRouteHandler(async (request: Request) => {
     );
   }
 
-  const result = await verifyOtp(body.phone, body.code, {
-    intendedRole: body.intendedRole,
-    statsConsent: body.statsConsent,
-  });
+  try {
+    const result = await verifyOtp(body.phone, body.code, {
+      intendedRole: body.intendedRole,
+      statsConsent: body.statsConsent,
+    });
 
-  return jsonResponse(
-    {
-      success: true,
-      destination: result.destination,
-      role: result.role,
-      userId: result.userId,
-    },
-    {
-      headers: {
-        "Set-Cookie": result.cookieHeader,
+    return jsonResponse(
+      {
+        success: true,
+        destination: result.destination,
+        role: result.role,
+        userId: result.userId,
       },
-    }
-  );
+      {
+        headers: {
+          "Set-Cookie": result.cookieHeader,
+        },
+      }
+    );
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : "Gagal memverifikasi kode.";
+    return jsonResponse({ error: message }, { status: 400 });
+  }
 });

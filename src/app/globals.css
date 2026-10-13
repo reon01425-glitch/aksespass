@@ -60,6 +60,31 @@ html {
   font-size: 100%;
 }
 
+html[data-text-size="100"] {
+  font-size: 100%;
+}
+
+html[data-text-size="150"] {
+  font-size: 150%;
+}
+
+html[data-text-size="200"] {
+  font-size: 200%;
+}
+
+html[data-contrast="high"] {
+  --bg-page: #FFFFFF;
+  --bg-surface: #FFFFFF;
+  --text-secondary: #164E63;
+  --border-decorative: #155E75;
+}
+
+html[data-contrast="high"] input,
+html[data-contrast="high"] select,
+html[data-contrast="high"] textarea {
+  border-width: 2px;
+}
+
 body {
   background-color: var(--bg-page);
   color: var(--text-main);

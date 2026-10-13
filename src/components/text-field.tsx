@@ -8,6 +8,7 @@ export interface TextFieldProps
   helperText?: string;
   error?: string;
   variant?: "text" | "tel" | "otp";
+  ref?: React.Ref<HTMLInputElement>;
 }
 
 export function TextField({
@@ -21,6 +22,7 @@ export function TextField({
   autoComplete,
   inputMode,
   maxLength,
+  ref,
   ...props
 }: TextFieldProps) {
   let resolvedType = type || "text";
@@ -48,6 +50,7 @@ export function TextField({
         {label}
       </label>
       <input
+        ref={ref}
         id={id}
         type={resolvedType}
         autoComplete={resolvedAutoComplete}

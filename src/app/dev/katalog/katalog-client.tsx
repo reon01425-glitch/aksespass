@@ -13,6 +13,7 @@ import {
   CareProofScale,
   type CareProofValue,
   PageShell,
+  LogoutButton,
 } from "@/components";
 import { MessageSquare, Eye, Volume2, Move } from "lucide-react";
 
@@ -96,6 +97,11 @@ export function KatalogClient() {
               <TextLink href="#section-textfield" standalone>
                 Tautan Mandiri 2 (ke TextField, ≥ 48×48 px)
               </TextLink>
+            </div>
+
+            <h3 className="text-base font-bold text-main">Tombol Keluar (§4A)</h3>
+            <div className="flex flex-wrap items-center gap-3">
+              <LogoutButton redirectTo="/masuk" />
             </div>
           </div>
         </section>

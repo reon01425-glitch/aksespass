@@ -49,9 +49,9 @@
 | 0 | Keputusan pemblokir | — | — | ☑ untuk cakupan hari ini |
 | 1 | Scaffold dan alat pemeriksaan | 0 (K-2) | — | ☑ |
 | 2 | Database dan skema | 1, K-1 | — | ☑ |
-| 3 | Inti domain: audit, privasi, auth, consent | 2, K-4 | P-05, P-06, T-01 (sisi server) | 1/3 |
-| 4 | Komponen UI bersama | 1 (boleh paralel dengan 2–3) | Nonfungsional | ☐ |
-| 5 | Masuk dan akun | 3, 4, K-3 | P-01, T-01, A-01 (aktivasi) | ☐ |
+| 3 | Inti domain: audit, privasi, auth, consent | 2, K-4 | P-05, P-06, T-01 (sisi server) | ☑ |
+| 4 | Komponen UI bersama | 1 (boleh paralel dengan 2–3) | Nonfungsional | ☑ |
+| 5 | Masuk dan akun | 3, 4, K-3 | P-01, T-01, A-01 (aktivasi) | ☑ |
 | 6 | Pasien: paspor, ConsentQR, kontrol akses | 5, K-8, K-11 | P-01, P-02, P-03, P-04, P-05, P-06 | ☐ |
 | 7 | Petugas: pindai, saran, catat bantuan | 6 | T-01, T-02, T-03, T-04 | ☐ |
 | 8 | CareProof dan dashboard | 7, K-9, K-10 | P-07, A-02, (P-08, A-03, A-04) | ☐ |
@@ -304,22 +304,48 @@
 **Baca:** `docs/user-flows.md` layar terkait; `architecture.md` §2, §10, §13.
 
 **Checklist**
-- [ ] P1 splash: arah sesuai sesi.
-- [ ] P2 onboarding aksesibilitas: preferensi ukuran teks dan kontras tersimpan dan berlaku.
-- [ ] P3 daftar/masuk dengan OTP sesuai K-3; persetujuan statistik anonim terpisah dan opsional.
-- [ ] P4 beranda pasien (menu boleh mengarah ke halaman kosong dulu).
-- [ ] T2 login petugas + aktivasi lewat undangan; A2 aktivasi admin.
-- [ ] Sesi petugas masa berlaku pendek, keluar otomatis.
+- [x] P1 splash: arah sesuai sesi.
+- [x] P2 onboarding aksesibilitas: preferensi ukuran teks dan kontras tersimpan dan berlaku.
+- [x] P3 daftar/masuk dengan OTP sesuai K-3; persetujuan statistik anonim terpisah dan opsional.
+- [x] P4 beranda pasien (menu boleh mengarah ke halaman kosong dulu).
+- [x] T2 login petugas + aktivasi lewat undangan (catatan: aktivasi lewat undangan ditunda; registrasi mandiri petugas ditolak); A2 aktivasi admin.
+- [x] Sesi petugas masa berlaku pendek, keluar otomatis.
 
 **Verifikasi**
-- [ ] Tes: petugas nonaktif atau belum diaktivasi tidak bisa masuk; pesan "Hubungi admin fasilitas".
-- [ ] Tes: OTP salah dan kedaluwarsa ditolak; ada batas percobaan.
-- [ ] Kode OTP tidak muncul di log aplikasi.
-- [ ] Cookie sesi `httpOnly`; tidak ada token di `localStorage`.
-- [ ] Alur P1→P3→P5 dan T1→T2→T3 dicoba manual dengan keyboard dan di lebar 320 px.
-- [ ] `lint`, `typecheck`, `test`, `build` lolos.
+- [x] Tes: petugas nonaktif atau belum diaktivasi tidak bisa masuk; pesan "Tidak dapat masuk. Hubungi admin fasilitas.".
+- [x] Tes: OTP salah dan kedaluwarsa ditolak; ada batas percobaan.
+- [x] Kode OTP tidak muncul di log aplikasi.
+- [x] Cookie sesi `httpOnly`; tidak ada token di `localStorage`.
+- [x] Alur P1→P3→P4 dan T1→T2→T3 dicoba manual dengan keyboard dan di lebar 320 px.
+- [x] `lint`, `typecheck`, `test`, `build` lolos.
 
 **Catatan hasil:**
+- Bagian 5 (Prompt 9):
+  - Rute dan navigasi berbasis peran:
+    - `/` (P1): Fungsi murni server-side `resolveRootDestination(claims, hasPreferenceCookie)` mengarahkan secara instan tanpa jeda buatan: sesi valid → beranda peran (`/pasien`, `/petugas`, `/admin`, `/pendamping`, `/kurator`); tanpa sesi & tanpa cookie preferensi → `/mulai`; selain itu → `/masuk`.
+    - `/mulai` (P2): Onboarding aksesibilitas 3 langkah (Bahasa Indonesia sederhana, ukuran teks 100%/150%/200% & kontras standar/tinggi dengan pratinjau live, informasi pembaca layar perangkat, kalimat privasi "aplikasi tidak meminta diagnosis"). Disimpan sebagai cookie HttpOnly `aksespass_pref` via `POST /api/preferences` (Origin guard). Root `layout.tsx` membaca cookie di server dan memasang atribut `data-text-size` & `data-contrast` di `<html>` tanpa kedipan visual.
+    - `/masuk` (P3): Login OTP pasien & pendamping. Input telepon, tombol [Kirim kode], input OTP satu kolom dengan fokus otomatis, countdown kedaluwarsa 5 menit, [Kirim ulang]. Banner demo OTP di UI development tanpa log/storage. Checkbox opsional statistik anonim terpisah (tidak tercentang bawaan). Tautan pendamping mengalihkan pendaftaran ke peran `companion` (D2).
+    - `/masuk/petugas` (T2/A2): Login OTP petugas/admin/kurator tanpa pendaftaran mandiri (`verifyOtp` tanpa `intendedRole`). Menolak nomor tak dikenal dan staf nonaktif/invited dengan pesan "Tidak dapat masuk. Hubungi admin fasilitas.".
+    - `/pasien` (P4): Status paspor via modul baru `src/lib/passport` (`getOwnPassportStatus(session)` via `withContext`). Status "Belum Diisi" menampilkan CTA [Isi Paspor] ke `/pasien/paspor`; status "Lengkap" menampilkan CTA besar [Mulai Kunjungan] ke `/pasien/kunjungan`. Menu navigasi: Paspor Saya, Kontrol Akses, Pendamping, dan [Keluar].
+    - `/petugas` (T3): Integrasi `src/lib/facility` (`getStaffFacilityInfo(session)` via `withContext`), nama fasilitas di header, tombol besar [Pindai ConsentQR] ke `/petugas/pindai`, tempat daftar kunjungan, dan tombol [Keluar] terpisah.
+    - Beranda sementara dengan tombol [Keluar]: `/admin`, `/pendamping`, `/kurator`, serta rute placeholder `/pasien/paspor`, `/pasien/kunjungan`, `/pasien/akses`, `/pasien/pendamping`, `/petugas/pindai`.
+    - Komponen `LogoutButton` di `src/components/logout-button.tsx` (ditambahkan ke katalog `/dev/katalog`) memanggil `POST /api/auth/logout`, mencabut sesi di Postgres, dan mengarahkan ke halaman masuk yang tepat.
+    - Proxy/Middleware (`src/proxy.ts`): Sesi kedaluwarsa/rusak dialihkan ke `/masuk?alasan=sesi-berakhir` (atau `/masuk/petugas?alasan=sesi-berakhir`) dengan `StatusBanner` peringatan "Sesi Anda berakhir. Silakan masuk lagi.". Pesan alasan dijaga murni oleh allowlist di `src/lib/auth/reasons.ts`.
+  - Bukti verifikasi:
+    - Vitest: 128 tes di 15 test file lulus 100% (termasuk 11 tes preferensi & routing P1, 3 tes passport status, 7 tes proxy, 28 tes auth).
+    - Uji browser otomatis DevTools:
+      - 0 pelanggaran axe di `/mulai`, `/masuk`, `/masuk/petugas`, `/pasien`, `/petugas`.
+      - Target sentuh ≥ 48×48 px pada seluruh tombol, input, dan tautan.
+      - 0 horizontal scroll pada lebar layar 320 px dan mode Teks 200%.
+      - Preferensi kontras tinggi + Teks 200% bertahan konsisten di `/masuk` dan `/pasien` via cookie HttpOnly.
+      - Alur keyboard murni dari `/` → `/mulai` → `/masuk` → demo OTP → `/pasien` (status "belum diisi", CTA "Isi Paspor").
+      - Pengujian akun seed: Pasien aktif (`+620000000001`) → status "lengkap", CTA "Mulai Kunjungan"; Petugas aktif (`+620000000011`) → "Puskesmas Contoh A"; Pendamping (`+620000000005`) → `/pendamping`; Admin (`+620000000021`) → `/admin`; Kurator (`+620000000031`) → `/kurator`; Petugas nonaktif (`+620000000012`) → ditolak 400 "Tidak dapat masuk. Hubungi admin fasilitas.".
+      - Kerusakan/kedaluwarsa cookie sesi mengalihkan ke `/masuk?alasan=sesi-berakhir` dengan banner peringatan.
+      - Logout berhasil menghapus sesi dari database dan cookie peramban.
+      - Pemeriksaan storage peramban: `localStorage` dan `sessionStorage` kosong (0 token, 0 kode OTP, 0 data akun). Cookie sesi `HttpOnly` tidak terbaca di `document.cookie`.
+      - Log dev server bersih: scrubber privasi aktif, 0 kode OTP dan 0 nomor telepon mentah bocor ke log.
+    - Arsitektur: `src/__tests__/architecture.test.ts` membuktikan `src/app` tidak mengimpor `src/db` atau `pg`, dan `patient_profiles` diizinkan hanya pada modul resmi (`src/lib/passport`, `src/lib/consent`).
+    - `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` lolos. Status Bagian 5: SELESAI.
 
 ---
 

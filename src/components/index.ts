@@ -8,3 +8,4 @@ export * from "./status-banner";
 export * from "./confirm-dialog";
 export * from "./care-proof-scale";
 export * from "./page-shell";
+export * from "./logout-button";

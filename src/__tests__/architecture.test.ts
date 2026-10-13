@@ -187,17 +187,19 @@ describe("Tes Arsitektur Kode (Statik & Tanpa DB)", () => {
     }
   });
 
-  it("tabel patient_profiles dan patient_profile_needs hanya muncul di src/lib/consent, src/db, dan tes", () => {
+  it("tabel patient_profiles dan patient_profile_needs hanya muncul di src/lib/consent, src/lib/passport, src/db, dan tes", () => {
     const violations: string[] = [];
 
     for (const file of allSrcFiles) {
       if (isTestFile(file)) continue;
 
       const relPath = path.relative(srcDir, file);
-      // Diizinkan di src/lib/consent/ dan src/db/ (serta migrasi)
+      // Diizinkan di src/lib/consent/, src/lib/passport/, dan src/db/ (serta migrasi)
       if (
         relPath.startsWith("lib/consent/") ||
         relPath.startsWith("lib\\consent\\") ||
+        relPath.startsWith("lib/passport/") ||
+        relPath.startsWith("lib\\passport\\") ||
         relPath.startsWith("db/") ||
         relPath.startsWith("db\\")
       ) {
@@ -215,7 +217,42 @@ describe("Tes Arsitektur Kode (Statik & Tanpa DB)", () => {
 
     expect(
       violations,
-      `Tabel patient_profiles/patient_profile_needs ditemukan di luar src/lib/consent dan src/db: ${violations.join(", ")}`
+      `Tabel patient_profiles/patient_profile_needs ditemukan di luar src/lib/consent, src/lib/passport, dan src/db: ${violations.join(", ")}`
+    ).toEqual([]);
+  });
+
+  it("src/app tidak mengimpor src/db atau pg (di luar file tes)", () => {
+    const violations: string[] = [];
+
+    for (const file of allSrcFiles) {
+      if (isTestFile(file)) continue;
+
+      const relPath = path.relative(srcDir, file);
+      if (!relPath.startsWith("app/") && !relPath.startsWith("app\\")) {
+        continue;
+      }
+
+      const content = fs.readFileSync(file, "utf8");
+      if (
+        /(?:from\s+['"].*\/db['"]|require\(['"].*\/db['"]\)|from\s+['"]@\/db['"]|require\(['"]@\/db['"]\))/.test(
+          content
+        )
+      ) {
+        violations.push(`${relPath} mengimpor src/db`);
+      }
+
+      if (
+        /(?:from\s+['"]pg['"]|require\(['"]pg['"]\)|from\s+['"]pg\/|require\(['"]pg\/)/.test(
+          content
+        )
+      ) {
+        violations.push(`${relPath} mengimpor pg`);
+      }
+    }
+
+    expect(
+      violations,
+      `Ditemukan impor src/db atau pg di dalam src/app: ${violations.join(", ")}`
     ).toEqual([]);
   });
 

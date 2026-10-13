@@ -32,10 +32,16 @@ function isStaticAsset(pathname: string): boolean {
 
 function isPublicRoute(pathname: string): boolean {
   if (pathname === "/") return true;
+  if (pathname === "/mulai" || pathname.startsWith("/mulai/")) return true;
   if (pathname === "/masuk" || pathname.startsWith("/masuk/")) return true;
   if (pathname === "/s" || pathname.startsWith("/s/")) return true;
   if (pathname.startsWith("/api/auth/")) return true;
+  if (pathname.startsWith("/api/preferences")) return true;
   return isStaticAsset(pathname);
+}
+
+function isStaffLikeRole(role: string): boolean {
+  return role === "staff" || role === "facility_admin" || role === "curator";
 }
 
 /**
@@ -77,8 +83,17 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   // 4. Verifikasi kriptografis murni (Web Crypto, tanpa DB)
   const claims = await verifySessionCookie(cookieFromReq);
   if (!claims) {
-    const masukUrl = new URL("/masuk", request.url);
-    return NextResponse.redirect(masukUrl);
+    // Cookie ada tetapi kedaluwarsa atau tidak valid -> hapus cookie dan arahkan
+    // dengan alasan sesi-berakhir (daftar alasan tetap di getAuthReasonMessage).
+    const isStaffGroup = isStaffLikeRole(matchedRoleRule.role);
+    const dest = isStaffGroup
+      ? "/masuk/petugas?alasan=sesi-berakhir"
+      : "/masuk?alasan=sesi-berakhir";
+
+    const redirectRes = NextResponse.redirect(new URL(dest, request.url));
+    redirectRes.cookies.delete(COOKIE_NAME);
+    redirectRes.cookies.delete(SECURE_COOKIE_NAME);
+    return redirectRes;
   }
 
   // 5. Periksa kecocokan peran dengan prefiks rute
