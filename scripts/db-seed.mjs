@@ -112,6 +112,8 @@ async function main() {
 
     await client.query(`
       TRUNCATE TABLE
+        rate_limit_hits,
+        otp_codes,
         audit_events,
         visit_confirmations,
         visits,

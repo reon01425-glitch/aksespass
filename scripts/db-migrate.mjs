@@ -63,6 +63,23 @@ async function main() {
         `[db:migrate] (${dbName}) Selesai: ${appliedCount} migrasi diterapkan.`
       );
     }
+
+    const useTest =
+      process.env.DB_TARGET === "test" || process.argv.includes("--test");
+    const rawAppUrl = useTest
+      ? process.env.DATABASE_URL_TEST ?? process.env.DATABASE_URL
+      : process.env.DATABASE_URL;
+    if (rawAppUrl) {
+      const parsedApp = new URL(rawAppUrl);
+      if (parsedApp.username === "aksespass_app" && parsedApp.password) {
+        const pwd = decodeURIComponent(parsedApp.password);
+        const { rows } = await client.query(
+          "SELECT format('ALTER ROLE aksespass_app WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS PASSWORD %L', $1::text) AS sql;",
+          [pwd]
+        );
+        await client.query(rows[0].sql);
+      }
+    }
   } finally {
     await client.end();
   }

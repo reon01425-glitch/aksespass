@@ -48,7 +48,7 @@
 | :--- | :--- | :--- | :--- | :--- |
 | 0 | Keputusan pemblokir | — | — | ☑ untuk cakupan hari ini |
 | 1 | Scaffold dan alat pemeriksaan | 0 (K-2) | — | ☑ |
-| 2 | Database dan skema | 1, K-1 | — | setengah (Prompt 3) |
+| 2 | Database dan skema | 1, K-1 | — | ☑ |
 | 3 | Inti domain: audit, privasi, auth, consent | 2, K-4 | P-05, P-06, T-01 (sisi server) | ☐ |
 | 4 | Komponen UI bersama | 1 (boleh paralel dengan 2–3) | Nonfungsional | ☐ |
 | 5 | Masuk dan akun | 3, 4, K-3 | P-01, T-01, A-01 (aktivasi) | ☐ |
@@ -137,31 +137,36 @@
 - [x] Migrasi untuk tabel yang dibutuhkan Bagian 3–8: `users`, `patient_profiles`, `needs_catalog`, `accommodation_rules`, `consents`, `consent_qr`, `facilities`, `staff_memberships`, `visits`, `visit_confirmations`, `follow_ups`, `audit_events`. Tabel untuk Bagian 9–10 ditambahkan di bagiannya. *(Cakupan hari ini di `001_initial_schema.sql`: `facilities`, `users`, `staff_memberships`, `needs_catalog`, `patient_profiles`, `patient_profile_needs`, `accommodation_rules`, `consents`, `consent_qr`, `companions`, `visits`, `visit_confirmations`, `audit_events`; tabel `follow_ups` tidak dibuat hari ini sesuai Jalur 13 Okt 2026).*
 - [x] Tidak ada kolom diagnosis di tabel mana pun.
 - [x] `consent_qr` hanya menyimpan `token_hash`.
-- [ ] Peran DB aplikasi hanya punya `INSERT` dan `SELECT` pada `audit_events`.
-- [ ] Kebijakan RLS minimal: petugas hanya baris fasilitasnya; admin tidak bisa membaca `briefs` dan profil pasien.
+- [x] Peran DB aplikasi hanya punya `INSERT` dan `SELECT` pada `audit_events`.
+- [x] Kebijakan RLS minimal: petugas hanya baris fasilitasnya; admin tidak bisa membaca `briefs` dan profil pasien.
 - [x] Seed sintetis: 2 fasilitas, petugas aktif dan nonaktif, 4 pasien (satu per profil: Tuli, autistik, low vision, mobilitas), katalog kebutuhan, aturan saran bawaan per profil.
 - [x] Koneksi dan kredensial lewat env, tidak ter-commit.
-- [ ] Kebijakan RLS membaca identitas dari setting transaksi (`current_setting(...)`), sesuai aturan siap serverless di `architecture.md` §3.
-- [ ] Tabel penghitung rate limit dan tabel OTP tiruan (state tidak di memori).
+- [x] Kebijakan RLS membaca identitas dari setting transaksi (`current_setting(...)`), sesuai aturan siap serverless di `architecture.md` §3.
+- [x] Tabel penghitung rate limit dan tabel OTP tiruan (state tidak di memori).
 
 **Verifikasi**
 - [x] Migrasi dijalankan dari database kosong dan berhasil; seed berhasil.
-- [ ] Tes: `UPDATE` dan `DELETE` pada `audit_events` dengan peran aplikasi **ditolak database**.
-- [ ] Tes RLS: petugas fasilitas A tidak bisa membaca data fasilitas B, bahkan lewat kueri langsung.
+- [x] Tes: `UPDATE` dan `DELETE` pada `audit_events` dengan peran aplikasi **ditolak database**.
+- [x] Tes RLS: petugas fasilitas A tidak bisa membaca data fasilitas B, bahkan lewat kueri langsung.
 - [x] `grep -ri diagnos` pada folder skema/migrasi tidak menemukan kolom.
 - [x] Seed tidak berisi nama atau nomor yang menyerupai orang nyata.
 - [x] `typecheck` dan `test` lolos.
 
 **Catatan hasil:**
 - Paruh pertama Bagian 2 (Prompt 3): PostgreSQL 16.15 lokal (`aksespass_dev` dan `aksespass_test`); `pg` + `@types/pg` terpasang; runner `scripts/db-reset.mjs`, `scripts/db-migrate.mjs`, dan `scripts/db-seed.mjs` berjalan via `pnpm db:reset`, `pnpm db:migrate`, `pnpm db:seed`.
+- Paruh kedua Bagian 2 (Prompt 4):
+  - `002_roles_and_grants.sql`: peran `aksespass_owner` (`NOLOGIN`, pemilik semua tabel dan sequence di `public`) serta `aksespass_app` (`LOGIN`, `NOSUPERUSER`, `NOBYPASSRLS`, bukan pemilik tabel). Grant minimum per tabel: `facilities`, `needs_catalog`, `accommodation_rules` hanya `SELECT`; `audit_events` hanya `SELECT, INSERT`; tabel operasional pengguna mendapat hak CRUD sesuai transaksi.
+  - `003_rls_policies.sql`: RLS aktif pada 10 tabel data pengguna (`users`, `staff_memberships`, `patient_profiles`, `patient_profile_needs`, `consents`, `consent_qr`, `companions`, `visits`, `visit_confirmations`, `audit_events`), membaca konteks transaksi lewat `current_setting('app.user_id', true)`, `'app.role'`, `'app.facility_id'`, dan `'app.scan_token_hash'` (tanpa konteks = 0 baris).
+  - `004_rate_limit_and_otp.sql`: tabel `rate_limit_hits` (PK gabungan `(key, window_start)`) dan `otp_codes` (`phone_hash`, `code_hash` minimal 32 karakter, `expires_at`, `attempts`, `consumed_at`).
+  - `src/db/index.ts`: satu-satunya helper akses data pengguna `withContext(ctx, fn)` yang membuka transaksi dan menyetel keempat kunci konteks dengan `set_config(..., true)`.
 - Bukti verifikasi:
-  - `pnpm db:reset && pnpm db:migrate && pnpm db:seed` sukses pada `aksespass_dev`; `pnpm db:migrate` ulang mencetak `Tidak ada migrasi baru (0 dijalankan)`.
+  - `pnpm db:reset && pnpm db:migrate && pnpm db:seed` sukses untuk 4 migrasi (`001`–`004`); `pnpm db:migrate` ulang mencetak `Tidak ada migrasi baru (0 dijalankan)`.
   - Guard `db:reset`: `DATABASE_ADMIN_URL="postgresql://remote.invalid.example:5432/aksespass_dev" pnpm db:reset` dan `DATABASE_ADMIN_URL="postgresql://localhost:5432/aksespass_prod" pnpm db:reset` langsung ditolak dengan exit code `1` sebelum membuka koneksi.
   - Jumlah baris seed di `aksespass_dev`: `facilities=2`, `users=11`, `staff_memberships=5`, `needs_catalog=12`, `patient_profiles=4`, `patient_profile_needs=13`, `accommodation_rules=13` (12 `published` + 1 `draft`), `companions=1`, `consents=4`, `consent_qr=4`, `visits=20`, `visit_confirmations=16`, `audit_events=8`.
-  - `grep -rni diagnos src/db` kosong (0 baris).
-  - `src/db/schema.test.ts` (4 tes di `aksespass_test`) lolos: menolak `staff_note > 280` karakter, menolak `client_id` duplikat, menolak `consents.shared_fields` kosong (`'{}'`), dan memastikan di `information_schema.columns` hanya ada `consent_qr.token_hash` yang mengandung kata `token`.
-  - `pnpm lint`, `pnpm typecheck`, `pnpm test` (6 tes di 2 file), dan `pnpm build` lolos.
-- Sisa untuk Prompt 4 (Bagian 2b): peran DB aplikasi terpisah (`INSERT`/`SELECT` saja pada `audit_events`), kebijakan RLS berbasis `current_setting(..., true)`, tabel rate limit dan OTP tiruan di Postgres, serta tes penolakan `UPDATE`/`DELETE` `audit_events` dan isolasi RLS antarfasilitas.
+  - `grep -rni diagnos src/db` kosong (0 baris); `grep -rn "SET app\.\|SET SESSION" src` kosong (0 baris).
+  - `src/db/rls.test.ts` (10 tes) dan `src/db/schema.test.ts` (4 tes) berjalan di `aksespass_test` dengan peran `aksespass_app` (`DATABASE_URL_TEST`) dan semuanya lolos: `UPDATE`/`DELETE` pada `audit_events` ditolak (`permission denied`), `pg_roles` mengonfirmasi `aksespass_app` bukan superuser/tanpa `BYPASSRLS`/bukan pemilik tabel, kueri tanpa konteks menghasilkan 0 baris, isolasi pasien/petugas/admin/pendamping terbukti, pencabutan `companions` langsung memutus akses (`0` baris), uji kebocoran konteks di `pg_backend_pid()` yang sama menghasilkan 0 baris dan setting kosong di transaksi kedua, serta dua upsert `rate_limit_hits` menghasilkan `count = 2` pada koneksi baru.
+  - `pnpm lint`, `pnpm typecheck`, `pnpm test` (16 tes di 3 file), dan `pnpm build` lolos.
+- Catatan lanjutan: jalur baca pra-sesi saat login/OTP (sebelum `app.user_id` tersedia) akan memakai fungsi `SECURITY DEFINER` sempit di Prompt 6, dan agregat dashboard admin fasilitas memakai fungsi `SECURITY DEFINER` di Prompt 15.
 
 ---
 

@@ -140,6 +140,8 @@ Aturan: **semua pembacaan data pasien oleh pihak lain lewat satu fungsi** di `li
 | `follow_ups` | kategori kebutuhan, fasilitas, status, catatan langkah, tanggal | Tindak lanjut admin (A8) dan status untuk pasien (P17). **[Usulan]** |
 | `recovery_requests` | pasien, pendamping, kode (hash), `eligible_at`, status | Bagian 10 |
 | `audit_events` | tipe, pelaku, subjek, waktu, fasilitas | Append-only, tanpa isi data pasien |
+| `rate_limit_hits` | `key`, `window_start`, `count` | Penghitung rate limit berbasis jendela waktu di Postgres (PK gabungan, upsert atomik). **[Usulan]** |
+| `otp_codes` | `phone_hash`, `code_hash`, `expires_at`, `attempts`, `consumed_at` | Penyimpanan kode OTP ter-hash di Postgres (tanpa menyimpan kode asli maupun nomor telepon mentah). **[Usulan]** |
 
 Prinsip: `audit_events` mencatat **siapa membuka apa dan kapan**, bukan salinan isinya.
 
@@ -222,6 +224,9 @@ Mekanisme **[Usulan]**:
 1. Middleware: sesi + peran per grup rute.
 2. Lapisan layanan: fungsi di `lib/consent` memeriksa fasilitas, consent, dan masa berlaku.
 3. Basis data: kebijakan row-level security sebagai jaring pengaman terakhir.
+   - **Peran basis data [Usulan]:** `aksespass_owner` (`NOLOGIN`, pemilik semua tabel dan fungsi `SECURITY DEFINER` sempit) dan `aksespass_app` (`LOGIN`, `NOSUPERUSER`, `NOBYPASSRLS`, bukan pemilik tabel, dipakai oleh koneksi aplikasi; hanya memiliki `SELECT, INSERT` pada `audit_events` dan hanya `SELECT` pada tabel katalog/aturan/fasilitas).
+   - **Kunci konteks RLS per transaksi [Usulan]:** `app.user_id`, `app.role`, `app.facility_id`, dan `app.scan_token_hash`, selalu disetel dengan `set_config(..., true)` di dalam transaksi melalui helper `withContext` (kosong bila tidak dipakai; tanpa konteks = 0 baris).
+   - **Aturan baca profil oleh petugas [Usulan]:** peran `staff` hanya dapat membaca baris `patient_profiles` dan `patient_profile_needs` di tingkat RLS apabila `app.scan_token_hash` cocok dengan `consent_qr` yang belum dicabut (`revoked_at IS NULL`), belum kedaluwarsa (`expires_at > now()`), dan tertaut ke `consents` yang masih berlaku untuk `app.facility_id`. Penyaringan daftar field (`shared_fields`) tetap dilakukan di `lib/consent`.
 
 **Pemisahan Alur Pemulihan Akun & Delegasi Darurat:**
 1. **Delegasi Sementara di Tempat (*On-site Emergency Delegate*):**
