@@ -108,9 +108,11 @@ src/
 ├─ lib/
 │  ├─ auth/                # sesi, peran, guard
 │  ├─ consent/             # buat/validasi/cabut token, aturan field yang boleh dibaca
+│  │  └─ constants.ts      # [Usulan] konstanta nama field bersama (6 kategori, catatan, nama panggilan)
 │  ├─ audit/               # tulis kejadian P19 (satu-satunya pintu tulis)
+│  ├─ http/                # [Usulan] respons no-store, pembungkus route handler aman, origin guard
 │  ├─ offline/             # antrean IndexedDB, sinkronisasi
-│  └─ privacy/             # scrubber log, daftar field terlarang di log/analitik
+│  └─ privacy/             # scrubber log, daftar field terlarang di log/analitik, logger tunggal
 ├─ db/                     # skema, migrasi, kebijakan RLS
 └─ sw/                     # service worker
 ```

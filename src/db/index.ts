@@ -1,42 +1,92 @@
 import fs from "node:fs";
 import path from "node:path";
 import { Pool, type PoolClient } from "pg";
+import {
+  CONSENT_SHARED_FIELDS,
+  type ConsentSharedField,
+  NEED_CATEGORIES,
+  type NeedCategory,
+} from "../lib/consent/constants";
 
-export const NEED_CATEGORIES = [
-  "komunikasi",
-  "penglihatan",
-  "pendengaran",
-  "mobilitas",
-  "sensorik_lingkungan",
-  "pendampingan",
-] as const;
-
-export type NeedCategory = (typeof NEED_CATEGORIES)[number];
-
-export const CONSENT_SHARED_FIELDS = [
-  ...NEED_CATEGORIES,
-  "catatan_pasien",
-] as const;
-
-export type ConsentSharedField = (typeof CONSENT_SHARED_FIELDS)[number];
+export {
+  CONSENT_SHARED_FIELDS,
+  type ConsentSharedField,
+  NEED_CATEGORIES,
+  type NeedCategory,
+};
 
 export const STAFF_NOTE_MAX_LENGTH = 280;
 export const PATIENT_NOTE_MAX_LENGTH = 300;
 export const DASHBOARD_MIN_GROUP_SIZE = 5;
 
-export type AppDbRole =
-  | "patient"
-  | "companion"
-  | "staff"
-  | "facility_admin"
-  | "curator"
-  | "system";
+export const APP_DB_ROLES = [
+  "patient",
+  "companion",
+  "staff",
+  "facility_admin",
+  "curator",
+  "system",
+] as const;
+
+export type AppDbRole = (typeof APP_DB_ROLES)[number];
 
 export interface DbContext {
   userId?: string | null;
   role?: AppDbRole | string | null;
   facilityId?: string | null;
   scanTokenHash?: string | null;
+}
+
+declare const TransactionClientBrand: unique symbol;
+
+/**
+ * Tipe bermerek khusus untuk client koneksi yang berada di dalam transaksi withContext.
+ * Fungsi seperti recordAuditEvent mewajibkan tipe ini agar tidak dapat dipanggil dengan pool biasa.
+ */
+export type TransactionClient = PoolClient & {
+  readonly [TransactionClientBrand]: true;
+};
+
+const UUID_REGEX =
+  /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+const HEX_64_REGEX = /^[0-9a-fA-F]{64}$/;
+
+function validateDbContext(ctx: DbContext): void {
+  if (ctx.role !== undefined && ctx.role !== null && ctx.role !== "") {
+    if (!(APP_DB_ROLES as readonly string[]).includes(ctx.role)) {
+      throw new Error(`Peran database tidak valid: ${ctx.role}`);
+    }
+  }
+
+  if (ctx.userId !== undefined && ctx.userId !== null && ctx.userId !== "") {
+    if (!UUID_REGEX.test(ctx.userId)) {
+      throw new Error(`userId konteks database harus berupa UUID valid: ${ctx.userId}`);
+    }
+  }
+
+  if (
+    ctx.facilityId !== undefined &&
+    ctx.facilityId !== null &&
+    ctx.facilityId !== ""
+  ) {
+    if (!UUID_REGEX.test(ctx.facilityId)) {
+      throw new Error(
+        `facilityId konteks database harus berupa UUID valid: ${ctx.facilityId}`
+      );
+    }
+  }
+
+  if (
+    ctx.scanTokenHash !== undefined &&
+    ctx.scanTokenHash !== null &&
+    ctx.scanTokenHash !== ""
+  ) {
+    if (!HEX_64_REGEX.test(ctx.scanTokenHash)) {
+      throw new Error(
+        `scanTokenHash konteks database harus berupa heks 64 karakter: ${ctx.scanTokenHash}`
+      );
+    }
+  }
 }
 
 const globalForDb = globalThis as unknown as {
@@ -101,19 +151,22 @@ function getInternalPool(): Pool {
 
 /**
  * Satu-satunya pintu akses database untuk kueri aplikasi / data pengguna.
- * Membuka transaksi, menyetel keempat kunci konteks RLS (`app.user_id`,
- * `app.role`, `app.facility_id`, `app.scan_token_hash`) secara lokal per
- * transaksi dengan `set_config(..., true)`, menjalankan `fn`, lalu melakukan
- * COMMIT atau ROLLBACK sebelum mengembalikan koneksi ke pool.
+ * Membuka transaksi, menetapkan batas waktu statement_timeout = 5s, menyetel
+ * keempat kunci konteks RLS (`app.user_id`, `app.role`, `app.facility_id`,
+ * `app.scan_token_hash`) secara lokal per transaksi dengan `set_config(..., true)`,
+ * menjalankan `fn`, lalu melakukan COMMIT atau ROLLBACK sebelum mengembalikan koneksi ke pool.
  */
 export async function withContext<T>(
   ctx: DbContext,
-  fn: (client: PoolClient) => Promise<T>
+  fn: (client: TransactionClient) => Promise<T>
 ): Promise<T> {
+  validateDbContext(ctx);
+
   const pool = getInternalPool();
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
+    await client.query("SET LOCAL statement_timeout = '5s';");
     await client.query(
       `SELECT
         set_config('app.user_id', $1, true),
@@ -127,7 +180,7 @@ export async function withContext<T>(
         ctx.scanTokenHash ?? "",
       ]
     );
-    const result = await fn(client);
+    const result = await fn(client as TransactionClient);
     await client.query("COMMIT");
     return result;
   } catch (error) {

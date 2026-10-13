@@ -49,7 +49,7 @@
 | 0 | Keputusan pemblokir | — | — | ☑ untuk cakupan hari ini |
 | 1 | Scaffold dan alat pemeriksaan | 0 (K-2) | — | ☑ |
 | 2 | Database dan skema | 1, K-1 | — | ☑ |
-| 3 | Inti domain: audit, privasi, auth, consent | 2, K-4 | P-05, P-06, T-01 (sisi server) | ☐ |
+| 3 | Inti domain: audit, privasi, auth, consent | 2, K-4 | P-05, P-06, T-01 (sisi server) | 1/3 |
 | 4 | Komponen UI bersama | 1 (boleh paralel dengan 2–3) | Nonfungsional | ☐ |
 | 5 | Masuk dan akun | 3, 4, K-3 | P-01, T-01, A-01 (aktivasi) | ☐ |
 | 6 | Pasien: paspor, ConsentQR, kontrol akses | 5, K-8, K-11 | P-01, P-02, P-03, P-04, P-05, P-06 | ☐ |
@@ -176,13 +176,13 @@
 **Baca:** `architecture.md` §5, §7, §10, §11, §13; `AGENTS.md` (Aturan arsitektur dan data).
 
 **Checklist**
-- [ ] `lib/audit`: satu fungsi tulis kejadian; modul lain tidak menulis ke `audit_events` secara langsung.
-- [ ] `lib/privacy`: scrubber log dan daftar field terlarang.
+- [x] `lib/audit`: satu fungsi tulis kejadian; modul lain tidak menulis ke `audit_events` secara langsung.
+- [x] `lib/privacy`: scrubber log dan daftar field terlarang.
 - [ ] `lib/auth`: sesi cookie `httpOnly` + `SameSite=Lax`, guard peran, guard fasilitas.
 - [ ] `lib/consent`: buat consent + token acak ≥ 128 bit (simpan hash); validasi berurutan sesuai §7; cabut; baca profil terkini yang disaring ke field yang dicentang; tulis `qr_scanned`, `profile_read` (nama field saja), `qr_scan_rejected`.
 - [ ] Respons gagal mengikuti keputusan K-4.
 - [ ] Rate limit percobaan pindai per petugas dan per IP, disimpan di Postgres dan diperiksa di route handler.
-- [ ] Satu helper transaksi yang selalu meng-set konteks RLS dengan `set_config(..., true)`; tidak ada kueri data pasien di luar helper ini.
+- [x] Satu helper transaksi yang selalu meng-set konteks RLS dengan `set_config(..., true)`; tidak ada kueri data pasien di luar helper ini.
 - [ ] Middleware hanya memeriksa cookie dan peran; tidak mengimpor modul database.
 - [ ] Route handler `POST /api/scan` hanya memanggil `lib/consent`.
 
@@ -197,9 +197,18 @@
 - [ ] `grep`: file middleware tidak mengimpor modul database.
 - [ ] Tes kebocoran: data sintetis unik tidak muncul di log aplikasi saat pindai lolos maupun gagal.
 - [ ] `grep` memastikan tidak ada impor tabel profil pasien di luar `lib/consent` dan alur milik pasien sendiri.
-- [ ] `lint`, `typecheck`, `test` lolos.
+- [x] `lint`, `typecheck`, `test` lolos.
 
 **Catatan hasil:**
+- Bagian 3a (Prompt 5):
+  - `src/lib/privacy`: Logger tunggal dengan allowlist ketat (`event`, `requestId`, `route`, `method`, `status`, `durationMs`, `errorCode`, `count`), scrubber regex otomatis untuk nomor telepon (`+62...`, `08...`), email, dan token (≥ 20 karakter base32/base64url/hex) tanpa merusak UUID requestId standar; `FORBIDDEN_LOG_FIELDS` diekspor; `serializeError` hanya meloloskan `name`, `code` SQLSTATE, dan pesan tersaring (membuang `detail`, `where`, `hint`, query text pg); sink dapat diganti saat pengujian.
+  - ESLint: aturan `no-console = error` aktif untuk seluruh `src/` kecuali `src/lib/privacy/logger.ts`, file tes, dan skrip.
+  - `src/lib/http`: pembantu respons JSON dengan `Cache-Control: no-store` wajib; `wrapRouteHandler` menangkap seluruh galat server, menyamarkan pesan galat generik ke klien, mencatat via logger privasi, serta memvalidasi `Origin === APP_ORIGIN` untuk request mutasi state (`POST`, `PUT`, `PATCH`, `DELETE`). Variabel `APP_ORIGIN=http://localhost:3000` ditambahkan ke `.env.example`.
+  - `src/lib/consent/constants.ts`: modul konstanta bersama untuk nama field yang boleh dibagikan (6 kategori kebutuhan, `catatan_pasien`, `nama_panggilan`/`preferred_name`).
+  - `src/lib/audit`: fungsi `recordAuditEvent(tx, event)` mewajibkan tipe client bermerek `TransactionClient` dari `withContext` (pool biasa ditolak oleh compiler), validasi runtime pada 17 tipe event `architecture.md` §11, memvalidasi field agar hanya memuat nama dari konstanta bersama, tanpa fungsi update/delete, serta atomisitas terbukti (gagal audit membatalkan transaksi; gagal transaksi membatalkan audit).
+  - `src/db/index.ts`: helper `withContext` diperkuat dengan validasi runtime sebelum `set_config` (role ∈ enum, ID = UUID valid, token hash = heks 64 karakter), penegakan `SET LOCAL statement_timeout = '5s'` per transaksi, pool internal tidak diekspor (hanya `withContext` dan `TransactionClient`).
+  - Tes arsitektur statik `src/__tests__/architecture.test.ts` membuktikan: `pg` hanya diimpor di `src/db`, string `audit_events` hanya diizinkan di `src/lib/audit` dan migrasi, `console.` hanya ada di `logger.ts`, dan ESLint API menghasilkan error pada `src/app/**`.
+  - Hasil pemeriksaan: 34 tes di 8 test file lulus; `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` lolos. Status Bagian 3: 1/3.
 
 ---
 
