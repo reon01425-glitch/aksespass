@@ -178,12 +178,12 @@
 **Checklist**
 - [x] `lib/audit`: satu fungsi tulis kejadian; modul lain tidak menulis ke `audit_events` secara langsung.
 - [x] `lib/privacy`: scrubber log dan daftar field terlarang.
-- [ ] `lib/auth`: sesi cookie `httpOnly` + `SameSite=Lax`, guard peran, guard fasilitas.
+- [x] `lib/auth`: sesi cookie `httpOnly` + `SameSite=Lax`, guard peran, guard fasilitas.
 - [ ] `lib/consent`: buat consent + token acak ≥ 128 bit (simpan hash); validasi berurutan sesuai §7; cabut; baca profil terkini yang disaring ke field yang dicentang; tulis `qr_scanned`, `profile_read` (nama field saja), `qr_scan_rejected`.
 - [ ] Respons gagal mengikuti keputusan K-4.
 - [ ] Rate limit percobaan pindai per petugas dan per IP, disimpan di Postgres dan diperiksa di route handler.
 - [x] Satu helper transaksi yang selalu meng-set konteks RLS dengan `set_config(..., true)`; tidak ada kueri data pasien di luar helper ini.
-- [ ] Middleware hanya memeriksa cookie dan peran; tidak mengimpor modul database.
+- [x] Middleware hanya memeriksa cookie dan peran; tidak mengimpor modul database.
 - [ ] Route handler `POST /api/scan` hanya memanggil `lib/consent`.
 
 **Verifikasi** (tes otomatis, masing-masing punya kasus lolos dan gagal)
@@ -194,7 +194,7 @@
 - [ ] Database berisi hash, bukan token asli (cek langsung ke tabel).
 - [ ] Rate limit memblokir setelah batas, dan tetap memblokir setelah server dev di-restart (bukti state tidak di memori).
 - [ ] Tes: dua request berurutan dengan petugas berbeda di koneksi pool yang sama tidak saling melihat konteks RLS.
-- [ ] `grep`: file middleware tidak mengimpor modul database.
+- [x] `grep`: file middleware tidak mengimpor modul database.
 - [ ] Tes kebocoran: data sintetis unik tidak muncul di log aplikasi saat pindai lolos maupun gagal.
 - [ ] `grep` memastikan tidak ada impor tabel profil pasien di luar `lib/consent` dan alur milik pasien sendiri.
 - [x] `lint`, `typecheck`, `test` lolos.
@@ -209,6 +209,18 @@
   - `src/db/index.ts`: helper `withContext` diperkuat dengan validasi runtime sebelum `set_config` (role ∈ enum, ID = UUID valid, token hash = heks 64 karakter), penegakan `SET LOCAL statement_timeout = '5s'` per transaksi, pool internal tidak diekspor (hanya `withContext` dan `TransactionClient`).
   - Tes arsitektur statik `src/__tests__/architecture.test.ts` membuktikan: `pg` hanya diimpor di `src/db`, string `audit_events` hanya diizinkan di `src/lib/audit` dan migrasi, `console.` hanya ada di `logger.ts`, dan ESLint API menghasilkan error pada `src/app/**`.
   - Hasil pemeriksaan: 34 tes di 8 test file lulus; `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` lolos. Status Bagian 3: 1/3.
+- Bagian 3b (Prompt 6):
+  - Migrasi `005_sessions_and_auth.sql`: tabel `sessions` dengan RLS (`user_id = app_user_id()`), fungsi `SECURITY DEFINER` sempit milik `aksespass_owner` dengan `SET search_path = public, pg_temp` (`find_user_by_phone_pre_session` dan `register_user_pre_session`), dengan hak `EXECUTE` dicabut dari `PUBLIC` dan hanya diberikan ke `aksespass_app`.
+  - `src/lib/auth`:
+    - Normalisasi nomor telepon Indonesia (+62 / 62 / 08, penolakan format tidak valid).
+    - `requestOtp`: rate limiting di Postgres per HMAC(telepon) dan per HMAC(IP) dengan `HASH_PEPPER`, kode 6-digit acak kriptografis, hash kode disimpan dengan kedaluwarsa 5 menit, respons identik untuk nomor terdaftar dan belum terdaftar. Mode `dev-display` mengembalikan kode di lokal/tes dan ditolak keras jika `VERCEL_ENV=production`. Mode kosong menolak dengan pesan "Penyedia OTP belum dikonfigurasi".
+    - `verifyOtp`: `SELECT ... FOR UPDATE` pada `otp_codes`, perbandingan konstan-waktu, batas maksimal 5 percobaan lalu hangus, sekali pakai (`consumed_at`), pendaftaran akun baru hanya untuk peran `patient` atau `companion` (petugas/admin tidak dapat daftar mandiri), penolakan login petugas nonaktif atau berstatus keanggotaan `invited`, penerbitan sesi di DB dengan konteks RLS user dan cookie bertanda tangan Web Crypto HMAC-SHA256 (`HttpOnly`, `SameSite=Lax`, `Path=/`, `Secure` bila https, `Max-Age` 8 jam untuk staf / 7 hari untuk pasien).
+    - Verifikasi dua tingkat: `verifySessionCookie` murni tanpa DB untuk middleware/proxy, dan `requireSession` di lapisan server memeriksa status sesi belum dicabut, status akun aktif, serta keanggotaan faskes aktif.
+    - `logout`: mencabut sesi di tabel `sessions` dan mengembalikan header penghapusan cookie.
+  - Route Handlers: `POST /api/auth/otp/request`, `POST /api/auth/otp/verify`, `POST /api/auth/logout` dibungkus dengan `wrapRouteHandler` dan Origin guard (menolak Origin asing dengan status 403).
+  - Proxy Next 16 (`src/proxy.ts`): menjaga rute berprefiks peran (`/pasien`, `/pendamping`, `/petugas`, `/admin`, `/kurator`) tanpa akses database atau pg, mengalihkan tanpa cookie ke `/masuk`, mengalihkan peran salah ke beranda perannya, dan meloloskan rute publik (`/`, `/masuk`, `/s`, `/api/auth/*`).
+  - Tes arsitektur diperluas: membuktikan file proxy/middleware tidak mengimpor `src/db` atau `pg`.
+  - Hasil pemeriksaan: 72 tes di 11 test file lulus (termasuk 28 tes auth, 5 tes proxy, 4 tes route handler, 5 tes arsitektur); `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` lolos. Status Bagian 3: 2/3.
 
 ---
 

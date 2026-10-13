@@ -119,6 +119,9 @@ src/
 
 Aturan: **semua pembacaan data pasien oleh pihak lain lewat satu fungsi** di `lib/consent`, yang otomatis menulis audit. Jangan ada kueri langsung ke tabel profil dari halaman petugas.
 
+**Penyesuaian Prefiks Rute [Usulan, 13 Okt 2026]:**
+Route groups dengan tanda kurung `(pasien)` di App Router tidak menghasilkan segmen URL nyata, sehingga Next.js middleware/proxy tidak dapat membedakan dan menjaga rute per grup. Rute aplikasi menggunakan segmen URL nyata berprefiks peran: `/pasien/*`, `/pendamping/*`, `/petugas/*`, `/admin/*`, dan `/kurator/*`. Rute publik meliputi `/`, `/masuk` (dan turunannya), `/s/*` (halaman tujuan QR), `/api/auth/*`, serta aset statis.
+
 ---
 
 ## 6. Model Data (ringkas)
@@ -223,11 +226,17 @@ Mekanisme **[Usulan]**:
 ## 10. Autentikasi, Otorisasi, dan Pemulihan
 
 **Otorisasi berlapis:**
-1. Middleware: sesi + peran per grup rute.
-2. Lapisan layanan: fungsi di `lib/consent` memeriksa fasilitas, consent, dan masa berlaku.
+1. Middleware/Proxy (`src/proxy.ts` di Next 16): verifikasi sesi tingkat satu tanpa DB murni lewat Web Crypto (HMAC-SHA256) pada cookie bertanda tangan; memeriksa masa berlaku dan kesesuaian peran dengan prefiks rute.
+2. Lapisan layanan & API (`lib/auth/guard.ts`, `lib/consent`):
+   - `requireSession`: verifikasi sesi tingkat dua ke basis data melalui transaksi `withContext`: memastikan baris sesi belum dicabut di tabel `sessions`, akun pengguna berstatus `active` di `users`, dan untuk peran `staff`/`facility_admin` keanggotaan `staff_memberships` berstatus `active` pada fasilitas yang sesuai klaim.
+   - Fungsi pemeriksaan persetujuan di `lib/consent` memvalidasi kesesuaian fasilitas, token QR, dan masa berlaku.
 3. Basis data: kebijakan row-level security sebagai jaring pengaman terakhir.
-   - **Peran basis data [Usulan]:** `aksespass_owner` (`NOLOGIN`, pemilik semua tabel dan fungsi `SECURITY DEFINER` sempit) dan `aksespass_app` (`LOGIN`, `NOSUPERUSER`, `NOBYPASSRLS`, bukan pemilik tabel, dipakai oleh koneksi aplikasi; hanya memiliki `SELECT, INSERT` pada `audit_events` dan hanya `SELECT` pada tabel katalog/aturan/fasilitas).
+   - **Peran basis data [Usulan]:** `aksespass_owner` (`NOLOGIN`, pemilik semua tabel dan fungsi `SECURITY DEFINER` sempit) dan `aksespass_app` (`LOGIN`, `NOSUPERUSER`, `NOBYPASSRLS`, bukan pemilik tabel, dipakai oleh koneksi aplikasi; hanya memiliki `SELECT, INSERT` pada `audit_events` dan hanya `SELECT` pada tabel katalog/aturan/fasilitas; memiliki hak CRUD pada `sessions` yang dibatasi RLS per `user_id = app_user_id()`).
    - **Kunci konteks RLS per transaksi [Usulan]:** `app.user_id`, `app.role`, `app.facility_id`, dan `app.scan_token_hash`, selalu disetel dengan `set_config(..., true)` di dalam transaksi melalui helper `withContext` (kosong bila tidak dipakai; tanpa konteks = 0 baris).
+   - **Fungsi SECURITY DEFINER pra-sesi [Usulan, 13 Okt 2026]:**
+     Karena jalur masuk/verifikasi OTP berjalan sebelum `app.user_id` tersedia, akses pra-sesi dijaga oleh dua fungsi `SECURITY DEFINER` sempit milik `aksespass_owner` dengan `SET search_path = public, pg_temp`, izin `EXECUTE` dicabut dari `PUBLIC` dan hanya diberikan ke `aksespass_app`:
+     • `find_user_by_phone_pre_session(phone)`: mengembalikan hanya `id`, `role`, `status`, `facility_id`, `membership_status`, dan `audit_subject_id`.
+     • `register_user_pre_session(phone, role, stats_consent, display_name)`: hanya mengizinkan pendaftaran mandiri peran `patient` atau `companion`, menyimpan `stats_consent`, dan mengisi `audit_subject_id`.
    - **Aturan baca profil oleh petugas [Usulan]:** peran `staff` hanya dapat membaca baris `patient_profiles` dan `patient_profile_needs` di tingkat RLS apabila `app.scan_token_hash` cocok dengan `consent_qr` yang belum dicabut (`revoked_at IS NULL`), belum kedaluwarsa (`expires_at > now()`), dan tertaut ke `consents` yang masih berlaku untuk `app.facility_id`. Penyaringan daftar field (`shared_fields`) tetap dilakukan di `lib/consent`.
 
 **Pemisahan Alur Pemulihan Akun & Delegasi Darurat:**
@@ -299,7 +308,8 @@ Nama kejadian baru di atas **[Usulan]**; maknanya mengikuti `docs/user-flows.md`
 | Log aplikasi | Scrubber di `lib/privacy`: daftar field terlarang tidak boleh muncul di log, analitik, atau pelacak galat |
 | Catatan bebas petugas (T8) | Opsional, **batas panjang**, dengan peringatan "jangan menulis diagnosis atau data sensitif" |
 | Catatan bebas pasien (P5) | Terpisah dari catatan petugas, hanya tampil bila dicentang |
-| Sesi | Cookie `httpOnly`, masa berlaku pendek, keluar otomatis di perangkat petugas |
+| Sesi | Cookie `httpOnly`, `SameSite=Lax`, `Path=/`, `Secure` (+ prefix `__Host-` bila HTTPS). Masa berlaku sesi **[Usulan]**: petugas/admin/kurator 8 jam, pasien/pendamping 7 hari. Keluar otomatis mencabut baris di tabel `sessions`. |
+| OTP & Rate Limit | OTP tiruan 6 digit acak kriptografis (K-3) disimpan sebagai hash HMAC(kode) dan HMAC(telepon) dengan `HASH_PEPPER`. Kedaluwarsa 5 menit, maksimal 5 percobaan lalu hangus, sekali pakai. Rate limit tersimpan di Postgres (`rate_limit_hits`) per telepon (maks 3) dan per IP (maks 10) per 15 menit. Respons request OTP identik untuk nomor terdaftar dan belum terdaftar. Mode `dev-display` mengembalikan kode di respons lokal/dev dan **ditolak keras** bila `VERCEL_ENV=production`. Bila mode kosong, menghasilkan galat "Penyedia OTP belum dikonfigurasi" tanpa kode. **[Usulan]** |
 | Header | CSP ketat, `Referrer-Policy: no-referrer` untuk halaman token |
 | Pihak ketiga | Minimalkan skrip pihak ketiga; tidak ada analitik di halaman yang menampilkan data pasien |
 | Hosting (A8, bila Vercel dipakai) | Output `console` masuk log Vercel, jadi scrubber `lib/privacy` wajib di semua log. Vercel Web Analytics dan Speed Insights tidak diaktifkan di halaman berisi data pasien. Preview deployment memakai database terpisah berisi data sintetis dan proteksi deployment aktif. Migrasi dijalankan terpisah dari build. **[Verifikasi]** region fungsi dan database terhadap ketentuan UU PDP soal transfer data kesehatan |

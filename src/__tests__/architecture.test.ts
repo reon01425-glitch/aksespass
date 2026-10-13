@@ -154,4 +154,36 @@ describe("Tes Arsitektur Kode (Statik & Tanpa DB)", () => {
       "ESLint TIDAK boleh menghasilkan error no-console pada file logger"
     ).toBe(false);
   });
+
+  it("file middleware/proxy (src/proxy.ts atau src/middleware.ts) tidak mengimpor src/db atau pg", () => {
+    const candidateFiles = [
+      path.resolve(srcDir, "proxy.ts"),
+      path.resolve(srcDir, "proxy.js"),
+      path.resolve(srcDir, "middleware.ts"),
+      path.resolve(srcDir, "middleware.js"),
+    ];
+
+    const existingFiles = candidateFiles.filter((f) => fs.existsSync(f));
+    expect(
+      existingFiles.length,
+      "File proxy.ts atau middleware.ts harus ada di src/"
+    ).toBeGreaterThanOrEqual(1);
+
+    for (const filePath of existingFiles) {
+      const content = fs.readFileSync(filePath, "utf8");
+      const relPath = path.relative(srcDir, filePath);
+
+      expect(
+        /(?:from\s+['"].*\/db['"]|require\(['"].*\/db['"]\))/.test(content),
+        `File ${relPath} mengimpor modul db: ${content}`
+      ).toBe(false);
+
+      expect(
+        /(?:from\s+['"]pg['"]|require\(['"]pg['"]\)|from\s+['"]pg\/|require\(['"]pg\/)/.test(
+          content
+        ),
+        `File ${relPath} mengimpor driver pg: ${content}`
+      ).toBe(false);
+    }
+  });
 });
