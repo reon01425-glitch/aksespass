@@ -1,0 +1,294 @@
+# AKSESPASS Architecture (`architecture.md`)
+
+**Versi:** 0.1 (draft, selaras dengan `design.md` v0.4)
+**Tech Stack:** Next.js (App Router), TypeScript, Tailwind CSS, Lucide React (sesuai `design.md`)
+**Penanda status keputusan:** **[Diputuskan]** = sudah kamu putuskan | **[Usulan]** = rekomendasi, boleh diganti | **[Verifikasi]** = klaim yang harus diuji sebelum dipakai di dokumen/presentasi
+
+---
+
+## 1. Tujuan dan Batasan
+
+AKSESPASS adalah PWA seluler yang membantu pasien menyampaikan kebutuhan layanannya ke petugas fasilitas **tanpa harus mengulang cerita**, dengan kontrol persetujuan di tangan pasien.
+
+Batasan arsitektur yang menurun dari keputusan produk:
+
+1. Data kebutuhan dibaca **saat QR dipindai**, bukan disalin ke QR. **[Diputuskan]**
+2. Diagnosis **tidak** disimpan di server dan **tidak** ada di QR. **[Diputuskan, lihat bagian 12]**
+3. Setiap pembukaan data oleh pihak lain **tercatat** (P19). **[Diputuskan]**
+4. Kartu cetak berisi ringkasan kebutuhan, **tanpa QR akses**, dan terbaca tanpa internet. **[Diputuskan]**
+5. Antarmuka mengikuti `design.md`: target sentuh 48 px, status = ikon + teks + warna, teks hingga 200%. **[Diputuskan]**
+
+---
+
+## 2. Aktor dan Peran
+
+| Aktor | Cara masuk | Hak utama |
+| :--- | :--- | :--- |
+| Pasien | Akun sendiri | Kelola profil kebutuhan, buat/cabut ConsentQR, kirim brief, konfirmasi kunjungan (P16) |
+| Pendamping | Tautan pendamping (D3) | Membantu pasien sesuai izin yang diberikan pasien |
+| Petugas | Akun terikat satu fasilitas | Pindai QR, lihat data yang dicentang, catat kunjungan (T4/T4b), baca brief |
+| Admin fasilitas | Akun terikat fasilitas | Kelola petugas, lihat **data agregat saja**, **tidak** melihat brief |
+| Kurator | Akun internal | Kelola katalog kebutuhan/bantuan. Di prototipe: K3 hanya baca-saja, aturan bawaan |
+
+**Dokter bukan aktor.** Dokter melihat apa pun yang pasien tunjukkan di layar ponselnya. **[Diputuskan]**
+
+---
+
+## 3. Keputusan Arsitektur Utama
+
+| # | Keputusan | Status | Alasan singkat |
+| :--- | :--- | :--- | :--- |
+| A1 | Monolit Next.js (UI + Route Handlers + Server Actions) | [Usulan] | Tim kecil, satu repo, satu deploy. Cukup untuk prototipe |
+| A2 | PostgreSQL terkelola sebagai penyimpanan utama | [Usulan] | Relasi jelas (pasien-fasilitas-kunjungan), mendukung row-level security |
+| A3 | Sesi berbasis cookie `httpOnly` + `SameSite=Lax` | [Usulan] | Lebih aman daripada token di `localStorage` |
+| A4 | QR hanya memuat **token acak tak bermakna** | [Diputuskan] | Data dibaca saat pindai, jadi QR tidak membawa data |
+| A5 | PWA: service worker + IndexedDB untuk antrean offline petugas | [Diputuskan, mekanisme: usulan] | Memenuhi T4b |
+| A6 | Audit log append-only terpisah dari tabel bisnis | [Usulan] | P19 harus sulit diubah, termasuk oleh admin |
+| A7 | Diagnosis hanya di perangkat pasien, terenkripsi (roadmap) | [Diputuskan: ke roadmap] | Lihat bagian 12 |
+
+---
+
+## 4. Gambaran Sistem
+
+```
+┌─────────────────────────── Perangkat ───────────────────────────┐
+│  PWA Pasien/Pendamping          PWA Petugas                     │
+│  - profil kebutuhan             - pemindai QR (kamera)          │
+│  - ConsentQR, brief             - input kode manual (cadangan)  │
+│  - kartu cetak (ringkasan)      - IndexedDB: antrean kunjungan  │
+│  - [roadmap] diagnosis lokal    - service worker (offline)      │
+└───────────────┬─────────────────────────┬───────────────────────┘
+                │ HTTPS                   │ HTTPS (saat online)
+        ┌───────▼─────────────────────────▼───────┐
+        │   Next.js (App Router)                  │
+        │   - Server Components / Server Actions  │
+        │   - Route Handlers /api/*               │
+        │   - Middleware: sesi, peran, rate limit │
+        └───────┬─────────────────────┬───────────┘
+                │                     │
+        ┌───────▼───────┐     ┌───────▼────────┐
+        │  PostgreSQL   │     │  Audit log     │
+        │  (data bisnis)│     │  (append-only) │
+        └───────────────┘     └────────────────┘
+                │
+        ┌───────▼───────────────────────┐
+        │ Penyedia notifikasi/OTP        │
+        │ (ke kontak terdaftar pasien)   │
+        └───────────────────────────────┘
+```
+
+Pemisahan data (sesuai keputusan nomor 5): **server** menyimpan kebutuhan layanan yang dibaca petugas lewat QR. **Perangkat pasien** menyimpan diagnosis (roadmap). Diagnosis tidak ikut QR dan tidak terbaca petugas.
+
+---
+
+## 5. Struktur Proyek (usulan)
+
+```
+src/
+├─ app/
+│  ├─ (pasien)/            # profil, qr, brief, kartu, riwayat
+│  ├─ (petugas)/           # pindai, hasil, catat kunjungan, brief masuk
+│  ├─ (admin)/             # petugas, agregat
+│  ├─ (kurator)/           # katalog (K3 baca-saja di prototipe)
+│  ├─ pendamping/[token]/  # tautan pendamping (D3)
+│  └─ api/                 # route handlers: qr, scan, brief, sync, recovery
+├─ components/             # komponen UI sesuai design.md (Button, StatusBanner, ...)
+├─ lib/
+│  ├─ auth/                # sesi, peran, guard
+│  ├─ consent/             # buat/validasi/cabut token, aturan field yang boleh dibaca
+│  ├─ audit/               # tulis kejadian P19 (satu-satunya pintu tulis)
+│  ├─ offline/             # antrean IndexedDB, sinkronisasi
+│  └─ privacy/             # scrubber log, daftar field terlarang di log/analitik
+├─ db/                     # skema, migrasi, kebijakan RLS
+└─ sw/                     # service worker
+```
+
+Aturan: **semua pembacaan data pasien oleh pihak lain lewat satu fungsi** di `lib/consent`, yang otomatis menulis audit. Jangan ada kueri langsung ke tabel profil dari halaman petugas.
+
+---
+
+## 6. Model Data (ringkas)
+
+| Tabel | Isi penting | Catatan |
+| :--- | :--- | :--- |
+| `users` | id, peran, kontak terdaftar, status | Satu tabel, peran dibatasi enum |
+| `patient_profiles` | nama panggilan, kebutuhan terpilih, catatan bebas pasien (P5) | **Tanpa kolom diagnosis** |
+| `needs_catalog` | kebutuhan/bantuan baku | Dikelola kurator |
+| `consents` | pasien, fasilitas tujuan, **daftar field yang dicentang**, tanggal berlaku | Dasar aturan "hanya data yang dicentang" |
+| `consent_qr` | `token_hash`, consent_id, `expires_at`, `revoked_at` | Token asli tidak disimpan, hanya hash |
+| `companions` | pasien, pendamping, izin, status tautan | Tautan D3 |
+| `facilities` | nama, status | |
+| `staff_memberships` | petugas, fasilitas, aktif/tidak | Petugas hanya aktif di fasilitas terdaftar |
+| `briefs` | pasien, fasilitas, tanggal kunjungan, field terpilih, `expires_at` | Pre-Arrival Brief (bagian 8) |
+| `visits` | pasien, fasilitas, petugas, bantuan dicatat, catatan opsional, `client_id`, `synced_at` | `client_id` untuk deduplikasi sinkron (bagian 9) |
+| `visit_confirmations` | visit_id, status konfirmasi pasien (P16) | Hanya bisa dibuat setelah visit tersinkron |
+| `recovery_requests` | pasien, pendamping, kode (hash), `eligible_at`, status | Bagian 10 |
+| `audit_events` | tipe, pelaku, subjek, waktu, fasilitas | Append-only, tanpa isi data pasien |
+
+Prinsip: `audit_events` mencatat **siapa membuka apa dan kapan**, bukan salinan isinya.
+
+---
+
+## 7. ConsentQR dan Alur Baca Saat Dipindai
+
+**Pembuatan (pasien):**
+1. Pasien memilih fasilitas, tanggal, dan field yang dicentang.
+2. Server membuat `consent` + token acak minimal 128 bit, menyimpan **hash**-nya di `consent_qr`.
+3. QR menampilkan URL pendek berisi token. **Tidak ada data pasien di dalam QR.**
+
+**Pemindaian (petugas):**
+1. Petugas memindai QR (atau memasukkan kode manual bila kamera ditolak).
+2. `POST /api/scan` dengan token. Server memeriksa berurutan: sesi petugas valid, petugas aktif di fasilitas yang sama dengan consent, token tidak kedaluwarsa dan tidak dicabut, tanggal berlaku.
+3. Bila lolos: server membaca **profil terkini**, **menyaring hanya field yang dicentang**, mengembalikannya, dan menulis `audit_events` (`qr_scanned`, `profile_read`).
+4. Bila gagal: server mengembalikan alasan generik (tanpa membocorkan apakah token pernah ada).
+
+**Status tampilan** (ikon + teks + warna, `design.md` bagian 2B):
+
+| Kondisi | Status | Ikon | Label |
+| :--- | :--- | :--- | :--- |
+| Valid | Sukses | `CheckCircle2` | "QR Valid" |
+| Mendekati batas | Peringatan | `AlertTriangle` | "Hampir Kedaluwarsa" |
+| Kedaluwarsa/dicabut | Galat | `XCircle` | "QR Kedaluwarsa" |
+| Kamera ditolak | Galat | `Ban` | "Kamera Ditolak" + tombol input kode manual |
+
+**Konsekuensi dari "data dibaca saat dipindai":** perubahan profil langsung berlaku di QR yang masih aktif (sesuai revisi P-02). Sebaliknya, tangkapan layar QR tetap berlaku sampai kedaluwarsa. Mitigasi: masa berlaku pendek, pasien bisa mencabut kapan saja, pembatasan fasilitas, dan audit yang terlihat oleh pasien (riwayat "siapa membuka data saya").
+
+**Rate limit:** batasi percobaan pindai per petugas dan per alamat IP untuk menghambat penebakan token.
+
+---
+
+## 8. Pre-Arrival Brief
+
+Usulan aturan akses (keputusan akhir tetap di tim):
+
+| Aturan | Implementasi |
+| :--- | :--- |
+| Hanya petugas aktif di fasilitas pilihan pasien | Filter `staff_memberships` + `briefs.facility_id` |
+| Hanya pada tanggal yang dipilih, lalu kedaluwarsa otomatis (P10) | `expires_at` dicek di setiap baca; pekerjaan terjadwal membersihkan brief lama |
+| Hanya data yang dicentang, hanya nama panggilan | Penyaringan sisi server, bukan sisi klien |
+| Admin tidak melihat brief | Peran admin tidak punya izin baca pada `briefs`; hanya agregat |
+| Dua kejadian dicatat di P19 | `brief_sent` (saat dikirim) dan `brief_opened` (siapa, kapan) |
+
+---
+
+## 9. Offline dan Sinkronisasi (T4b)
+
+Yang tersedia offline:
+
+- **Membaca ringkasan di kartu cetak** tidak butuh internet (T-05).
+- **Pencatatan kunjungan (T4b)** disimpan di perangkat petugas dan disinkronkan saat online.
+
+Yang **tidak** tersedia offline: pemindaian ConsentQR (membutuhkan server untuk memvalidasi dan membaca data terkini) dan konfirmasi pasien (P16), yang baru bisa dikirim **setelah sinkron**.
+
+Mekanisme **[Usulan]**:
+
+1. Service worker meng-cache cangkang aplikasi dan halaman pencatatan.
+2. Catatan kunjungan masuk antrean IndexedDB dengan `client_id` (UUID dibuat di perangkat).
+3. Saat online, antrean dikirim berurutan ke `POST /api/sync`. Server menolak duplikat berdasarkan `client_id` (idempotent).
+4. Status antrean ditampilkan: "Menunggu Sinkron" (peringatan) lalu "Tersinkron" (sukses), sesuai `design.md`.
+5. Data di IndexedDB dibatasi ke yang diperlukan, dihapus setelah sinkron, dan dikunci saat petugas keluar.
+
+**[Verifikasi]** Perilaku penyimpanan PWA di iOS Safari (pembersihan data situs yang lama tidak dibuka) perlu diuji pada perangkat nyata sebelum klaim offline dipakai di presentasi.
+
+---
+
+## 10. Autentikasi, Otorisasi, dan Pemulihan
+
+**Otorisasi berlapis:**
+1. Middleware: sesi + peran per grup rute.
+2. Lapisan layanan: fungsi di `lib/consent` memeriksa fasilitas, consent, dan masa berlaku.
+3. Basis data: kebijakan row-level security sebagai jaring pengaman terakhir.
+
+**Pemulihan akun lewat pendamping (P3):**
+1. Pendamping memulai permintaan pemulihan.
+2. Server mengirim **kode verifikasi ke kontak pasien yang terdaftar** (bukan ke pendamping) dan **notifikasi ke pasien**.
+3. Pendamping memasukkan kode. **[Usulan]** akses baru aktif setelah **jeda tunggu 24 jam**, sehingga pasien punya waktu membatalkan.
+4. Semua langkah dicatat di `audit_events`.
+
+---
+
+## 11. Audit Log (P19)
+
+| Kejadian | Dicatat saat |
+| :--- | :--- |
+| `qr_created`, `qr_revoked` | Pasien membuat/mencabut QR |
+| `qr_scanned`, `profile_read` | Petugas memindai dan data dibaca |
+| `brief_sent`, `brief_opened` | Brief dikirim, lalu dibuka petugas |
+| `visit_recorded`, `visit_synced` | Kunjungan dicatat, lalu tersinkron |
+| `recovery_*` | Setiap langkah pemulihan |
+
+- Tabel append-only: aplikasi hanya punya izin `INSERT` dan `SELECT`.
+- Isi: pelaku, subjek, tipe, waktu, fasilitas. **Tanpa isi data pasien.**
+- Pasien dapat melihat riwayat pembukaan datanya sendiri.
+
+---
+
+## 12. Diagnosis: Keputusan dan Desain Roadmap
+
+**Keputusan:** fitur diagnosis masuk **roadmap/fitur opsional kecil**, bukan inti prototipe. Dokter bukan aktor.
+
+**Rancangan bila dibangun:**
+- Diagnosis disimpan **hanya di perangkat pasien**, terenkripsi (Web Crypto API, kunci diturunkan dari kredensial perangkat/PIN), di IndexedDB.
+- Dokter melihatnya karena pasien **menunjukkan layar**. Tidak ada jalur sistem.
+- Diagnosis tidak ikut QR, tidak terbaca petugas, tidak ada kolomnya di server.
+
+**Konsekuensi yang harus diterima:**
+1. Data hilang bila perangkat hilang atau berganti (tidak ada cadangan server).
+2. Pendamping hanya bisa melihatnya di perangkat pasien. Transfer antar-perangkat jauh lebih rumit dan di luar prototipe.
+3. **[Verifikasi]** Penghapusan data situs oleh Safari iOS memengaruhi apakah diagnosis bertahan di PWA.
+4. **[Verifikasi]** Apakah UU PDP berlaku untuk data yang hanya berada di perangkat pasien belum pasti dan perlu dikonfirmasi.
+
+**Klaim privasi:** klaim kuat "diagnosis hanya tersimpan di perangkat pasien, tidak pernah ke server" hanya boleh dipakai bila **diuji** bahwa tidak ada jalur yang membocorkannya: log error, analitik, cadangan otomatis peramban, cache service worker, pelacakan galat pihak ketiga. Bila fitur ini tidak dibangun, klaim cukup: "diagnosis tidak diminta".
+
+---
+
+## 13. Privasi dan Keamanan
+
+| Area | Kontrol |
+| :--- | :--- |
+| Transport | HTTPS wajib, HSTS |
+| Data diam | Enkripsi at-rest oleh penyedia basis data; hash untuk token dan kode |
+| Log aplikasi | Scrubber di `lib/privacy`: daftar field terlarang tidak boleh muncul di log, analitik, atau pelacak galat |
+| Catatan bebas petugas (T8) | Opsional, **batas panjang**, dengan peringatan "jangan menulis diagnosis atau data sensitif" |
+| Catatan bebas pasien (P5) | Terpisah dari catatan petugas, hanya tampil bila dicentang |
+| Sesi | Cookie `httpOnly`, masa berlaku pendek, keluar otomatis di perangkat petugas |
+| Header | CSP ketat, `Referrer-Policy: no-referrer` untuk halaman token |
+| Pihak ketiga | Minimalkan skrip pihak ketiga; tidak ada analitik di halaman yang menampilkan data pasien |
+
+---
+
+## 14. Aksesibilitas di Level Arsitektur
+
+- Font Atkinson Hyperlegible Next dimuat lokal (self-hosted, `font-display: swap`), bukan dari CDN pihak ketiga.
+- Semua ukuran berbasis `rem`; uji pada text scaling 200% dan lebar 320 px.
+- Komponen status (`StatusBanner`) satu-satunya cara menampilkan status, agar ikon + teks + warna selalu konsisten.
+- Fokus keyboard terlihat; hormati `prefers-reduced-motion`.
+- Input 16 px untuk mencegah auto-zoom iOS Safari.
+- Pesan galat memberi langkah lanjut (contoh: "Minta pasien memperbarui ConsentQR di aplikasinya.").
+
+---
+
+## 15. Rencana Pengujian dan Verifikasi
+
+| Yang diuji | Cara |
+| :--- | :--- |
+| Aturan akses brief dan QR (fasilitas, tanggal, field) | Uji otomatis: setiap aturan di bagian 7 dan 8 punya kasus lolos dan gagal |
+| Tidak ada kebocoran data ke log/analitik | Uji dengan data sintetis, cari data itu di semua keluaran log |
+| Sinkronisasi offline idempotent | Kirim antrean yang sama dua kali, pastikan tidak ada duplikat |
+| PWA di iOS Safari | Perangkat nyata: install, tutup lama, buka lagi, cek data |
+| Kontras dan fokus | Pemeriksaan otomatis + pemeriksaan manual pembaca layar |
+| Klaim "3 ketukan" petugas | Hitung pada alur nyata dengan isi centang otomatis dari saran tindakan (T6) |
+
+---
+
+## 16. Roadmap dan Keputusan Terbuka
+
+**Prototipe (inti):** profil, ConsentQR, pindai + baca saat pindai, brief, kartu cetak tanpa QR, pencatatan kunjungan offline, konfirmasi P16, audit P19, pemulihan lewat pendamping.
+
+**Roadmap:** diagnosis lokal terenkripsi, K4-K6 (kurasi lanjutan), transfer antar-perangkat untuk pendamping.
+
+**Keputusan yang masih perlu ditutup:**
+1. P-04 (naik ke Must) dan K-01 (tetap Should) — usulan campuran ada di dokumen revisi, menunggu persetujuan.
+2. Penyedia basis data dan hosting (bagian 3, A1-A3 masih usulan).
+3. Jeda tunggu pemulihan (24 jam) disetujui atau diubah.
+4. Hasil verifikasi iOS Safari dan UU PDP (bagian 12).
