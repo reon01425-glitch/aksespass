@@ -1,8 +1,9 @@
 # AKSESPASS Architecture (`architecture.md`)
 
-**Versi:** 0.1 (draft, selaras dengan `design.md` v0.4)
+**Versi:** 0.1 (draft, selaras dengan `design.md` v0.5)
 **Tech Stack:** Next.js (App Router), TypeScript, Tailwind CSS, Lucide React (sesuai `design.md`)
 **Penanda status keputusan:** **[Diputuskan]** = sudah kamu putuskan | **[Usulan]** = rekomendasi, boleh diganti | **[Verifikasi]** = klaim yang harus diuji sebelum dipakai di dokumen/presentasi
+**Kode:** `P-05`, `T-01` (bertanda hubung) = user story → `docs/user-stories.md`. `P16`, `T4b`, `K3` (tanpa tanda hubung) = layar → `docs/user-flows.md`. `A1`–`A7` di §3 = keputusan arsitektur, bukan layar admin.
 
 ---
 
@@ -24,13 +25,15 @@ Batasan arsitektur yang menurun dari keputusan produk:
 
 | Aktor | Cara masuk | Hak utama |
 | :--- | :--- | :--- |
-| Pasien | Akun sendiri | Kelola profil kebutuhan, buat/cabut ConsentQR, kirim brief, konfirmasi kunjungan (P16) |
-| Pendamping | Tautan pendamping (D3) | Membantu pasien sesuai izin yang diberikan pasien |
-| Petugas | Akun terikat satu fasilitas | Pindai QR, lihat data yang dicentang, catat kunjungan (T4/T4b), baca brief |
-| Admin fasilitas | Akun terikat fasilitas | Kelola petugas, lihat **data agregat saja**, **tidak** melihat brief |
-| Kurator | Akun internal | Kelola katalog kebutuhan/bantuan. Di prototipe: K3 hanya baca-saja, aturan bawaan |
+| Pasien | Akun sendiri: nomor HP + kode verifikasi/OTP, tanpa KTP (P3) **[Diputuskan]** | Kelola profil kebutuhan, buat/cabut ConsentQR, kirim brief, konfirmasi kunjungan (P16), lihat riwayat akses (P19), setujui/cabut tautan pendamping (P21), hapus akun (P23) |
+| Pendamping | Akun sendiri (HP atau email + kode, D2), tertaut ke pasien **hanya setelah pasien menyetujui** (D3 → P21) | Membantu pasien sesuai izin; setiap tindakan ditandai "oleh pendamping" (D5, D8) |
+| Petugas | Akun terikat satu fasilitas, diaktivasi lewat undangan admin fasilitas (T2) | Pindai QR, lihat data yang dicentang, catat kunjungan (T4/T4b, T8), baca brief, mengesahkan delegasi darurat di tempat (bagian 10) |
+| Admin fasilitas | Akun terikat fasilitas, diaktivasi lewat undangan (A2) | Kelola petugas (A4–A5), lihat **data agregat saja** (A6–A7), kelola tindak lanjut (A8), **tidak** melihat brief |
+| Kurator | Akun internal, diundang admin sistem (K2) | Kelola katalog kebutuhan/bantuan dan aturan saran. Di prototipe: K3 hanya baca-saja, aturan bawaan; K4–K6 roadmap |
 
 **Dokter bukan aktor.** Dokter melihat apa pun yang pasien tunjukkan di layar ponselnya. **[Diputuskan]**
+
+**Admin sistem bukan aktor aplikasi di prototipe.** Pendaftaran fasilitas dan undangan kurator dilakukan manual sebagai proses onboarding (`docs/user-flows.md`, keputusan terbuka 7).
 
 ---
 
@@ -45,6 +48,15 @@ Batasan arsitektur yang menurun dari keputusan produk:
 | A5 | PWA: service worker + IndexedDB untuk antrean offline petugas | [Diputuskan, mekanisme: usulan] | Memenuhi T4b |
 | A6 | Audit log append-only terpisah dari tabel bisnis | [Usulan] | P19 harus sulit diubah, termasuk oleh admin |
 | A7 | Diagnosis hanya di perangkat pasien, terenkripsi (roadmap) | [Diputuskan: ke roadmap] | Lihat bagian 12 |
+| A8 | Hosting aplikasi di **Vercel**; PostgreSQL dari penyedia terpisah (lewat integrasi Vercel atau langsung) | [Usulan utama] | Next.js didukung langsung, HTTPS dan preview otomatis. Vercel tidak menyimpan Postgres sendiri, jadi penyedia DB tetap dipilih terpisah (syarat A2) |
+
+**[Diputuskan, 13 Okt 2026] Lokal dulu:** prototipe dibangun dan diuji di lokal dengan PostgreSQL 16 (Homebrew). Deploy ke hosting (usulan utama: A8) setelah produk lokal benar. Library yang disetujui: Vitest, `pg` + migrasi SQL mentah, `qrcode`, `html5-qrcode`, axe-core. OTP memakai kode tiruan khusus mode pengembangan (tanpa SMS).
+
+**Aturan siap serverless [Diputuskan, 13 Okt 2026]** — berlaku sejak build lokal agar kode tidak perlu ditulis ulang saat pindah ke A8:
+1. **Konteks RLS per transaksi.** Identitas, peran, dan fasilitas di-set dengan `set_config(..., true)` / `SET LOCAL` di dalam transaksi, tidak pernah per sesi koneksi, karena koneksi lewat pooler dipakai bergantian oleh request lain.
+2. **Tidak ada state penting di memori proses.** Rate limit, OTP tiruan, dan penghitung lain disimpan di Postgres.
+3. **Middleware tanpa akses database.** Middleware hanya memeriksa cookie sesi dan peran per grup rute; rate limit, consent, dan fasilitas diperiksa di route handler lewat `lib/consent` / `lib/auth`.
+4. **Konfigurasi lewat env.** URL database (termasuk URL pooler nanti) dan rahasia hanya dari variabel lingkungan.
 
 ---
 
@@ -63,7 +75,7 @@ Batasan arsitektur yang menurun dari keputusan produk:
         │   Next.js (App Router)                  │
         │   - Server Components / Server Actions  │
         │   - Route Handlers /api/*               │
-        │   - Middleware: sesi, peran, rate limit │
+        │   - Middleware: sesi, peran (tanpa DB)  │
         └───────┬─────────────────────┬───────────┘
                 │                     │
         ┌───────▼───────┐     ┌───────▼────────┐
@@ -77,7 +89,7 @@ Batasan arsitektur yang menurun dari keputusan produk:
         └───────────────────────────────┘
 ```
 
-Pemisahan data (sesuai keputusan nomor 5): **server** menyimpan kebutuhan layanan yang dibaca petugas lewat QR. **Perangkat pasien** menyimpan diagnosis (roadmap). Diagnosis tidak ikut QR dan tidak terbaca petugas.
+Pemisahan data (sesuai batasan nomor 2 di bagian 1): **server** menyimpan kebutuhan layanan yang dibaca petugas lewat QR. **Perangkat pasien** menyimpan diagnosis (roadmap). Diagnosis tidak ikut QR dan tidak terbaca petugas.
 
 ---
 
@@ -111,21 +123,26 @@ Aturan: **semua pembacaan data pasien oleh pihak lain lewat satu fungsi** di `li
 
 | Tabel | Isi penting | Catatan |
 | :--- | :--- | :--- |
-| `users` | id, peran, kontak terdaftar, status | Satu tabel, peran dibatasi enum |
-| `patient_profiles` | nama panggilan, kebutuhan terpilih, catatan bebas pasien (P5) | **Tanpa kolom diagnosis** |
+| `users` | id, peran, kontak terdaftar (HP untuk OTP), status, persetujuan statistik anonim (opsional, terpisah; P3) | Satu tabel, peran dibatasi enum |
+| `patient_profiles` | nama panggilan, kebutuhan terpilih, catatan bebas pasien (P5), penanda perubahan terakhir oleh pendamping (D5) | **Tanpa kolom diagnosis**. Draft editor (P5) hanya di perangkat, tidak di tabel ini |
 | `needs_catalog` | kebutuhan/bantuan baku | Dikelola kurator |
+| `accommodation_rules` | profil kebutuhan pemicu, saran tindakan (teks pendek + ikon), sumber/alasan, versi, status (Draft/Dalam Tinjauan/Terbit), tanggal, pengesah | Dasar Smart Accommodation Engine (T6, T-03). Prototipe: aturan bawaan, baca-saja (K3). **[Usulan]** |
 | `consents` | pasien, fasilitas tujuan, **daftar field yang dicentang**, tanggal berlaku | Dasar aturan "hanya data yang dicentang" |
 | `consent_qr` | `token_hash`, consent_id, `expires_at`, `revoked_at` | Token asli tidak disimpan, hanya hash |
-| `companions` | pasien, pendamping, izin, status tautan | Tautan D3 |
-| `facilities` | nama, status | |
-| `staff_memberships` | petugas, fasilitas, aktif/tidak | Petugas hanya aktif di fasilitas terdaftar |
+| `companions` | pasien, pendamping, izin, status tautan (Menunggu Persetujuan/Aktif/Dicabut) | Aktif hanya setelah pasien menyetujui (D3 → P21) |
+| `emergency_delegations` | pasien, pendamping, petugas pengesah, fasilitas, tanggal berlaku | Delegasi darurat di tempat (bagian 10); cakupan satu fasilitas dan satu tanggal. **[Usulan]** nama dan kolom |
+| `facilities` | nama, status | Didaftarkan manual oleh admin sistem |
+| `staff_memberships` | petugas, fasilitas, unit, status (Menunggu Aktivasi/Aktif/Nonaktif) | Petugas hanya aktif di fasilitas terdaftar; nonaktif langsung menolak pindai (A4) |
 | `briefs` | pasien, fasilitas, tanggal kunjungan, field terpilih, `expires_at` | Pre-Arrival Brief (bagian 8) |
-| `visits` | pasien, fasilitas, petugas, bantuan dicatat, catatan opsional, `client_id`, `synced_at` | `client_id` untuk deduplikasi sinkron (bagian 9) |
-| `visit_confirmations` | visit_id, status konfirmasi pasien (P16) | Hanya bisa dibuat setelah visit tersinkron |
+| `visits` | pasien, fasilitas, petugas, jalur (`qr` / `kartu`), bantuan dicatat, catatan opsional, `client_id`, `synced_at` | `client_id` untuk deduplikasi sinkron (bagian 9). Jalur kartu (T4b) menyimpan pengenal dari kartu; **bentuk pengenal belum konsisten** antara bagian 9 dan `docs/user-flows.md` keputusan 2 |
+| `visit_confirmations` | visit_id, status (terpenuhi/sebagian/belum), kebutuhan belum terpenuhi, `confirmed_by` (`patient`/`companion`/`on_site`) | Hanya bisa dibuat setelah visit tersinkron. Tanpa jawaban = "belum dikonfirmasi", **tidak** dihitung terpenuhi (P16) |
+| `follow_ups` | kategori kebutuhan, fasilitas, status, catatan langkah, tanggal | Tindak lanjut admin (A8) dan status untuk pasien (P17). **[Usulan]** |
 | `recovery_requests` | pasien, pendamping, kode (hash), `eligible_at`, status | Bagian 10 |
 | `audit_events` | tipe, pelaku, subjek, waktu, fasilitas | Append-only, tanpa isi data pasien |
 
 Prinsip: `audit_events` mencatat **siapa membuka apa dan kapan**, bukan salinan isinya.
+
+Agregat dashboard (A6–A7) dihitung dari `visit_confirmations`, memisahkan `confirmed_by` (bagian 9) dan menyembunyikan kelompok kecil. **[Usulan]** Nilai ambang belum ditetapkan.
 
 ---
 
@@ -148,12 +165,12 @@ Prinsip: `audit_events` mencatat **siapa membuka apa dan kapan**, bukan salinan 
 | :--- | :--- | :--- | :--- |
 | Valid | Sukses | `CheckCircle2` | "QR Valid" |
 | Mendekati batas | Peringatan | `AlertTriangle` | "Hampir Kedaluwarsa" |
-| Kedaluwarsa/dicabut | Galat | `XCircle` | "QR Kedaluwarsa" |
+| Token tak dikenal/kedaluwarsa/dicabut, atau fasilitas tidak cocok | Galat | `XCircle` | "QR Tidak Dapat Dipakai" + "Minta pasien membuat ConsentQR baru." Satu pesan yang sama untuk semua alasan **[Diputuskan, 13 Okt 2026]** |
 | Kamera ditolak | Galat | `Ban` | "Kamera Ditolak" + tombol input kode manual |
 
 **Konsekuensi dari "data dibaca saat dipindai":** perubahan profil langsung berlaku di QR yang masih aktif (sesuai revisi P-02). Sebaliknya, tangkapan layar QR tetap berlaku sampai kedaluwarsa. Mitigasi: masa berlaku pendek, pasien bisa mencabut kapan saja, pembatasan fasilitas, dan audit yang terlihat oleh pasien (riwayat "siapa membuka data saya").
 
-**Rate limit:** batasi percobaan pindai per petugas dan per alamat IP untuk menghambat penebakan token.
+**Rate limit:** batasi percobaan pindai per petugas dan per alamat IP untuk menghambat penebakan token. Penghitung disimpan di Postgres dan diperiksa di route handler, bukan di middleware atau memori proses (aturan siap serverless, bagian 3).
 
 ---
 
@@ -227,12 +244,22 @@ Mekanisme **[Usulan]**:
 | `qr_created`, `qr_revoked` | Pasien membuat/mencabut QR |
 | `qr_scanned`, `profile_read` | Petugas memindai dan data dibaca |
 | `brief_sent`, `brief_opened` | Brief dikirim, lalu dibuka petugas |
+| `qr_scan_rejected` | Pindai ditolak (kedaluwarsa, dicabut, fasilitas tidak cocok, petugas nonaktif; T4, A4). Tanpa menyimpan token mentah |
 | `visit_recorded`, `visit_synced` | Kunjungan dicatat, lalu tersinkron |
+| `visit_confirmed` | Konfirmasi CareProof dikirim, beserta `confirmed_by` (P16, D8, T9) |
+| `companion_link_requested`, `companion_linked`, `companion_unlinked` | Tautan diajukan, disetujui, dicabut (D3, P21) |
+| `profile_changed_by_companion` | Pendamping mengubah paspor atas nama pasien (D5) |
+| `delegation_signed_off` | Petugas mengesahkan delegasi darurat (bagian 10), pelaku = petugas pengesah |
+| `access_reported` | Pasien melaporkan akses yang tidak dikenali (P19) |
 | `recovery_*` | Setiap langkah pemulihan |
+| `account_deleted` | Pasien menghapus akun (P23) |
+
+Nama kejadian baru di atas **[Usulan]**; maknanya mengikuti `docs/user-flows.md`.
 
 - Tabel append-only: aplikasi hanya punya izin `INSERT` dan `SELECT`.
-- Isi: pelaku, subjek, tipe, waktu, fasilitas. **Tanpa isi data pasien.**
-- Pasien dapat melihat riwayat pembukaan datanya sendiri.
+- Isi: pelaku, subjek, tipe, waktu, fasilitas. **Tanpa isi data pasien.** Untuk `profile_read`, yang dicatat adalah **nama field** yang dibuka (agar P19 bisa menampilkan "data yang dilihat"), bukan nilainya.
+- Pasien dapat melihat riwayat pembukaan datanya sendiri (P19).
+- **Hapus akun (P23):** identitas pasien harus dapat dipisahkan dari audit log tanpa melanggar append-only. **[Usulan]** `subjek` memakai pengenal pseudonim; saat akun dihapus, pemetaan pseudonim → pasien yang dihapus, bukan baris log. **[Verifikasi]** UU PDP.
 
 ---
 
@@ -267,6 +294,7 @@ Mekanisme **[Usulan]**:
 | Sesi | Cookie `httpOnly`, masa berlaku pendek, keluar otomatis di perangkat petugas |
 | Header | CSP ketat, `Referrer-Policy: no-referrer` untuk halaman token |
 | Pihak ketiga | Minimalkan skrip pihak ketiga; tidak ada analitik di halaman yang menampilkan data pasien |
+| Hosting (A8, bila Vercel dipakai) | Output `console` masuk log Vercel, jadi scrubber `lib/privacy` wajib di semua log. Vercel Web Analytics dan Speed Insights tidak diaktifkan di halaman berisi data pasien. Preview deployment memakai database terpisah berisi data sintetis dan proteksi deployment aktif. Migrasi dijalankan terpisah dari build. **[Verifikasi]** region fungsi dan database terhadap ketentuan UU PDP soal transfer data kesehatan |
 
 ---
 
@@ -291,6 +319,13 @@ Mekanisme **[Usulan]**:
 | PWA di iOS Safari | Perangkat nyata: install, tutup lama, buka lagi, cek data |
 | Kontras dan fokus | Pemeriksaan otomatis + pemeriksaan manual pembaca layar |
 | Klaim "3 ketukan" petugas | Hitung pada alur nyata dengan isi centang otomatis dari saran tindakan (T6) |
+| Penolakan pindai | Token tak dikenal, kedaluwarsa, dan dicabut tidak membocorkan keberadaan token (bagian 7); petugas nonaktif langsung ditolak (A4); setiap penolakan tercatat `qr_scan_rejected` |
+| Tautan pendamping | Pendamping tidak bisa membaca data apa pun sebelum disetujui (D3); akses berakhir seketika setelah dicabut (P21); perubahan oleh pendamping tercatat dan terlihat pasien (D5) |
+| Delegasi darurat | Hanya pendamping terdaftar; terbatas satu fasilitas dan satu tanggal; ditolak di fasilitas/tanggal lain; tercatat dengan petugas pengesah |
+| Konfirmasi CareProof | `confirmed_by` tersimpan benar untuk pasien, pendamping, dan di tempat; tanpa jawaban tidak dihitung terpenuhi; jawaban offline tidak terduplikasi saat sinkron |
+| Agregat dashboard | Tidak ada identitas pasien; kelompok di bawah ambang disembunyikan; sub-metrik pendamping dan di tempat terpisah |
+| Hapus akun | Data pribadi, tautan, dan QR hilang; agregat hanya tersisa bila pasien setuju statistik; audit log tidak lagi menunjuk ke identitas pasien |
+| Draft di perangkat | Draft paspor (P5) tidak bisa dibagikan lewat QR sebelum disimpan; draft petugas (T8) terkunci saat petugas keluar (bagian 9 poin 5) |
 
 ---
 
@@ -307,5 +342,5 @@ Mekanisme **[Usulan]**:
 
 **Keputusan yang masih perlu ditutup:**
 1. P-04 (naik ke Must) dan K-01 (tetap Should) — usulan campuran ada di dokumen revisi, menunggu persetujuan.
-2. Penyedia basis data dan hosting (bagian 3, A1-A3 masih usulan).
+2. Hosting untuk rilis: Vercel sebagai usulan utama (A8), menunggu konfirmasi; penyedia PostgreSQL dan region (UU PDP) belum dipilih. Prototipe berjalan lokal (bagian 3).
 3. Hasil verifikasi iOS Safari dan UU PDP (bagian 12).

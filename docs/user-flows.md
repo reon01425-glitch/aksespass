@@ -1,0 +1,448 @@
+# AKSESPASS — Alur Navigasi Layar
+
+> **Sumber:** dokumen "Alur Navigasi Layar AKSESPASS" (11 Okt 2026). Menggantikan user flow PDF hal. 12–13.
+> Tabel pemetaan user story → layar dipindahkan ke kolom "Layar" di `docs/user-stories.md` agar tidak ada dua salinan.
+
+## Ringkasan dan Konvensi
+
+Alur navigasi per layar untuk lima aktor, dalam 7 kelompok alur: Pasien (A, B, C), Pendamping, Petugas, Admin Fasilitas, dan Kurator Aturan. Setiap layar mencantumkan user story (US) yang dipenuhinya.
+
+| Kode layar | Aktor | Cakupan |
+| :--- | :--- | :--- |
+| P1–P8 | Pasien A | Splash, onboarding, daftar, beranda, MyCare Passport, draft, kartu cetak |
+| P9–P17 | Pasien B | Kunjungan, ConsentQR, antrean, KomunikaCare, CareProof, jalur offline |
+| P18–P23 | Pasien C | Kontrol akses, pendamping, hapus akun |
+| D1–D8 | Pendamping | Tautan, kelola atas nama pasien, konfirmasi |
+| T1–T9 | Petugas | Login, pindai, saran tindakan, catat bantuan |
+| A1–A8 | Admin Fasilitas | Akun petugas, dashboard, tindak lanjut |
+| K1–K6 | Kurator Aturan | Pustaka, penyusunan, persetujuan, riwayat |
+
+Kode layar **tanpa tanda hubung** (P16, T4b). Kode user story **dengan tanda hubung** (P-07, T-05). Layar A1–A8 bukan keputusan arsitektur A1–A7 di `architecture.md`.
+
+Prioritas (sesuai daftar US): M = Must, S = Should, C = Could (roadmap).
+Format tiap layar: Tampilan, Aksi Utama, Aksi Alternatif atau Error, Navigasi, US.
+
+**Aturan untuk semua layar (nonfungsional):**
+- Kompatibel pembaca layar, kontras tinggi, teks dapat diperbesar, target sentuh besar (rincian: `design.md`).
+- Bahasa sederhana dengan ikon pendamping teks.
+- Tombol kembali dan batal selalu tersedia; tindakan merusak (cabut, hapus) selalu meminta konfirmasi.
+- Semua pembukaan data tercatat di audit log.
+
+---
+
+## Alur Pasien A: Pengaturan Awal (P1–P8)
+
+Pasien memulai dari splash screen, menyesuaikan aksesibilitas, mendaftar, lalu menyusun MyCare Passport dan kartu cetak sekali saja.
+
+### [P1] Splash Screen
+- **Tampilan:** logo AKSESPASS dan tagline, indikator memuat. Singkat dan dapat dilewati.
+- **Aksi Utama:** tidak ada; sistem memeriksa apakah pasien sudah masuk dan apakah ada draft.
+- **Navigasi:** belum pernah membuka aplikasi → [P2]; sudah punya sesi → [P4]; sesi berakhir → [P3].
+
+### [P2] Onboarding Aksesibilitas
+- **Tampilan:** tiga langkah: pilih bahasa (Indonesia sederhana), ukuran teks dan kontras, mode pembaca layar atau teks-ke-suara. Satu kalimat privasi: aplikasi tidak meminta diagnosis.
+- **Aksi Utama:** pasien memilih preferensi, lalu [Lanjut]. Pratinjau teks berubah langsung.
+- **Aksi Alternatif:** [Lewati] memakai pengaturan bawaan; dapat diubah kapan saja di [P22].
+- **Navigasi:** → [P3].
+- **US:** P-01 (aksesibilitas formulir), nonfungsional.
+
+### [P3] Daftar atau Masuk
+- **Tampilan:** satu kolom nomor HP, [Kirim kode], lalu kolom kode verifikasi (OTP). Tautan [Masuk dengan bantuan pendamping]. Kotak persetujuan opsional terpisah: izinkan kunjungan saya dihitung dalam statistik anonim fasilitas.
+- **Aksi Utama:** pasien memasukkan kontak, menerima kode, memasukkan kode. Akun baru dibuat otomatis bila belum ada.
+- **Aksi Alternatif atau Error:** kode salah atau kedaluwarsa → pesan sederhana dan opsi kirim ulang. Lupa akses → pemulihan lewat kontak yang sama atau lewat pendamping yang tertaut.
+- **Navigasi:** akun baru → [P5]; akun lama → [P4].
+- **US:** P-01.
+
+### [P4] Beranda Pasien
+- **Tampilan:** kartu status paspor (lengkap atau belum), tombol utama besar [Mulai Kunjungan], menu: Paspor Saya, Kartu Cetak, Kontrol Akses, Pendamping, Akun. Jika ada draft, banner [Lanjutkan draft paspor].
+- **Aksi Utama:** pasien memilih menu atau [Mulai Kunjungan].
+- **Navigasi:** [Mulai Kunjungan] → [P9]; Paspor Saya → [P5]; Kartu Cetak → [P7]; Kontrol Akses → [P18]; Pendamping → [P21]; Akun → [P22].
+- **US:** P-02, P-03 (pintu masuk).
+
+### [P5] Editor MyCare Passport
+Satu kelompok kebutuhan per layar, dengan indikator langkah (misalnya 2 dari 5).
+- **Tampilan:** pilihan bergambar per kelompok: Komunikasi (BISINDO, tulisan, papan gambar, bicara pelan), Penglihatan, Pendengaran, Mobilitas, Sensorik dan Lingkungan (tenang, penjelasan bertahap), Pendampingan. Kolom catatan bebas opsional. **Tidak ada kolom diagnosis.**
+- **Aksi Utama:** pilih kebutuhan lalu [Lanjut]; di langkah terakhir [Lihat Pratinjau].
+- **Simpan Draft:** setiap pilihan tersimpan otomatis sebagai draft **di perangkat**. Jika pasien keluar atau aplikasi tertutup, [P4] menampilkan [Lanjutkan draft paspor]. Draft tidak dapat dibagikan lewat QR sampai disimpan.
+- **Aksi Alternatif:** [X] keluar dengan pilihan [Simpan draft] atau [Buang]. Untuk pengguna yang sudah punya paspor, layar ini berfungsi sebagai ubah profil.
+- **Navigasi:** → [P6].
+- **US:** P-01, P-02.
+
+### [P6] Pratinjau dan Simpan Paspor
+- **Tampilan:** ringkasan paspor seperti yang akan dilihat petugas (hanya kebutuhan layanan), dengan keterangan bahwa diagnosis tidak diminta.
+- **Aksi Utama:** [Simpan Paspor] → pop-up berhasil dengan [Atur Kartu Cetak] dan [Ke Beranda].
+- **Aksi Alternatif:** [Kembali Edit] → [P5] dengan pilihan tetap terisi.
+- **Navigasi:** [Atur Kartu Cetak] → [P7]; [Ke Beranda] → [P4]. Perubahan baru berlaku di ConsentQR berikutnya.
+- **US:** P-01, P-02.
+
+### [P7] Kartu Cetak
+- **Tampilan:** daftar isi ringkasan yang bisa dicentang untuk dicetak (misalnya bahasa isyarat, bantuan mobilitas, pendampingan), pratinjau kartu, catatan bahwa kartu hanya memuat ringkasan kebutuhan.
+- **Aksi Utama:** pilih isi, lalu [Cetak] atau [Unduh PDF]. Kartu hanya memuat ringkasan tertulis **tanpa QR akses** (sudah diputuskan).
+- **Aksi Alternatif:** [Simpan untuk offline] menyimpan ringkasan di perangkat → [P8].
+- **Navigasi:** selesai → [P4].
+- **US:** P-14, T-05.
+
+### [P8] Mode Offline (PWA)
+- **Tampilan:** ringkasan kebutuhan besar untuk ditunjukkan ke petugas, tanda "Mode offline", status sinkron terakhir.
+- **Aksi Utama:** pasien menunjukkan layar ke petugas. Dapat dibuka tanpa sinyal dari ikon aplikasi.
+- **Aksi Alternatif:** perubahan atau konfirmasi saat offline masuk antrean lokal dan tersinkron otomatis saat online, dengan status "menunggu sinkron".
+- **Navigasi:** [Kembali] → [P4].
+- **US:** P-14.
+
+---
+
+## Alur Pasien B: Kunjungan (P9–P17)
+
+Berjalan di setiap kunjungan: bagikan kebutuhan, dipanggil sesuai kebutuhan, dilayani, lalu mengonfirmasi.
+
+### [P9] Mulai Kunjungan
+- **Tampilan:** pilihan fasilitas (daftar atau pencarian), dua jalur: [Kirim kebutuhan sebelum datang] (opsional) dan [Saya sudah di fasilitas].
+- **Aksi Utama:** pilih fasilitas, lalu salah satu jalur.
+- **Aksi Alternatif:** tanpa sinyal atau ponsel bermasalah: [Pakai mode offline] → [P8], atau tunjukkan kartu cetak [P7].
+- **Navigasi:** sebelum datang → [P10]; di fasilitas → [P11].
+- **US:** P-03, P-12, P-14.
+
+### [P10] Pre-Arrival Brief (opsional, Could)
+- **Tampilan:** pilih fasilitas dan tanggal, kebutuhan untuk kunjungan ini (dari paspor, dapat dikurangi), [Kirim].
+- **Aksi Utama:** [Kirim]. Fasilitas menerima ringkasan satu layar di beranda petugas.
+- **Aksi Alternatif:** batal → [P9]. Brief hanya berlaku untuk jadwal yang dipilih dan kedaluwarsa otomatis.
+- **Navigasi:** pop-up "Terkirim", lalu → [P11] saat pasien tiba.
+- **US:** P-12.
+
+### [P11] Pengaturan ConsentQR
+- **Tampilan:** daftar data yang dibagikan dengan tombol geser (kebutuhan komunikasi, mobilitas, pendampingan), pilihan masa berlaku (misalnya 1 jam, hari ini, 24 jam), keterangan bahwa diagnosis tidak ikut.
+- **Aksi Utama:** pilih data dan masa berlaku, lalu [Buat QR].
+- **Aksi Alternatif:** [Batal] → [P9]. Pengaturan terakhir tersimpan sebagai bawaan.
+- **Navigasi:** → [P12].
+- **US:** P-03, P-04.
+
+### [P12] Tampilan QR
+- **Tampilan:** QR besar, hitung mundur masa berlaku, ringkasan data yang dibagikan, [Cabut Sekarang].
+- **Aksi Utama:** tunjukkan QR ke petugas. Setelah dipindai, layar berubah menjadi "Dipindai oleh petugas" dengan nama fasilitas.
+- **Aksi Alternatif atau Error:** QR kedaluwarsa → [Buat QR Baru] → [P11]. [Cabut Sekarang] meminta konfirmasi, lalu QR langsung ditolak saat dipindai dan pencabutan tercatat. Jika petugas melaporkan QR ditolak, pasien diarahkan membuat QR baru.
+- **Navigasi:** setelah dipindai → [P13].
+- **US:** P-03, P-05, P-06.
+
+### [P13] Menunggu Dipanggil
+- **Tampilan:** status "Menunggu", posisi antrean (bila tersedia), ringkasan kebutuhan yang diketahui petugas, [Buka KomunikaCare].
+- **Aksi Utama:** menunggu; notifikasi visual dan getar akan memanggil.
+- **Aksi Alternatif atau Error:** bila notifikasi tidak didukung atau gagal, layar menyatakan "Perhatikan layar ruang tunggu atau petugas" dan petugas memanggil secara visual. [P15] dapat dibuka kapan saja.
+- **Navigasi:** saat giliran tiba → [P14].
+- **US:** P-13 (Could), P-09.
+
+### [P14] Panggilan Giliran
+- **Tampilan:** layar penuh kontras tinggi "Giliran Anda" dan nama ruangan, dengan getar dan ikon besar. Suara tidak pernah menjadi satu-satunya penanda.
+- **Aksi Utama:** [Saya Menuju Ruangan].
+- **Navigasi:** → [P15] selama dilayani.
+- **US:** P-13.
+
+### [P15] KomunikaCare
+Empat sub-layar yang dapat dibuka kapan saja selama kunjungan.
+- **[P15.1] Papan Bergambar:** ikon keluhan dan kebutuhan (nyeri, haus, toilet, ulang). Menekan ikon menampilkan teks besar untuk petugas.
+- **[P15.2] Teks ke Suara:** ketik atau pilih kalimat, [Ucapkan] memutar suara untuk petugas.
+- **[P15.3] Teks Langsung dari Ucapan Petugas:** ucapan petugas tampil sebagai teks besar, dengan peringatan "Alat bantu, bukan pengganti juru bahasa isyarat". Bila akurasi rendah: [Ulangi] atau minta petugas menulis.
+- **[P15.4] Frasa BISINDO (Could):** klip video pendek frasa medis umum untuk ditunjukkan ke petugas.
+- **Aksi Alternatif:** jika mikrofon atau browser tidak mendukung, teks langsung dinonaktifkan dengan pesan jelas dan tersedia input ketik.
+- **Navigasi:** setelah pelayanan selesai, notifikasi permintaan konfirmasi membuka [P16].
+- **US:** P-09, P-10, P-11.
+
+### [P16] Konfirmasi CareProof
+- **Tampilan:** "Apakah kebutuhan Anda terpenuhi?" dengan tiga ikon besar: terpenuhi, sebagian, belum. Daftar bantuan yang dicatat petugas ditampilkan agar pasien bisa menilai.
+- **Aksi Utama:** pilih ikon. Bila "sebagian" atau "belum", muncul daftar kebutuhan yang belum terpenuhi (ikon, catatan opsional), lalu [Kirim].
+- **Aksi Alternatif atau Error:** tidak menjawab → status tetap "belum dikonfirmasi" dan **tidak** dihitung terpenuhi. Pasien dapat meminta pendamping menjawab (ditandai "oleh pendamping"), atau menjawab di tempat lewat ikon yang ditunjukkan petugas (ditandai "di tempat"). Jawaban saat offline masuk antrean lokal dan tersinkron saat online.
+- **Navigasi:** → [P17].
+- **US:** P-07, D-03.
+
+### [P17] Selesai dan Status Tindak Lanjut
+- **Tampilan:** ucapan terima kasih, ringkasan konfirmasi, daftar kebutuhan belum terpenuhi beserta status (Diterima, Sedang Ditindaklanjuti, Selesai).
+- **Aksi Utama:** [Kembali ke Beranda]. Status tindak lanjut dapat dibuka lagi dari beranda.
+- **Navigasi:** → [P4]; status diperbarui saat admin menandai tindak lanjut.
+- **US:** P-08.
+
+---
+
+## Alur Pasien C: Kontrol Akses dan Akun (P18–P23)
+
+Pasien tetap memegang kendali atas data dan siapa yang bisa bertindak atas namanya.
+
+### [P18] Kontrol Akses
+- **Tampilan:** dua kartu: [Riwayat Akses] dan [QR Aktif], dengan penanda jika ada QR yang masih berlaku.
+- **Navigasi:** Riwayat Akses → [P19]; QR Aktif → [P20].
+- **US:** P-05, P-06.
+
+### [P19] Riwayat Akses (Audit Log)
+- **Tampilan:** daftar kronologis setiap pembukaan data: tanggal dan jam, nama petugas, fasilitas, dan data yang dilihat. Filter tanggal dan fasilitas.
+- **Aksi Utama:** membaca riwayat. Jika ada akses yang tidak dikenali: [Laporkan] dan [Cabut Semua QR].
+- **Aksi Alternatif:** daftar kosong → "Belum ada akses".
+- **Navigasi:** [Laporkan] mengirim laporan ke admin fasilitas terkait; [Cabut Semua QR] → konfirmasi di [P20].
+- **US:** P-06.
+
+### [P20] QR Aktif dan Cabut
+- **Tampilan:** daftar QR yang belum kedaluwarsa dengan sisa waktu, fasilitas, dan data yang dibagikan.
+- **Aksi Utama:** [Cabut] pada satu QR → pop-up "QR ini tidak akan bisa dipakai lagi." → [Ya, Cabut].
+- **Aksi Alternatif:** [Batal] menutup pop-up. Setelah dicabut, QR ditolak saat dipindai dan pencabutan tercatat di [P19].
+- **Navigasi:** → [P18].
+- **US:** P-05.
+
+### [P21] Pendamping
+- **Tampilan:** daftar pendamping tertaut dengan status (Aktif, Menunggu Persetujuan), [Tambah Pendamping] menampilkan kode tautan.
+- **Aksi Utama:** pasien memeriksa nama pendamping lalu [Setujui]. Dapat dilakukan lewat pembaca layar atau dengan bantuan.
+- **Aksi Alternatif:** [Tolak] menolak permintaan. [Cabut Tautan] pada pendamping aktif → konfirmasi → akses pendamping berakhir langsung dan tercatat.
+- **Navigasi:** → [P4].
+- **US:** D-01, P-16.
+
+### [P22] Pengaturan Akun dan Privasi
+- **Tampilan:** ubah kontak, bahasa dan aksesibilitas (seperti [P2]), pemulihan akses, tautan ke [P23].
+- **Aksi Utama:** ubah pengaturan lalu [Simpan].
+- **Navigasi:** → [P23] atau → [P4].
+- **US:** P-15 (pintu masuk).
+
+### [P23] Hapus Data dan Akun
+- **Tampilan:** penjelasan akibat penghapusan: paspor, profil, tautan pendamping, dan catatan kunjungan yang terkait identitas dihapus; semua QR dicabut. Yang tersisa hanya angka agregat anonim fasilitas (tanpa baris per pasien, kelompok kecil disembunyikan), dan hanya bila pasien menyetujui statistik anonim saat daftar. Identitas pasien dipisahkan dari audit log. **[Verifikasi]** Konfirmasi teks ini dengan UU Pelindungan Data Pribadi sebelum dipakai sungguhan.
+- **Aksi Utama:** [Hapus Akun] → konfirmasi dengan kode verifikasi → pesan selesai.
+- **Aksi Alternatif:** [Batal] → [P22]. Jeda tenggang pembatalan bila tim memutuskannya.
+- **Navigasi:** setelah selesai → [P1] sebagai pengguna baru.
+- **US:** P-15.
+
+---
+
+## Alur Pendamping (D1–D8)
+
+Pendamping bertindak atas nama pasien hanya setelah pasien menyetujui tautan, dan setiap tindakannya ditandai "oleh pendamping".
+
+### [D1] Splash Screen
+- **Tampilan:** sama dengan [P1].
+- **Navigasi:** belum masuk → [D2]; sudah masuk → [D4].
+
+### [D2] Daftar atau Masuk sebagai Pendamping
+- **Tampilan:** pilihan peran [Pasien] atau [Pendamping], lalu nomor HP atau email dan kode verifikasi. Onboarding aksesibilitas ringkas seperti [P2].
+- **Aksi Utama:** daftar atau masuk.
+- **Aksi Alternatif atau Error:** kode salah → pesan dan kirim ulang.
+- **Navigasi:** akun baru → [D3]; akun lama → [D4].
+- **US:** D-01.
+
+### [D3] Tautkan ke Pasien
+- **Tampilan:** kolom kode tautan dari pasien, atau pindai kode tautan di perangkat pasien. Status "Menunggu persetujuan pasien" setelah dikirim.
+- **Aksi Utama:** masukkan kode, [Ajukan Tautan]. Pasien menyetujui di [P21].
+- **Aksi Alternatif atau Error:** kode kedaluwarsa atau ditolak → pesan dan opsi minta kode baru. **Pendamping belum bisa mengakses data apa pun sampai pasien menyetujui.**
+- **Navigasi:** setelah disetujui → [D4].
+- **US:** D-01.
+
+### [D4] Beranda Pendamping
+- **Tampilan:** daftar pasien yang didampingi dengan status paspor dan kunjungan aktif, [Tambah Tautan].
+- **Aksi Utama:** pilih seorang pasien.
+- **Aksi Alternatif:** jika tautan dicabut pasien, kartu pasien itu hilang dan muncul "Tautan berakhir".
+- **Navigasi:** Paspor → [D5]; QR dan Kartu → [D6]; Kunjungan → [D7].
+- **US:** D-01, D-02, P-16.
+
+### [D5] Kelola Paspor atas Nama Pasien
+- **Tampilan:** editor yang sama dengan [P5] dan [P6], berlabel "Atas nama [nama pasien]".
+- **Aksi Utama:** isi atau ubah kebutuhan, pratinjau, simpan. Draft tersimpan otomatis seperti [P5].
+- **Aksi Alternatif:** perubahan oleh pendamping tercatat dengan jejak "diubah oleh pendamping" dan dapat dilihat pasien.
+- **Navigasi:** → [D4].
+- **US:** D-02, P-01, P-02.
+
+### [D6] Kelola QR dan Kartu
+- **Tampilan:** [Buat ConsentQR] (pengaturan seperti [P11]) dan [Kartu Cetak] (seperti [P7]).
+- **Aksi Utama:** buat QR atas nama pasien lalu tunjukkan ke petugas, atau cetak kartu bersama pasien.
+- **Aksi Alternatif:** QR kedaluwarsa atau dicabut ditolak seperti [P12].
+- **Navigasi:** → [D4].
+- **US:** D-02, P-03, P-14.
+
+### [D7] Dampingi Kunjungan
+- **Tampilan:** status antrean dan panggilan pasien (mirip [P13]), akses ke [P15] KomunikaCare, notifikasi giliran.
+- **Aksi Utama:** memantau panggilan dan mendampingi pasien ke ruangan.
+- **Navigasi:** setelah layanan selesai, permintaan konfirmasi membuka [D8].
+- **US:** D-02, P-13.
+
+### [D8] Konfirmasi CareProof atas Nama Pasien
+- **Tampilan:** tiga ikon seperti [P16], dengan penanda "Dijawab oleh pendamping".
+- **Aksi Utama:** pilih ikon bersama atau mewakili pasien, lalu [Kirim].
+- **Aksi Alternatif:** jawaban pendamping disimpan terpisah dari jawaban pasien dan dipisahkan di dashboard. Pasien tetap bisa mengubah jawaban melalui [P17].
+- **Navigasi:** → [D4].
+- **US:** D-03.
+
+---
+
+## Alur Petugas (T1–T9)
+
+Dirancang ringan: pindai, lihat satu layar, layani, catat paling banyak tiga ketukan.
+
+### [T1] Splash Screen
+- **Tampilan:** sama dengan [P1].
+- **Navigasi:** belum masuk → [T2]; sudah masuk → [T3].
+
+### [T2] Login Petugas
+- **Tampilan:** nomor HP atau email dan kode verifikasi, atau kata sandi sesuai kebijakan fasilitas. Pertama kali: [Aktivasi Akun] lewat undangan admin fasilitas.
+- **Aksi Utama:** masuk.
+- **Aksi Alternatif atau Error:** akun nonaktif atau belum diaktivasi → "Hubungi admin fasilitas" dan tidak membuka layar berikutnya.
+- **Navigasi:** berhasil → [T3].
+- **US:** T-01, A-01.
+
+### [T3] Beranda Petugas
+- **Tampilan:** tombol besar [Pindai ConsentQR], daftar antrean hari ini (termasuk Pre-Arrival Brief bila ada), [Pasien dengan Kartu Cetak].
+- **Aksi Utama:** [Pindai ConsentQR].
+- **Aksi Alternatif:** pasien membawa kartu cetak atau tanpa ponsel → [T4b].
+- **Navigasi:** pindai → [T4]; kartu cetak → [T4b].
+- **US:** T-02, P-12.
+
+### [T4] Pindai ConsentQR
+- **Tampilan:** pratinjau kamera dan panduan bidik. Di server sistem memeriksa: token valid, belum kedaluwarsa, tidak dicabut, akun petugas aktif, fasilitas sesuai.
+- **Aksi Utama:** arahkan kamera ke QR pasien. Setelah lolos, pembukaan tercatat di audit log (siapa, kapan, fasilitas mana).
+- **Aksi Alternatif atau Error:** QR kedaluwarsa atau dicabut, akun nonaktif, atau fasilitas tidak cocok → ditolak dan percobaan tercatat. Petugas melihat **satu pesan generik** "QR Tidak Dapat Dipakai — minta pasien membuat ConsentQR baru", apa pun alasannya, agar tidak membocorkan apakah token pernah ada (`architecture.md` §7, diputuskan 13 Okt 2026). Akun petugas nonaktif ditangani di login [T2].
+- **[T4b] Input Kunjungan Manual (jalur kartu cetak):** petugas membaca ringkasan di kartu, memasukkan kode atau nama panggilan pasien, dan memilih kebutuhan dari kartu untuk membuat catatan kunjungan. Tanpa catatan kunjungan, konfirmasi tidak bisa menempel ke kunjungan dan tidak masuk dashboard.
+- **Navigasi:** berhasil → [T5].
+- **US:** T-01, T-02, T-05, P-06.
+
+### [T5] Kebutuhan Pasien
+- **Tampilan:** satu layar yang terbaca dalam hitungan detik: nama panggilan, kebutuhan (ikon dan teks besar), keterangan bahwa hanya data yang diizinkan pasien yang tampil. Tidak ada diagnosis.
+- **Aksi Utama:** baca, lalu [Lihat Saran].
+- **Navigasi:** → [T6].
+- **US:** T-02.
+
+### [T6] Saran Tindakan dan Panggilan
+- **Tampilan:** saran tindakan dari Smart Accommodation Engine sesuai profil (misalnya Tuli: komunikasi tertulis, antrean visual), berlabel "Saran, bukan instruksi klinis". Tombol [Panggil Pasien].
+- **Aksi Utama:** siapkan akomodasi, lalu [Panggil Pasien] untuk mengirim notifikasi sesuai kebutuhan.
+- **Aksi Alternatif:** jika notifikasi tidak terkirim, sistem menyarankan panggilan visual lewat layar atau langsung.
+- **Navigasi:** → [T7].
+- **US:** T-03, P-13.
+
+### [T7] Layani Pasien
+- **Tampilan:** [Teks Langsung] untuk menampilkan ucapan petugas sebagai teks, dan [Papan Bergambar] untuk melihat pilihan pasien.
+- **Aksi Utama:** melayani pasien; teks langsung dipakai bila perlu.
+- **Aksi Alternatif:** bila mikrofon atau browser tidak mendukung, tersedia input ketik. Pengingat: teks langsung bukan pengganti juru bahasa isyarat.
+- **Navigasi:** → [T8].
+- **US:** P-10, P-09.
+
+### [T8] Catat Bantuan
+- **Tampilan:** daftar bantuan sesuai kebutuhan pasien sebagai kotak centang yang sebagian sudah terisi dari saran tindakan.
+- **Aksi Utama:** paling banyak tiga ketukan: (1) centang bantuan yang diberikan, (2) catatan singkat bila perlu (opsional), (3) [Simpan].
+- **Simpan Draft:** bila terputus, catatan tersimpan sebagai draft di perangkat dan tampil di beranda sebagai "Belum dikirim".
+- **Navigasi:** → [T9].
+- **US:** T-04.
+
+### [T9] Kirim Permintaan Konfirmasi
+- **Tampilan:** ringkasan bantuan yang dicatat dan [Kirim ke Pasien]. Setelah dikirim: "Menunggu konfirmasi pasien".
+- **Aksi Utama:** [Kirim ke Pasien]; pasien menerima permintaan di [P16].
+- **Aksi Alternatif:** bila pasien tidak membawa ponsel, [Konfirmasi di Tempat] menampilkan ikon untuk pasien (hasil ditandai "di tempat" karena bisa bias). Jika offline, permintaan antre dan terkirim saat online.
+- **Navigasi:** → [T3].
+- **US:** T-04, P-07, D-03.
+
+---
+
+## Alur Admin Fasilitas (A1–A8)
+
+Mengelola akun petugas dan menindaklanjuti kebutuhan yang belum terpenuhi, tanpa melihat identitas pasien pada data agregat.
+
+### [A1] Splash Screen
+- **Tampilan:** sama dengan [P1].
+- **Navigasi:** belum masuk → [A2]; sudah masuk → [A3].
+
+### [A2] Login dan Aktivasi Admin
+- **Tampilan:** login akun admin. Fasilitas sudah didaftarkan oleh admin sistem melalui onboarding; admin fasilitas menerima undangan aktivasi pertama kali.
+- **Aksi Utama:** aktivasi akun lalu masuk.
+- **Aksi Alternatif atau Error:** undangan kedaluwarsa → "Hubungi admin sistem".
+- **Navigasi:** berhasil → [A3].
+- **US:** A-01.
+
+### [A3] Beranda Admin
+- **Tampilan:** ringkasan bulan berjalan: jumlah kunjungan ber-AKSESPASS, Accommodation Fulfillment Rate, jumlah kebutuhan belum terpenuhi.
+- **Navigasi:** Akun Petugas → [A4]; Dashboard → [A6]; Belum Terpenuhi → [A7].
+- **US:** A-02.
+
+### [A4] Kelola Akun Petugas
+- **Tampilan:** daftar petugas: nama, peran, unit, status aktif atau nonaktif. [Tambah Petugas].
+- **Aksi Utama:** [Tambah Petugas], atau pilih petugas untuk [Nonaktifkan] (misalnya resign atau pindah), dengan konfirmasi.
+- **Aksi Alternatif:** setelah dinonaktifkan, akses ConsentQR petugas tertutup langsung; upaya pindai berikutnya ditolak dan tercatat.
+- **Navigasi:** tambah → [A5].
+- **US:** A-01.
+
+### [A5] Tambah atau Ubah Petugas
+- **Tampilan:** formulir nama, peran, unit, kontak.
+- **Aksi Utama:** [Kirim Undangan]; petugas menerima tautan aktivasi.
+- **Simpan Draft:** formulir yang belum dikirim tersimpan sebagai draft.
+- **Aksi Alternatif:** [Batal] → [A4].
+- **Navigasi:** → [A4] dengan status "Menunggu aktivasi".
+- **US:** A-01.
+
+### [A6] Dashboard Kesenjangan Aksesibilitas
+- **Tampilan:** Accommodation Fulfillment Rate, tren bulanan, rincian per kategori kebutuhan. Respons "oleh pendamping" atau "di tempat" ditandai terpisah.
+- **Aksi Utama:** filter periode atau kategori, baca metrik. Semua data agregat dan anonim.
+- **Aksi Alternatif:** data belum cukup → "Belum ada data kunjungan".
+- **Navigasi:** → [A7] untuk rincian kebutuhan belum terpenuhi.
+- **US:** A-02.
+
+### [A7] Kebutuhan Belum Terpenuhi
+- **Tampilan:** kategori kebutuhan yang paling sering belum terpenuhi (misalnya antrean visual, juru bahasa isyarat) dengan jumlah dan tren, tanpa identitas pasien.
+- **Aksi Utama:** pilih kategori, lalu [Buat Tindak Lanjut].
+- **Navigasi:** → [A8].
+- **US:** A-03.
+
+### [A8] Tindak Lanjut
+- **Tampilan:** daftar tindak lanjut dengan status (Baru, Sedang Dikerjakan, Selesai), catatan langkah, tanggal.
+- **Aksi Utama:** tentukan langkah, ubah status, [Tandai Selesai]. Perubahan status terlihat pasien di [P17] sebagai ringkasan umum tanpa data pribadi lain.
+- **Aksi Alternatif:** [Kembali] → [A7].
+- **Navigasi:** → [A3].
+- **US:** A-04, P-08.
+
+---
+
+## Alur Kurator Aturan (K1–K6)
+
+Kurator adalah perwakilan komunitas disabilitas dan tenaga kesehatan yang menyusun serta mengesahkan aturan panduan tindakan; alur ini membuat saran ke petugas dapat dipertanggungjawabkan.
+
+### [K1] Splash Screen
+- **Tampilan:** sama dengan [P1].
+- **Navigasi:** belum masuk → [K2]; sudah masuk → [K3].
+
+### [K2] Login Kurator
+- **Tampilan:** login akun kurator yang diundang admin sistem.
+- **Aksi Alternatif atau Error:** akun tanpa hak kurator ditolak dengan pesan jelas.
+- **Navigasi:** berhasil → [K3].
+- **US:** K-01.
+
+### [K3] Pustaka Aturan
+- **Tampilan:** aturan dikelompokkan menurut profil kebutuhan (Tuli, autistik, low vision atau tunanetra, mobilitas). Tiap aturan menampilkan status (Draft, Dalam Tinjauan, Terbit) dan nomor versi.
+- **Aksi Utama:** buka aturan, atau [Aturan Baru].
+- **Navigasi:** baru atau ubah → [K4]; Dalam Tinjauan → [K5]; riwayat → [K6].
+- **US:** K-01.
+
+### [K4] Editor Aturan
+- **Tampilan:** formulir: profil kebutuhan pemicu, saran tindakan untuk petugas (teks pendek dan ikon), sumber atau alasan, catatan perubahan.
+- **Aksi Utama:** susun aturan lalu [Ajukan Tinjauan].
+- **Simpan Draft:** perubahan tersimpan otomatis sebagai draft. Draft tidak memengaruhi saran yang dilihat petugas sampai disetujui.
+- **Aksi Alternatif:** [Buang Draft] meminta konfirmasi.
+- **Navigasi:** setelah diajukan → [K5].
+- **US:** K-01.
+
+### [K5] Tinjau dan Setujui
+- **Tampilan:** isi aturan, komentar komunitas dan tenaga kesehatan, status persetujuan tiap peninjau.
+- **Aksi Utama:** setelah peninjau menyetujui, [Setujui dan Terbitkan] dengan nomor versi, tanggal, dan pengesah. Aturan langsung dipakai Smart Accommodation Engine.
+- **Aksi Alternatif:** [Minta Revisi] → [K4] dengan komentar. Versi lama tetap dipakai sampai versi baru terbit.
+- **Navigasi:** terbit → [K3]; revisi → [K4].
+- **US:** K-01.
+
+### [K6] Riwayat Perubahan
+- **Tampilan:** daftar versi dengan tanggal, pengesah, ringkasan perubahan; perbandingan antarversi.
+- **Aksi Utama:** memeriksa jejak versi.
+- **Aksi Alternatif:** [Pulihkan Versi Ini] setelah konfirmasi (dicatat sebagai versi baru).
+- **Navigasi:** → [K3].
+- **US:** K-02.
+
+> Di prototipe, `architecture.md` §2 dan §16 menetapkan K3 baca-saja dengan aturan bawaan; K4–K6 masuk roadmap.
+
+---
+
+## Keputusan
+
+**Sudah diputuskan:**
+1. **QR pada kartu cetak:** ditunda, tidak dipakai untuk saat ini.
+2. **Kunjungan jalur kartu cetak:** tetap membuat catatan kunjungan minimal (kode atau nama panggilan dan kebutuhan dari kartu) agar CareProof menempel dan masuk dashboard ([T4b]).
+3. **Login pasien tanpa KTP:** nomor HP dengan kode verifikasi (OTP) ([P3]).
+4. **Hapus akun dan data anonim (arah):** hapus data pribadi, simpan hanya agregat anonim dengan ambang kelompok kecil, persetujuan statistik terpisah dan opsional, identitas pasien dipisahkan dari audit log. **[Verifikasi]** UU PDP sebelum dipakai sungguhan ([P23]).
+
+**Masih terbuka:**
+
+5. **Cakupan prototipe:** layar mana yang benar-benar dibangun. Usulan: semua layar story Must, ditambah D-01 sampai D-03 dan A-03 bila waktu cukup; Pre-Arrival Brief ([P10]), Smart Queue Alert ([P14]), dan frasa BISINDO ([P15.4]) sebagai roadmap.
+6. **Dukungan peramban:** teks langsung (speech-to-text) dan notifikasi bergetar berbeda antarperangkat, terutama iOS. Uji di perangkat demo dan siapkan alternatif ketik.
+7. **Pendaftaran fasilitas dan kurator:** untuk prototipe cukup admin sistem secara manual; tulis sebagai proses onboarding di presentasi.
