@@ -480,24 +480,70 @@
 **Baca:** `docs/user-flows.md` layar terkait; `architecture.md` §6, §7, §13.
 
 **Checklist**
-- [ ] T3 beranda petugas.
-- [ ] T4 pindai kamera + input kode manual bila kamera ditolak (status "Kamera Ditolak").
-- [ ] T5 satu layar kebutuhan: nama panggilan, ikon + teks besar, tanpa diagnosis.
+- [x] T3 beranda petugas.
+- [x] T4 pindai kamera + input kode manual bila kamera ditolak (status "Kamera Ditolak").
+- [x] T5 satu layar kebutuhan: nama panggilan, ikon + teks besar, tanpa diagnosis.
 - [ ] T6 saran tindakan dari `accommodation_rules` (aturan bawaan), berlabel "Saran, bukan instruksi klinis".
 - [ ] T8 catat bantuan: centang terisi dari saran; catatan bebas opsional dengan batas panjang dan peringatan "jangan menulis diagnosis".
 - [ ] T9 kirim permintaan konfirmasi; opsi "Konfirmasi di Tempat".
 
 **Verifikasi**
-- [ ] Demo end-to-end: pasien P12 → petugas T4 → T5 menampilkan field yang dicentang saja.
+- [x] Demo end-to-end: pasien P12 → petugas T4 → T5 menampilkan field yang dicentang saja.
 - [ ] Hitung manual T8: maksimal 3 ketukan dari layar terbuka sampai tersimpan, dengan saran terisi otomatis.
 - [ ] Tes: setiap profil seed menghasilkan saran yang sesuai aturan; aturan berstatus Draft tidak tampil.
 - [ ] Tes: catatan petugas melebihi batas ditolak di server.
-- [ ] Pesan galat pindai sesuai K-4 dan memberi langkah lanjut.
-- [ ] Kamera ditolak → jalur kode manual berfungsi.
-- [ ] Uji di perangkat seluler nyata (kamera belakang).
-- [ ] `lint`, `typecheck`, `test`, `build` lolos.
+- [x] Pesan galat pindai sesuai K-4 dan memberi langkah lanjut.
+- [x] Kamera ditolak → jalur kode manual berfungsi.
+- [ ] Uji di perangkat seluler nyata (kamera belakang) — belum diverifikasi pada perangkat fisik nyata (tersedia panduan demo di README.md).
+- [x] `lint`, `typecheck`, `test`, `build` lolos.
 
 **Catatan hasil:**
+- Bagian 7a (1 dari 2 / Prompt 13 — T3–T5, Halaman /s, Mode Demo):
+  - State Machine Klien (`src/components/petugas-pindai-flow.tsx`):
+    - Alur terpadu `memindai` (T4) → `kebutuhan` (T5) → `saran` (placeholder jujur Prompt 14).
+    - Aksesibilitas navigasi langkah: `document.title` berubah dinamis pada setiap langkah dan fokus keyboard otomatis dipindahkan ke judul langkah (H1/H2).
+    - Privasi perangkat bersama: data hasil pemindaian hanya disimpan di React state memori; tidak disimpan di `localStorage`, `sessionStorage`, cookie, atau URL. Tombol [Selesai] dan [Keluar] membersihkan seluruh data dan bernavigasi menggunakan `window.location.replace` agar tombol Back peramban tidak menampilkan data kembali.
+    - Auto-sembunyi: data pasien otomatis disembunyikan jika tidak ada aktivitas (mouse/keyboard/touch/scroll) selama 10 menit dengan banner peringatan dan opsi pulihkan/pindai ulang.
+  - T4 Kamera dan Kode Manual:
+    - Kamera menggunakan API tingkat rendah `Html5Qrcode` (impor dinamis) tanpa widget pihak ketiga. Kamera tidak menyala otomatis; meminta izin setelah ketukan tombol [Mulai kamera]; kamera belakang (`facingMode: environment`) dengan fallback kamera standar; status peran `status` "Kamera aktif"; tombol [Hentikan kamera]; dan penguncian scanning untuk mencegah request ganda.
+    - Ekstraksi token murni (`src/lib/consent/extract-token.ts`): mengekstrak bagian setelah `#` bila ada, atau teks mentah apa adanya, dipotong ke 64 karakter.
+    - Input manual selalu tersedia: `TextField` "Kode ConsentQR (26 karakter)" dengan teks bantuan, `autoCapitalize="characters"`, `autoComplete="off"`, `spellCheck=false`.
+    - Galat kamera: izin ditolak menampilkan banner galat ikon Ban "Kamera Ditolak" + tombol [Masukkan kode manual]; lingkungan non-secure context atau kamera tak tersedia menampilkan "Kamera Tidak Tersedia".
+    - Respons `/api/scan`:
+      • 422: StatusBanner galat K-4 generik "QR Tidak Dapat Dipakai" + "Minta pasien membuat ConsentQR baru." + [Pindai lagi] (mengosongkan input dan mengembalikan fokus).
+      • 429: "Terlalu banyak percobaan. Coba lagi beberapa menit lagi."
+      • 403: "Akun tidak aktif. Hubungi admin fasilitas." + [Keluar].
+      • 401: dialihkan ke `/masuk/petugas?alasan=sesi-berakhir`.
+      • Kegagalan jaringan: banner galat koneksi internet.
+  - T5 Kebutuhan Pasien:
+    - StatusBanner sukses "QR Valid", atau peringatan "Hampir Kedaluwarsa" (< 15 menit).
+    - `PatientNeedsSummary` merender nama panggilan, kebutuhan terkelompok dengan ikon dan teks besar, catatan untuk petugas, dan catatan privasi "Hanya data yang diizinkan pasien. Diagnosis tidak diminta." (heading level h2 dinamis untuk kepatuhan urutan heading WCAG AA).
+    - Tombol [Lihat Saran] (navigasi ke langkah saran) dan [Selesai] (membersihkan data dan kembali ke `/petugas`).
+  - Halaman `/s` Publik / Petugas (`src/app/s`):
+    - Client membaca `location.hash` dan segera memanggil `history.replaceState(null, "", "/s")` sehingga token hilang seketika dari address bar dan riwayat peramban.
+    - Sesi petugas: memproses token ke alur pemindaian dan membuka T5 secara otomatis.
+    - Tanpa sesi petugas: kartu informasi publik ("Halaman ini untuk petugas fasilitas. Bila Anda pasien, tunjukkan QR ini kepada petugas.") + tautan login petugas, tanpa request ke `/api/scan`.
+  - T3 Beranda Petugas & Daftar Kunjungan Hari Ini (`src/lib/visits`):
+    - Modul `listTodayVisits(session)`: kueri kunjungan fasilitas hari ini (WIB UTC+7) dengan RLS isolasi fasilitas.
+    - Daftar menampilkan jam, rujukan pendek (4 karakter akhir UUID), status sebagai teks netral ("Belum dicatat", "Menunggu konfirmasi", "Dikonfirmasi") tanpa warna token status demi menjaga §14.
+    - TANPA nama pasien atau data profil apa pun.
+  - Mode Demo Dua Perangkat & Keamanan:
+    - `src/lib/http`: pemeriksaan Origin mutasi diperluas membaca daftar `APP_ORIGINS` (dipisahkan koma, bawaan `APP_ORIGIN`).
+    - Header `Cache-Control: no-store` dipasang di Next.js config dan middleware proxy untuk rute `/petugas/*` dan `/s`.
+    - Panduan lengkap pengujian multi-perangkat (laptop petugas vs ponsel pasien) dan peringatan keamanan Wi-Fi ditulis di `README.md`.
+  - Bukti Verifikasi:
+    - Vitest: 174 tes di 20 test file lolos 100% (termasuk tes ekstraksi token, isolasi kunjungan faskes, format WIB, APP_ORIGINS).
+    - DevTools Browser:
+      • Masuk petugas seed A (`+620000000011` / OTP dev `611965`) → T3 menampilkan fasilitas "Puskesmas Contoh A" dan daftar kunjungan tanpa nama pasien.
+      • Pindai kode manual Pasien Contoh 1 (`GWG7-RPQH-DZVS-FXDX-6AYQ-EYDN-0M`) → T5 terbuka menampilkan "QR Valid", nama "Budi", kebutuhan komunikasi tertulis, catatan pasien, dan tanpa diagnosis.
+      • [Lihat Saran] → langkah placeholder jujur → [Selesai] → kembali ke `/petugas` dan kunjungan baru muncul di T3 sebagai rujukan `#A6E0` "Belum dicatat".
+      • Riwayat Back peramban diuji: tidak membocorkan data pasien (tetap di `/petugas`).
+      • Kode acak 26 karakter diuji: banner galat generik 422 K-4 "QR Tidak Dapat Dipakai" + [Pindai lagi] mengosongkan input dan mengembalikan fokus.
+      • `/s#<token>` dengan sesi petugas: URL hash bersih seketika dan T5 terbuka otomatis.
+      • `/s#<token>` tanpa sesi: kartu informasi publik tampil tanpa request ke server dan hash bersih seketika.
+      • Log server dev selama semua pengujian diverifikasi: 0 token mentah, kode manual, atau nama panggilan bocor.
+      • Dev Audit Panel pada T3, T4 (galat & manual), T5, dan /s: 0 pelanggaran axe, semua target sentuh ≥ 48×48 px, 0 scroll horizontal pada lebar 320 px dan zoom teks 200%.
+    - `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` lolos 100%. Status Bagian 7: 1/2.
 
 ---
 

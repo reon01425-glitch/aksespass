@@ -7,14 +7,35 @@ export function getAppOrigin(): string {
 }
 
 /**
- * Memeriksa apakah header Origin pada request sesuai dengan APP_ORIGIN.
+ * Mengambil daftar origin yang diizinkan:
+ * Membaca APP_ORIGINS (dipisahkan koma), serta menyertakan getAppOrigin().
+ * Bawaan bila APP_ORIGINS kosong: [getAppOrigin()].
+ */
+export function getAllowedOrigins(): string[] {
+  const primary = getAppOrigin();
+  const rawList = process.env.APP_ORIGINS;
+  if (!rawList) {
+    return [primary];
+  }
+  const origins = rawList
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (!origins.includes(primary)) {
+    origins.unshift(primary);
+  }
+  return origins;
+}
+
+/**
+ * Memeriksa apakah header Origin pada request sesuai dengan daftar yang diizinkan.
  */
 export function checkOrigin(request: Request): boolean {
   const origin = request.headers.get("origin");
   if (!origin) {
     return false;
   }
-  return origin === getAppOrigin();
+  return getAllowedOrigins().includes(origin);
 }
 
 /**
@@ -46,10 +67,16 @@ export type RouteHandler<TContext = unknown> = (
  *    lewat logger privasi + serializeError, dan mengembalikan pesan galat generik.
  *    err.message tidak pernah dikirim ke klien.
  */
-export function wrapRouteHandler<TContext = unknown>(
-  handler: RouteHandler<TContext>
-): RouteHandler<TContext> {
-  return async (request: Request, context?: TContext): Promise<Response> => {
+export function wrapRouteHandler(
+  handler: (request: Request) => Promise<Response> | Response
+): (request: Request) => Promise<Response>;
+export function wrapRouteHandler<TContext>(
+  handler: (request: Request, context: TContext) => Promise<Response> | Response
+): (request: Request, context: TContext) => Promise<Response>;
+export function wrapRouteHandler(
+  handler: (request: Request, context?: unknown) => Promise<Response> | Response
+): (request: Request, context?: unknown) => Promise<Response> {
+  return async (request: Request, context?: unknown): Promise<Response> => {
     const method = request.method.toUpperCase();
 
     // Verifikasi Origin untuk request yang mengubah state

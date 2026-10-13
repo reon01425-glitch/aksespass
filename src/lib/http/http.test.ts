@@ -127,4 +127,42 @@ describe("src/lib/http: Pembungkus Route Handler dan Response Helper", () => {
     expect(logString).not.toContain(syntheticEmail);
     expect(logString).not.toContain(syntheticToken);
   });
+
+  it("pemeriksaan Origin menerima semua origin di APP_ORIGINS dan menolak lainnya", () => {
+    const originalOrigins = process.env.APP_ORIGINS;
+    try {
+      process.env.APP_ORIGIN = "http://localhost:3000";
+      process.env.APP_ORIGINS =
+        "http://localhost:3000, http://192.168.1.100:3000, https://aksespass.example.com";
+
+      // 1. Origin di APP_ORIGINS diterima
+      const req1 = new Request("http://localhost:3000/api/scan", {
+        headers: { origin: "http://localhost:3000" },
+      });
+      const req2 = new Request("http://localhost:3000/api/scan", {
+        headers: { origin: "http://192.168.1.100:3000" },
+      });
+      const req3 = new Request("http://localhost:3000/api/scan", {
+        headers: { origin: "https://aksespass.example.com" },
+      });
+
+      expect(checkOrigin(req1)).toBe(true);
+      expect(checkOrigin(req2)).toBe(true);
+      expect(checkOrigin(req3)).toBe(true);
+
+      // 2. Origin lain ditolak
+      const reqDenied1 = new Request("http://localhost:3000/api/scan", {
+        headers: { origin: "http://192.168.1.101:3000" },
+      });
+      const reqDenied2 = new Request("http://localhost:3000/api/scan", {
+        headers: { origin: "https://evil.com" },
+      });
+
+      expect(checkOrigin(reqDenied1)).toBe(false);
+      expect(checkOrigin(reqDenied2)).toBe(false);
+    } finally {
+      process.env.APP_ORIGINS = originalOrigins;
+    }
+  });
 });
+

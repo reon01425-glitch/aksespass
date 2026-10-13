@@ -7,13 +7,14 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "db:migrate": "node scripts/db-migrate.mjs",
     "db:seed": "node scripts/db-seed.mjs",
     "db:reset": "node scripts/db-reset.mjs"
   },
   "dependencies": {
+    "html5-qrcode": "^2.3.8",
     "lucide-react": "^1.56.0",
     "next": "16.4.0",
     "pg": "^8.23.1",

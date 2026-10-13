@@ -290,19 +290,29 @@ Dirancang ringan: pindai, lihat satu layar, layani, catat paling banyak tiga ket
 - **US:** T-01, A-01.
 
 ### [T3] Beranda Petugas
-- **Tampilan:** tombol besar [Pindai ConsentQR], daftar antrean hari ini (termasuk Pre-Arrival Brief bila ada), [Pasien dengan Kartu Cetak].
+- **Tampilan:** tombol besar [Pindai ConsentQR], daftar kunjungan fasilitas hari ini (jam, rujukan 4 karakter, status teks netral tanpa warna status demi §14: "Belum dicatat", "Menunggu konfirmasi", "Dikonfirmasi"). Daftar tidak menampilkan nama panggilan atau data profil pasien untuk menjaga kerahasiaan sebelum token dipindai. Jalur kartu cetak [T4b] tidak ditampilkan pada rilis ini karena kartu cetak hanya berisi ringkasan kebutuhan fisik tanpa QR akses online. Tombol [Keluar] untuk membersihkan sesi di perangkat bersama.
 - **Aksi Utama:** [Pindai ConsentQR].
-- **Aksi Alternatif:** pasien membawa kartu cetak atau tanpa ponsel → [T4b].
-- **Navigasi:** pindai → [T4]; kartu cetak → [T4b].
+- **Navigasi:** pindai → [T4].
 - **US:** T-02, P-12.
 
 ### [T4] Pindai ConsentQR
-- **Tampilan:** pratinjau kamera dan panduan bidik. Di server sistem memeriksa: token valid, belum kedaluwarsa, tidak dicabut, akun petugas aktif, fasilitas sesuai.
-- **Aksi Utama:** arahkan kamera ke QR pasien. Setelah lolos, pembukaan tercatat di audit log (siapa, kapan, fasilitas mana).
-- **Aksi Alternatif atau Error:** QR kedaluwarsa atau dicabut, akun nonaktif, atau fasilitas tidak cocok → ditolak dan percobaan tercatat. Petugas melihat **satu pesan generik** "QR Tidak Dapat Dipakai — minta pasien membuat ConsentQR baru", apa pun alasannya, agar tidak membocorkan apakah token pernah ada (`architecture.md` §7, diputuskan 13 Okt 2026). Akun petugas nonaktif ditangani di login [T2].
-- **[T4b] Input Kunjungan Manual (jalur kartu cetak):** petugas membaca ringkasan di kartu, memasukkan kode atau nama panggilan pasien, dan memilih kebutuhan dari kartu untuk membuat catatan kunjungan. Tanpa catatan kunjungan, konfirmasi tidak bisa menempel ke kunjungan dan tidak masuk dashboard.
+- **Tampilan:** pratinjau kamera (diaktifkan manual via [Mulai kamera], tidak otomatis demi privasi dan daya) dan opsi [Masukkan kode manual] selalu tersedia (kode 26 karakter). Di server sistem memeriksa: token valid, belum kedaluwarsa, tidak dicabut, akun petugas aktif, fasilitas sesuai.
+- **Aksi Utama:** arahkan kamera ke QR pasien atau ketik kode manual. Setelah lolos, pembukaan tercatat di audit log (siapa, kapan, fasilitas mana).
+- **Aksi Alternatif atau Error:**
+  - QR kedaluwarsa atau dicabut, fasilitas tidak cocok, atau kode salah → ditolak dan percobaan tercatat. Petugas melihat **satu pesan generik** "QR Tidak Dapat Dipakai — minta pasien membuat ConsentQR baru" (422, K-4) + tombol [Pindai lagi] untuk mengosongkan input dan mengembalikan fokus.
+  - Kamera ditolak peramban → status error ikon ban "Kamera Ditolak" + arahan izin peramban / gunakan kode manual.
+  - Kamera tidak tersedia atau non-secure context → status error "Kamera Tidak Tersedia".
+  - Terlalu banyak percobaan (429) → pesan pembatasan laju.
+  - Sesi habis (401) → diarahkan ke login petugas dengan alasan sesi berakhir.
 - **Navigasi:** berhasil → [T5].
 - **US:** T-01, T-02, T-05, P-06.
+
+### [/s] URL Publik / Petugas (Tujuan ConsentQR)
+- **Tampilan:** URL tertera pada QR fisik/digital (`https://.../s#<token>`).
+- **Alur Client:** client membaca `location.hash` dan segera memanggil `history.replaceState(null, "", "/s")` sehingga token terhapus seketika dari address bar dan riwayat peramban.
+- **Dengan Sesi Petugas:** token yang diekstrak langsung diproses ke POST `/api/scan` dan membuka [T5] Kebutuhan Pasien.
+- **Tanpa Sesi Petugas:** menampilkan kartu informasi publik ("Halaman ini untuk petugas fasilitas. Bila Anda pasien, tunjukkan QR ini kepada petugas.") serta tautan [Masuk sebagai Petugas] dan [Kembali ke Beranda]. Token tidak dikirim ke server.
+- **Privasi:** dikirim dengan header `Cache-Control: no-store`.
 
 ### [T5] Kebutuhan Pasien
 - **Tampilan:** satu layar yang terbaca dalam hitungan detik: nama panggilan, kebutuhan (ikon dan teks besar), keterangan bahwa hanya data yang diizinkan pasien yang tampil. Tidak ada diagnosis.

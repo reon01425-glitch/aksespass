@@ -45,6 +45,24 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      {
+        source: "/petugas/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "no-store",
+          },
+        ],
+      },
+      {
+        source: "/s",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "no-store",
+          },
+        ],
+      },
     ];
   },
 };

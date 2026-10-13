@@ -54,7 +54,11 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 
   // 1. Rute publik dan aset statis selalu dilewati
   if (isPublicRoute(pathname)) {
-    return NextResponse.next();
+    const res = NextResponse.next();
+    if (pathname === "/s" || pathname.startsWith("/s/")) {
+      res.headers.set("Cache-Control", "no-store");
+    }
+    return res;
   }
 
   // 2. Periksa apakah rute memiliki prefiks peran tertentu
@@ -103,7 +107,15 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     return NextResponse.redirect(redirectUrl);
   }
 
-  return NextResponse.next();
+  const res = NextResponse.next();
+  if (
+    pathname === "/s" ||
+    pathname.startsWith("/s/") ||
+    pathname.startsWith("/petugas")
+  ) {
+    res.headers.set("Cache-Control", "no-store");
+  }
+  return res;
 }
 
 export default proxy;

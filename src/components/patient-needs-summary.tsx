@@ -32,6 +32,8 @@ export interface PatientNeedsSummaryProps {
   patientNote?: string | null;
   catatan?: string | null;
   showPrivacyNotes?: boolean;
+  privacyNoteDescription?: string;
+  headingLevel?: "h2" | "h3";
   className?: string;
 }
 
@@ -99,8 +101,11 @@ export function PatientNeedsSummary({
   patientNote,
   catatan,
   showPrivacyNotes = true,
+  privacyNoteDescription,
+  headingLevel = "h2",
   className = "",
 }: PatientNeedsSummaryProps) {
+  const HeadingTag = headingLevel;
   const displayName = (preferredName ?? namaPanggilan ?? "").trim();
   const note = (patientNote ?? catatan ?? null)?.trim() || null;
 
@@ -139,9 +144,9 @@ export function PatientNeedsSummary({
 
       {/* Daftar Kebutuhan Per Kategori */}
       <div className="flex flex-col gap-5">
-        <h3 className="text-base font-bold text-main border-b border-cyan-100 pb-2">
+        <HeadingTag className="text-base font-bold text-main border-b border-cyan-100 pb-2">
           Kebutuhan Layanan Terpilih
-        </h3>
+        </HeadingTag>
 
         {sortedCategories.length === 0 ? (
           <p className="text-sm font-normal text-secondary">
@@ -198,7 +203,8 @@ export function PatientNeedsSummary({
         <div className="p-4 rounded-xl bg-cyan-100 border border-cyan-400 text-sm text-secondary flex flex-col gap-1">
           <p className="font-bold text-main">Diagnosis tidak diminta</p>
           <p className="font-normal text-secondary">
-            Petugas hanya melihat bagian yang Anda pilih saat membuat ConsentQR.
+            {privacyNoteDescription ||
+              "Petugas hanya melihat bagian yang Anda pilih saat membuat ConsentQR."}
           </p>
         </div>
       )}

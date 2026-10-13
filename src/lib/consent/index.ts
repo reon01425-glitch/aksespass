@@ -22,6 +22,7 @@ export * from "./constants";
 export * from "./rate-limit";
 export * from "./token";
 export * from "./time";
+export * from "./extract-token";
 
 export interface ConsentActor {
   userId: string;

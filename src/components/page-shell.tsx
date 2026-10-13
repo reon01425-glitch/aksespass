@@ -8,6 +8,8 @@ export interface PageShellProps {
   backLabel?: string;
   children: React.ReactNode;
   className?: string;
+  titleRef?: React.Ref<HTMLHeadingElement>;
+  titleTabIndex?: number;
 }
 
 export function PageShell({
@@ -16,6 +18,8 @@ export function PageShell({
   backLabel = "Kembali",
   children,
   className = "",
+  titleRef,
+  titleTabIndex,
 }: PageShellProps) {
   return (
     <div className="min-h-full flex flex-col w-full bg-page text-main">
@@ -30,7 +34,13 @@ export function PageShell({
               <ArrowLeft className="w-6 h-6" aria-hidden="true" />
             </Link>
           )}
-          <h1 className="font-bold text-main break-words min-w-0 flex-1">{title}</h1>
+          <h1
+            ref={titleRef}
+            tabIndex={titleTabIndex}
+            className="font-bold text-main break-words min-w-0 flex-1 focus:outline-none"
+          >
+            {title}
+          </h1>
         </div>
       </header>
       <main

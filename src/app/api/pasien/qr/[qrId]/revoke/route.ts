@@ -5,7 +5,7 @@ import { jsonResponse, wrapRouteHandler } from "../../../../../../lib/http";
 export const POST = wrapRouteHandler(
   async (
     request: Request,
-    context?: { params: Promise<{ qrId: string }> }
+    context: { params: Promise<{ qrId: string }> }
   ) => {
     const sessionRes = await requireSession(request, { roles: ["patient"] });
 

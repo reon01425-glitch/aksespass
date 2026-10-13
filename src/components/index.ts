@@ -11,3 +11,4 @@ export * from "./page-shell";
 export * from "./logout-button";
 export * from "./patient-needs-summary";
 export * from "./radio-list";
+export * from "./petugas-pindai-flow";

@@ -11,7 +11,8 @@ import {
   LogoutButton,
   PageShell,
 } from "@/components";
-import { QrCode, Building2, Clock } from "lucide-react";
+import { listTodayVisits } from "@/lib/visits";
+import { QrCode, Building2, Clock, FileEdit, CheckCheck } from "lucide-react";
 import Link from "next/link";
 
 export const instant = false;
@@ -37,6 +38,7 @@ export default async function PetugasPage() {
   }
 
   const facilityInfo = await getStaffFacilityInfo(session);
+  const todayVisits = await listTodayVisits(session);
 
   return (
     <PageShell title="Beranda Petugas">
@@ -66,7 +68,7 @@ export default async function PetugasPage() {
           </p>
         </div>
 
-        {/* Daftar Kunjungan Hari Ini (Tempat Penampung untuk Prompt 13) */}
+        {/* Daftar Kunjungan Hari Ini (T3) */}
         <section aria-labelledby="heading-antrean" className="flex flex-col gap-3">
           <div className="flex items-center justify-between border-b border-cyan-100 pb-2">
             <h2 id="heading-antrean" className="text-base font-bold text-main">
@@ -78,14 +80,55 @@ export default async function PetugasPage() {
             </div>
           </div>
 
-          <div className="p-6 rounded-xl border border-dashed border-cyan-400 bg-surface text-center flex flex-col items-center justify-center gap-2">
-            <p className="text-sm font-bold text-main">
-              Belum ada kunjungan hari ini
-            </p>
-            <p className="text-xs text-secondary">
-              Kunjungan pasien yang baru dipindai akan otomatis muncul pada daftar ini.
-            </p>
-          </div>
+          {todayVisits.length === 0 ? (
+            <div className="p-6 rounded-xl border border-dashed border-cyan-400 bg-surface text-center flex flex-col items-center justify-center gap-2">
+              <p className="text-sm font-bold text-main">
+                Belum ada kunjungan hari ini.
+              </p>
+              <p className="text-xs text-secondary">
+                Kunjungan pasien yang baru dipindai akan otomatis muncul pada daftar ini.
+              </p>
+            </div>
+          ) : (
+            <ul role="list" className="flex flex-col gap-3 m-0 p-0 list-none">
+              {todayVisits.map((visit) => (
+                <li
+                  key={visit.id}
+                  className="p-4 rounded-xl bg-white border border-cyan-800 shadow-sm flex flex-col gap-2"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-main">
+                      Rujukan #{visit.shortRef}
+                    </span>
+                    <span className="text-xs text-secondary">
+                      {visit.time}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm font-bold text-main">
+                    {visit.statusCode === "unrecorded" && (
+                      <FileEdit
+                        aria-hidden="true"
+                        className="w-4 h-4 shrink-0 text-cyan-800"
+                      />
+                    )}
+                    {visit.statusCode === "pending_confirmation" && (
+                      <Clock
+                        aria-hidden="true"
+                        className="w-4 h-4 shrink-0 text-cyan-800"
+                      />
+                    )}
+                    {visit.statusCode === "confirmed" && (
+                      <CheckCheck
+                        aria-hidden="true"
+                        className="w-4 h-4 shrink-0 text-cyan-800"
+                      />
+                    )}
+                    <span className="break-words">{visit.statusText}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
 
         {/* Tombol Keluar Menonjol (Perangkat Petugas Dipakai Bergantian) */}
