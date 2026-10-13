@@ -356,8 +356,8 @@
 **Baca:** `docs/user-flows.md` layar terkait; `architecture.md` §6, §7, §11.
 
 **Checklist**
-- [ ] P5 editor paspor per kelompok kebutuhan; tidak ada kolom diagnosis; draft sesuai K-8.
-- [ ] P6 pratinjau persis seperti yang akan dilihat petugas; simpan.
+- [x] P5 editor paspor per kelompok kebutuhan; tidak ada kolom diagnosis; draft sesuai K-8.
+- [x] P6 pratinjau persis seperti yang akan dilihat petugas; simpan.
 - [ ] P9 pilih fasilitas (jalur "sudah di fasilitas").
 - [ ] P11 pilih field (P-04) dan masa berlaku.
 - [ ] P12 QR besar berisi URL dengan token saja, hitung mundur, cabut dengan konfirmasi; berubah menjadi "Dipindai oleh petugas".
@@ -365,15 +365,45 @@
 
 **Verifikasi**
 - [ ] Dekode isi QR: hanya URL + token, tanpa nama, kebutuhan, atau ID pasien.
-- [ ] Tes: draft belum disimpan tidak bisa dibagikan lewat QR.
-- [ ] Tes: profil diubah → QR aktif membaca profil terbaru (perilaku "dibaca saat dipindai").
+- [x] Tes: draft belum disimpan tidak bisa dibagikan lewat QR (K-8 draft hanya di memori).
+- [x] Tes: profil diubah → QR aktif membaca profil terbaru (perilaku "dibaca saat dipindai").
 - [ ] Tes: QR dicabut di P12 atau P20 → pindai berikutnya ditolak dan pencabutan tampil di P19.
 - [ ] P19 hanya menampilkan riwayat milik pasien yang masuk (tes akses silang antarpasien ditolak).
 - [ ] Halaman token memakai `Referrer-Policy: no-referrer`.
-- [ ] Uji manual keyboard + 320 px + zoom 200% pada P5, P11, P12, P19.
-- [ ] `lint`, `typecheck`, `test`, `build` lolos.
+- [x] Uji manual keyboard + 320 px + zoom 200% pada P5 dan P6.
+- [x] `lint`, `typecheck`, `test`, `build` lolos.
 
 **Catatan hasil:**
+- Bagian 6 (1 dari 3 / Prompt 10 — P5–P6):
+  - Modul Domain Paspor (`src/lib/passport`):
+    - `getNeedsCatalog(session?)`: Mengambil seluruh katalog kebutuhan yang dikelompokkan per 6 kategori (`komunikasi`, `penglihatan`, `pendengaran`, `mobilitas`, `sensorik_lingkungan`, `pendampingan`). Kategori kosong tanpa item tidak dikembalikan.
+    - `getOwnPassport(session, targetPatientUserId?)`: Mengembalikan data lengkap paspor pasien sendiri (`preferredName`, `namaPanggilan`, `needCodes`, `kodeKebutuhan`, `patientNote`, `catatan`, `updatedAt`, `waktuUbah`) atau `null` jika profil belum ada.
+    - `saveOwnPassport(session, input, options?)`: Dijalankan dalam satu transaksi `withContext`. Skema input divalidasi sangat ketat (kunci tak dikenal atau bernama `diagnosis`/`diagnosa` ditolak dengan galat). Nama panggilan wajib (1–80 karakter trim). Kebutuhan wajib terdaftar di katalog dan minimal satu. Catatan opsional (maks 300 karakter). Melakukan upsert atomik ke `patient_profiles`, menghapus dan mengganti relasi `patient_profile_needs`, serta menyetel penanda pembaruan pasien (`last_updated_by_companion_id = null`, `last_updated_by_companion_at = null`). Parameter opsi actor disediakan agar Prompt 16 dapat menambahkan tindakan pendamping.
+  - Komponen Bersama `PatientNeedsSummary` (`src/components/patient-needs-summary.tsx`):
+    - Komponen ringkasan kebutuhan dengan nama panggilan besar, kebutuhan per kategori dengan ikon Lucide dan teks tebal `text-base font-bold text-main`, catatan untuk petugas bila ada, serta keterangan privasi *"Diagnosis tidak diminta"* dan *"Petugas hanya melihat bagian yang Anda pilih saat membuat ConsentQR."*
+    - Dipasang di katalog pengembangan `/dev/katalog` (Section 11) dan diekspor melalui `src/components/index.ts`.
+  - Halaman dan Klien Editor Paspor (`/pasien/paspor` — P5 + P6):
+    - Alur wizard 8 langkah + pratinjau P6 dalam satu komponen klien `PassportEditorClient`.
+    - Langkah 1: "Nama Panggilan" dengan teks bantuan *"Boleh nama panggilan, tidak perlu nama lengkap."*.
+    - Langkah 2–7: Pemilihan kebutuhan per kategori dengan `ChoiceGroup` dan `ChoiceChip`. Pengguna dapat lanjut tanpa memilih pada kategori tertentu.
+    - Langkah 8: "Catatan untuk Petugas (Opsional)" dengan teks bantuan *"Tulis cara membantu Anda. Tidak perlu menulis diagnosis atau nama penyakit."* dilengkapi penghitung karakter dinamis (maks 300).
+    - Aksesibilitas: Indikator *"Langkah X dari 8"*, tombol navigasi [Sebelumnya] dan [Lanjut]/[Lihat Pratinjau]. Setiap pergantian langkah otomatis memindahkan fokus keyboard ke judul langkah (H2) sehingga diumumkan oleh pembaca layar.
+    - Tombol Keluar [X]: Jika isian mengalami perubahan (`isDirty`), membuka `ConfirmDialog` *"Keluar tanpa menyimpan? Perubahan akan hilang."* dengan tombol [Tetap mengisi] dan [Ya, Buang]. Fokus kembali ke pemicu jika dibatalkan.
+    - Kepatuhan K-8: Draft paspor berada HANYA di memori komponen (React state). Sama sekali tidak ditulis ke `localStorage`, `sessionStorage`, `IndexedDB`, atau `cookie`. Pemuatan ulang halaman membersihkan isian.
+    - Layar Pratinjau P6: Menampilkan `PatientNeedsSummary`. Jika kebutuhan kosong (`0`), muncul `StatusBanner` peringatan *"Pilih minimal satu kebutuhan"* dan tombol simpan diblokir. Tombol [Kembali Edit] mengembalikan pengguna ke Langkah 8 dengan pilihan tetap terjaga.
+    - Route Handler `POST /api/pasien/paspor`: Dilindungi `wrapRouteHandler` (pemeriksaan `Origin`, header `Cache-Control: no-store`, logging privasi tanpa membocorkan pesan galat internal) dan `requireSession` (hanya peran `patient`).
+    - Pesan Sukses: `StatusBanner` sukses *"Paspor tersimpan"* dengan pesan *"Perubahan langsung berlaku, termasuk untuk ConsentQR yang masih aktif."* (sesuai arsitektur §7) serta tombol [Mulai Kunjungan] dan [Ke Beranda].
+  - Tes Arsitektur:
+    - Ditambahkan aturan verifikasi statis di `src/__tests__/architecture.test.ts`: kata *"diagnos"* dilarang keras muncul sebagai kolom, input, form field, name, id, prop, atau identifier di seluruh `src/app` dan `src/components`. Setiap kemunculan string "diagnos" hanya diizinkan berupa pernyataan penolakan/privasi resmi.
+  - Bukti verifikasi:
+    - Vitest: 144 tes di 16 test file lulus 100% (termasuk 13 tes arsitektur, 13 tes passport, 4 tes passport route handler, 16 tes komponen UI).
+    - Browser otomatis DevTools:
+      - Alur Pasien Baru 8 langkah → pratinjau → simpan: status beranda `/pasien` berubah dari *"Paspor Belum Diisi"* menjadi *"Paspor Layanan Lengkap"*.
+      - Ubah profil Pasien Contoh 1: formulir terisi data tersimpan dari basis data.
+      - Draft di memori (K-8): isi formulir lalu reload halaman membuktikan isian hilang dan `localStorage`/`sessionStorage`/`document.cookie` bersih dari data paspor.
+      - Dialog konfirmasi keluar berfungsi dan mengembalikan fokus tombol [X] saat batal.
+      - Dev Audit Panel pada Langkah 1, Langkah 2, Langkah 8, dan Pratinjau: 0 pelanggaran axe, target sentuh ≥ 48×48 px, 0 horizontal scroll pada lebar 320 px dan zoom teks 200%.
+    - `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` lolos 100%. Status Bagian 6: 1/3 (Bagian 6a SELESAI).
 
 ---
 

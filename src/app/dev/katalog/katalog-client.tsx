@@ -14,6 +14,7 @@ import {
   type CareProofValue,
   PageShell,
   LogoutButton,
+  PatientNeedsSummary,
 } from "@/components";
 import { MessageSquare, Eye, Volume2, Move } from "lucide-react";
 
@@ -327,6 +328,37 @@ export function KatalogClient() {
               setIsDialogOpen(false);
               setDialogOutcome("Dikonfirmasi ('Ya, Cabut')");
             }}
+          />
+        </section>
+
+        {/* 11. PatientNeedsSummary */}
+        <section className="flex flex-col gap-4">
+          <h2 className="text-xl font-bold text-main border-b border-cyan-100 pb-2">
+            11. PatientNeedsSummary (Pratinjau Kebutuhan Pasien)
+          </h2>
+          <PatientNeedsSummary
+            preferredName="Pasien Contoh"
+            needs={[
+              {
+                code: "komunikasi_bisindo",
+                label: "Komunikasi dengan BISINDO",
+                iconName: "Hand",
+                category: "komunikasi",
+              },
+              {
+                code: "komunikasi_tertulis",
+                label: "Instruksi dan penjelasan tertulis",
+                iconName: "FileText",
+                category: "komunikasi",
+              },
+              {
+                code: "antrean_visual_getar",
+                label: "Panggilan giliran visual atau getar",
+                iconName: "BellRing",
+                category: "pendengaran",
+              },
+            ]}
+            patientNote="Mohon panggil giliran lewat tanda visual atau tepuk bahu pelan."
           />
         </section>
       </div>

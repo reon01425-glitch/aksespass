@@ -464,5 +464,57 @@ describe("Tes Arsitektur Kode (Statik & Tanpa DB)", () => {
       )}`
     ).toEqual([]);
   });
+
+  it("kata 'diagnos' tidak muncul di src/app dan src/components (tidak ada kolom, label, atau input diagnosis; hanya kalimat privasi)", () => {
+    const violations: string[] = [];
+
+    for (const file of allSrcFiles) {
+      if (isTestFile(file)) continue;
+
+      const relPath = path.relative(srcDir, file);
+      if (
+        !relPath.startsWith("app/") &&
+        !relPath.startsWith("app\\") &&
+        !relPath.startsWith("components/") &&
+        !relPath.startsWith("components\\")
+      ) {
+        continue;
+      }
+
+      const content = fs.readFileSync(file, "utf8");
+
+      // 1. Dilarang keras ada input, textarea, select, label, name, id, prop, atau identifier 'diagnos'
+      const forbiddenIdentifierRegex =
+        /(?:<input[^>]*diagnos|<textarea[^>]*diagnos|<select[^>]*diagnos|<label[^>]*diagnos|name=['"][^'"]*diagnos|id=['"][^'"]*diagnos|data-testid=['"][^'"]*diagnos|\bdiagnos[a-z]*\s*:|\bdiagnos[a-z]*\s*=)/i;
+      const idMatch = content.match(forbiddenIdentifierRegex);
+      if (idMatch) {
+        violations.push(`${relPath} mengandung identifier/input diagnosis: ${idMatch[0]}`);
+      }
+
+      // 2. Setiap baris yang memuat 'diagnos' harus berupa pernyataan privasi resmi bahwa diagnosis TIDAK diminta
+      const lines = content.split("\n");
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (/\bdiagnos/i.test(line)) {
+          const isAllowedPrivacyDisclaimer =
+            /tidak meminta diagnosis|tidak perlu menulis diagnosis|diagnosis tidak diminta/i.test(
+              line
+            );
+          if (!isAllowedPrivacyDisclaimer) {
+            violations.push(
+              `${relPath} baris ${i + 1}: kemunculan kata diagnos di luar kalimat privasi yang diizinkan: "${line.trim()}"`
+            );
+          }
+        }
+      }
+    }
+
+    expect(
+      violations,
+      `Pelanggaran kata 'diagnos' ditemukan di src/app atau src/components: ${violations.join(
+        "; "
+      )}`
+    ).toEqual([]);
+  });
 });
 

@@ -72,13 +72,18 @@ Satu kelompok kebutuhan per layar, dengan indikator langkah (misalnya 2 dari 5).
 - **Aksi Alternatif:** [X] keluar dengan pilihan [Simpan draft] atau [Buang]. Untuk pengguna yang sudah punya paspor, layar ini berfungsi sebagai ubah profil.
 - **Navigasi:** → [P6].
 - **US:** P-01, P-02.
+- **Catatan implementasi (Prompt 10):**
+  - **Langkah Nama Panggilan:** ditambahkan sebagai Langkah 1 dari 8 pada editor wizard P5 ("Boleh nama panggilan, tidak perlu nama lengkap"), mengakomodasi kebutuhan tampilan T5 dan P6.
+  - **Draft Memori Murni (K-8):** draft paspor hanya disimpan di memori halaman/React state, tidak disimpan ke perangkat (bebas dari localStorage, sessionStorage, IndexedDB, dan cookie). Jika pengguna keluar atau memuat ulang halaman, isian dibuang. Pilihan "Simpan draft" dan banner "Lanjutkan draft paspor" di P4 ditiadakan.
 
 ### [P6] Pratinjau dan Simpan Paspor
 - **Tampilan:** ringkasan paspor seperti yang akan dilihat petugas (hanya kebutuhan layanan), dengan keterangan bahwa diagnosis tidak diminta.
-- **Aksi Utama:** [Simpan Paspor] → pop-up berhasil dengan [Atur Kartu Cetak] dan [Ke Beranda].
+- **Aksi Utama:** [Simpan Paspor] → pop-up/banner berhasil dengan [Mulai Kunjungan] dan [Ke Beranda] ([Atur Kartu Cetak] ditunda hari ini).
 - **Aksi Alternatif:** [Kembali Edit] → [P5] dengan pilihan tetap terisi.
-- **Navigasi:** [Atur Kartu Cetak] → [P7]; [Ke Beranda] → [P4]. Perubahan baru berlaku di ConsentQR berikutnya.
+- **Navigasi:** [Mulai Kunjungan] → [P9]; [Ke Beranda] → [P4].
 - **US:** P-01, P-02.
+- **Catatan implementasi & konflik spesifikasi (Prompt 10):**
+  - **Konflik teks P6 vs `architecture.md` §7:** teks spesifikasi awal P6 menyatakan *"Perubahan baru berlaku di ConsentQR berikutnya"*, sedangkan keputusan arsitektur inti `architecture.md` §7 (prinsip "data dibaca saat dipindai") menetapkan bahwa perubahan profil langsung berlaku seketika saat token dipindai, termasuk pada ConsentQR yang masih aktif. Implementasi mengikuti `architecture.md` §7 dengan pesan sukses: *"Perubahan langsung berlaku, termasuk untuk ConsentQR yang masih aktif."*
 
 ### [P7] Kartu Cetak
 - **Tampilan:** daftar isi ringkasan yang bisa dicentang untuk dicetak (misalnya bahasa isyarat, bantuan mobilitas, pendampingan), pratinjau kartu, catatan bahwa kartu hanya memuat ringkasan kebutuhan.

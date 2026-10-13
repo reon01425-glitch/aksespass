@@ -9,3 +9,4 @@ export * from "./confirm-dialog";
 export * from "./care-proof-scale";
 export * from "./page-shell";
 export * from "./logout-button";
+export * from "./patient-needs-summary";

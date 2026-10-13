@@ -242,5 +242,30 @@ describe("Komponen UI Bersama (renderToStaticMarkup, tanpa DOM)", () => {
       expect(html).toContain("text-link");
       expect(html).toContain("underline");
     });
+
+    it("PatientNeedsSummary: merender nama panggilan, kebutuhan terkelompok, catatan, dan privasi", async () => {
+      const { PatientNeedsSummary } = await import("../patient-needs-summary");
+      const html = renderToStaticMarkup(
+        <PatientNeedsSummary
+          preferredName="Budi Prakoso"
+          needs={[
+            {
+              code: "komunikasi_bisindo",
+              label: "Komunikasi dengan BISINDO",
+              iconName: "Hand",
+              category: "komunikasi",
+            },
+          ]}
+          patientNote="Catatan khusus"
+          showPrivacyNotes={true}
+        />
+      );
+
+      expect(html).toContain("Budi Prakoso");
+      expect(html).toContain("Komunikasi dengan BISINDO");
+      expect(html).toContain("Catatan khusus");
+      expect(html).toContain("Diagnosis tidak diminta");
+      expect(html).toContain("Petugas hanya melihat bagian yang Anda pilih");
+    });
   });
 });
