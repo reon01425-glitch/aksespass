@@ -47,7 +47,7 @@
 | # | Bagian | Bergantung pada | Story | Status |
 | :--- | :--- | :--- | :--- | :--- |
 | 0 | Keputusan pemblokir | — | — | ☑ untuk cakupan hari ini |
-| 1 | Scaffold dan alat pemeriksaan | 0 (K-2) | — | ☐ |
+| 1 | Scaffold dan alat pemeriksaan | 0 (K-2) | — | ☑ |
 | 2 | Database dan skema | 1, K-1 | — | ☐ |
 | 3 | Inti domain: audit, privasi, auth, consent | 2, K-4 | P-05, P-06, T-01 (sisi server) | ☐ |
 | 4 | Komponen UI bersama | 1 (boleh paralel dengan 2–3) | Nonfungsional | ☐ |
@@ -103,24 +103,28 @@
 **Baca:** `AGENTS.md` (Teknologi, Verifikasi); `design.md` §2C, §3; `architecture.md` §5, §14.
 
 **Checklist**
-- [ ] Next.js (App Router) + TypeScript mode `strict` + Tailwind + Lucide React.
-- [ ] Skrip di `package.json` dengan nama tetap: `lint`, `typecheck`, `test`, `build` (bagian lain merujuk nama ini).
-- [ ] Test runner dan alat uji aksesibilitas sesuai K-2.
-- [ ] Font Atkinson Hyperlegible Next di-host sendiri, `font-display: swap`, hanya bobot 400 dan 700.
-- [ ] Token warna `design.md` §2C sebagai CSS variable dan terhubung ke Tailwind.
-- [ ] Gaya dasar: `rem` untuk ukuran teks, focus ring terlihat, aturan `prefers-reduced-motion`.
-- [ ] Header keamanan dasar §13: CSP, `Referrer-Policy`.
-- [ ] `.gitignore` untuk `node_modules`, `.next`, file env.
-- [ ] README singkat: cara install, jalankan, dan perintah pemeriksaan.
+- [x] Next.js (App Router) + TypeScript mode `strict` + Tailwind + Lucide React.
+- [x] Skrip di `package.json` dengan nama tetap: `lint`, `typecheck`, `test`, `build` (bagian lain merujuk nama ini).
+- [x] Test runner dan alat uji aksesibilitas sesuai K-2 (Vitest terpasang; `axe-core` ditunda ke tahap komponen UI sesuai jadwal prompt).
+- [x] Font Atkinson Hyperlegible Next di-host sendiri, `font-display: swap`, hanya bobot 400 dan 700.
+- [x] Token warna `design.md` §2C sebagai CSS variable dan terhubung ke Tailwind.
+- [x] Gaya dasar: `rem` untuk ukuran teks, focus ring terlihat, aturan `prefers-reduced-motion`.
+- [x] Header keamanan dasar §13: CSP, `Referrer-Policy`.
+- [x] `.gitignore` untuk `node_modules`, `.next`, file env.
+- [x] README singkat: cara install, jalankan, dan perintah pemeriksaan.
 
 **Verifikasi**
-- [ ] `lint`, `typecheck`, `test` (minimal satu tes contoh), dan `build` dijalankan dan lolos.
-- [ ] Halaman contoh di lebar 320 px tidak punya horizontal scroll.
-- [ ] Panel network browser: font dimuat dari domain sendiri, tidak ada permintaan ke CDN font.
-- [ ] Hanya file font 400 dan 700 yang dimuat.
-- [ ] Header CSP dan `Referrer-Policy` terlihat di respons.
+- [x] `lint`, `typecheck`, `test` (minimal satu tes contoh), dan `build` dijalankan dan lolos.
+- [x] Halaman contoh di lebar 320 px tidak punya horizontal scroll.
+- [x] Panel network browser: font dimuat dari domain sendiri, tidak ada permintaan ke CDN font.
+- [x] Hanya file font 400 dan 700 yang dimuat.
+- [x] Header CSP dan `Referrer-Policy` terlihat di respons.
 
 **Catatan hasil:**
+- Versi: Next.js 16.4.0 (App Router, Turbopack), React 19.3.0, Tailwind CSS 4.3.3 (`@theme inline` di `src/app/globals.css`), TypeScript 5.9.3 (`strict: true`), `lucide-react` 1.56.0, `vitest` 5.0.4.
+- Font: `Atkinson_Hyperlegible_Next` dari `next/font/google` dengan bobot `["400", "700"]`, `display: "swap"`, disajikan dari `/_next/static/media/*.woff2` tanpa request ke `fonts.googleapis.com` / `fonts.gstatic.com`.
+- Verifikasi: `pnpm lint`, `pnpm typecheck`, `pnpm test` (2 tes di `src/lib/tokens.test.ts`), dan `pnpm build` lolos; `curl -I http://localhost:3000` menampilkan `Content-Security-Policy`, `Referrer-Policy: no-referrer`, dan `X-Content-Type-Options: nosniff`; uji Chrome DevTools pada viewport `320×640` (100% dan zoom teks 200%) bebas horizontal scroll (`scrollWidth = 320`) serta tombol contoh menampilkan focus ring saat `Tab`; `grep -rn "font-medium\|font-semibold" src` kosong.
+- Sisa pekerjaan yang ditunda sesuai rencana: penerapan CSP berbasis nonce (saat ini masih memakai `'unsafe-inline'` pada `script-src`/`style-src` dan `'unsafe-eval'` khusus mode dev) serta instalasi `axe-core` di tahap komponen UI.
 
 ---
 

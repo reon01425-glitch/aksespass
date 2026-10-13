@@ -1,0 +1,122 @@
+@import "tailwindcss";
+
+:root {
+  --bg-page: #ECFEFF;
+  --bg-surface: #CFFAFE;
+  --border-decorative: #22D3EE;
+  --border-input: #155E75;
+  --icon-accent: #0891B2;
+  --btn-primary: #0E7490;
+  --text-main: #164E63;
+  --text-secondary: #475569;
+  --text-link: #155E75;
+  --disabled-surface: #E2E8F0;
+  --disabled-text: #64748B;
+
+  --success-bg: #ECFDF5;  --success-fg: #047857;
+  --warning-bg: #FFFBEB;  --warning-fg: #B45309;
+  --error-bg:   #FEF2F2;  --error-fg:   #B91C1C;
+}
+
+@theme inline {
+  --font-sans: var(--font-atkinson), sans-serif;
+
+  --color-page: var(--bg-page);
+  --color-bg-page: var(--bg-page);
+  --color-surface: var(--bg-surface);
+  --color-bg-surface: var(--bg-surface);
+  --color-decorative: var(--border-decorative);
+  --color-border-decorative: var(--border-decorative);
+  --color-input: var(--border-input);
+  --color-border-input: var(--border-input);
+  --color-icon-accent: var(--icon-accent);
+  --color-btn-primary: var(--btn-primary);
+  --color-main: var(--text-main);
+  --color-text-main: var(--text-main);
+  --color-secondary: var(--text-secondary);
+  --color-text-secondary: var(--text-secondary);
+  --color-link: var(--text-link);
+  --color-text-link: var(--text-link);
+  --color-disabled-surface: var(--disabled-surface);
+  --color-disabled-text: var(--disabled-text);
+
+  --color-success-bg: var(--success-bg);
+  --color-success-fg: var(--success-fg);
+  --color-warning-bg: var(--warning-bg);
+  --color-warning-fg: var(--warning-fg);
+  --color-error-bg: var(--error-bg);
+  --color-error-fg: var(--error-fg);
+}
+
+html {
+  font-size: 100%;
+}
+
+body {
+  background-color: var(--bg-page);
+  color: var(--text-main);
+  font-family: var(--font-atkinson), sans-serif;
+  font-size: 1rem;
+  line-height: 1.6;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+h1 {
+  font-size: clamp(1.75rem, 1.55rem + 0.8vw, 1.95rem);
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+h2 {
+  font-size: 1.5625rem;
+  line-height: 1.3;
+  font-weight: 700;
+  letter-spacing: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+h3 {
+  font-size: 1.25rem;
+  line-height: 1.4;
+  font-weight: 700;
+  letter-spacing: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+p {
+  font-size: 1rem;
+  line-height: 1.6;
+  font-weight: 400;
+  max-width: min(60ch, 100%);
+  overflow-wrap: anywhere;
+}
+
+input,
+select,
+textarea,
+button {
+  font-size: 1rem;
+  letter-spacing: 0;
+}
+
+:focus-visible {
+  outline: 3px solid var(--text-main);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
