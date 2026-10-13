@@ -549,4 +549,58 @@ describe("Peran DB, RLS per transaksi, audit append-only, dan state Postgres (Ba
       await freshClient.end();
     }
   });
+
+  it("kebijakan RLS consents untuk petugas: token cocok -> 1 baris; tanpa token atau token lain -> 0 baris", async () => {
+    const validHashFacilityA = sha256Hex("contoh-seed-qr-p1-aktif");
+    const otherHash = sha256Hex("contoh-token-lain-yang-tidak-terdaftar");
+
+    // 1. Petugas dengan token cocok -> 1 baris consents (c1)
+    const matchRows = await withContext(
+      {
+        userId: IDS.users.staffA1,
+        role: "staff",
+        facilityId: IDS.facilities.a,
+        scanTokenHash: validHashFacilityA,
+      },
+      async (client) => {
+        const res = await client.query<{ id: string; subject_ref: string }>(
+          "SELECT id, subject_ref FROM consents;"
+        );
+        return res.rows;
+      }
+    );
+    expect(matchRows).toHaveLength(1);
+    expect(matchRows[0].id).toBe(IDS.consents.c1);
+    expect(matchRows[0].subject_ref).toBe(IDS.auditSubjects.p1);
+
+    // 2. Petugas tanpa scan_token_hash -> 0 baris consents
+    const noTokenRows = await withContext(
+      {
+        userId: IDS.users.staffA1,
+        role: "staff",
+        facilityId: IDS.facilities.a,
+      },
+      async (client) => {
+        const res = await client.query("SELECT id FROM consents;");
+        return res.rows;
+      }
+    );
+    expect(noTokenRows).toHaveLength(0);
+
+    // 3. Petugas dengan token lain -> 0 baris consents
+    const otherTokenRows = await withContext(
+      {
+        userId: IDS.users.staffA1,
+        role: "staff",
+        facilityId: IDS.facilities.a,
+        scanTokenHash: otherHash,
+      },
+      async (client) => {
+        const res = await client.query("SELECT id FROM consents;");
+        return res.rows;
+      }
+    );
+    expect(otherTokenRows).toHaveLength(0);
+  });
 });
+

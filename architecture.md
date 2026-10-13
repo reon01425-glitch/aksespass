@@ -133,14 +133,14 @@ Route groups dengan tanda kurung `(pasien)` di App Router tidak menghasilkan seg
 | `patient_profile_needs` | `profile_id`, `need_code` | Tabel penghubung `patient_profiles` ↔ `needs_catalog` untuk integritas referensi. **[Usulan]** |
 | `needs_catalog` | kebutuhan/bantuan baku | Dikelola kurator |
 | `accommodation_rules` | profil kebutuhan pemicu, saran tindakan (teks pendek + ikon), sumber/alasan, versi, status (Draft/Dalam Tinjauan/Terbit), tanggal, pengesah | Dasar Smart Accommodation Engine (T6, T-03). Prototipe: aturan bawaan, baca-saja (K3). **[Usulan]** |
-| `consents` | pasien, fasilitas tujuan, **daftar field yang dicentang** (`shared_fields`), tanggal berlaku | Dasar aturan "hanya data yang dicentang". Nilai `shared_fields` yang diizinkan: `komunikasi`, `penglihatan`, `pendengaran`, `mobilitas`, `sensorik_lingkungan`, `pendampingan`, `catatan_pasien` (nama panggilan selalu ikut). **[Usulan]** |
-| `consent_qr` | `token_hash`, consent_id, `expires_at`, `revoked_at` | Token asli tidak disimpan, hanya hash |
+| `consents` | pasien, fasilitas tujuan, **daftar field yang dicentang** (`shared_fields`), tanggal berlaku, `subject_ref` | Dasar aturan "hanya data yang dicentang". Nilai `shared_fields` yang diizinkan: `komunikasi`, `penglihatan`, `pendengaran`, `mobilitas`, `sensorik_lingkungan`, `pendampingan`, `catatan_pasien` (nama panggilan selalu ikut). Kolom `subject_ref` (UUID audit pasien) diisi saat consent dibuat agar audit pindai petugas tidak perlu membaca tabel `users` pasien. **[Usulan, 13 Okt 2026]** |
+| `consent_qr` | `token_hash`, consent_id, `expires_at`, `revoked_at` | Token asli tidak disimpan, hanya hash SHA-256 |
 | `companions` | pasien, pendamping, izin, status tautan (Menunggu Persetujuan/Aktif/Dicabut) | Aktif hanya setelah pasien menyetujui (D3 → P21) |
 | `emergency_delegations` | pasien, pendamping, petugas pengesah, fasilitas, tanggal berlaku | Delegasi darurat di tempat (bagian 10); cakupan satu fasilitas dan satu tanggal. **[Usulan]** nama dan kolom |
 | `facilities` | nama, status | Didaftarkan manual oleh admin sistem |
 | `staff_memberships` | petugas, fasilitas, unit, status (Menunggu Aktivasi/Aktif/Nonaktif) | Petugas hanya aktif di fasilitas terdaftar; nonaktif langsung menolak pindai (A4) |
 | `briefs` | pasien, fasilitas, tanggal kunjungan, field terpilih, `expires_at` | Pre-Arrival Brief (bagian 8) |
-| `visits` | pasien, fasilitas, petugas, jalur (`qr` / `kartu`), bantuan dicatat, catatan opsional, `client_id`, `synced_at` | `client_id` untuk deduplikasi sinkron (bagian 9). Jalur kartu (T4b) menyimpan pengenal dari kartu; **bentuk pengenal belum konsisten** antara bagian 9 dan `docs/user-flows.md` keputusan 2 |
+| `visits` | pasien, fasilitas, petugas, jalur (`qr` / `kartu`), bantuan dicatat, catatan opsional, `client_id`, `synced_at`, `recorded_at` | Dibuka saat pindai lolos dengan `recorded_at = NULL` (dipakai ulang bila sudah ada kunjungan terbuka untuk consent dan faskes sama hari itu). `recorded_at` dan bantuan dicatat diisi saat T8. `client_id` untuk deduplikasi sinkron (bagian 9). **[Usulan, 13 Okt 2026]** |
 | `visit_confirmations` | visit_id, status (terpenuhi/sebagian/belum), kebutuhan belum terpenuhi, `confirmed_by` (`patient`/`companion`/`on_site`) | Hanya bisa dibuat setelah visit tersinkron. Tanpa jawaban = "belum dikonfirmasi", **tidak** dihitung terpenuhi (P16) |
 | `follow_ups` | kategori kebutuhan, fasilitas, status, catatan langkah, tanggal | Tindak lanjut admin (A8) dan status untuk pasien (P17). **[Usulan]** |
 | `recovery_requests` | pasien, pendamping, kode (hash), `eligible_at`, status | Bagian 10 |
@@ -157,28 +157,46 @@ Agregat dashboard (A6–A7) dihitung dari `visit_confirmations`, memisahkan `con
 ## 7. ConsentQR dan Alur Baca Saat Dipindai
 
 **Pembuatan (pasien):**
-1. Pasien memilih fasilitas, tanggal, dan field yang dicentang.
-2. Server membuat `consent` + token acak minimal 128 bit, menyimpan **hash**-nya di `consent_qr`.
-3. QR menampilkan URL pendek berisi token. **Tidak ada data pasien di dalam QR.**
+1. Pasien memilih fasilitas, masa berlaku, dan field yang dicentang.
+2. Server membuat `consent` + token acak 128 bit, menyimpan **hash SHA-256**-nya di `consent_qr`.
+3. QR menampilkan URL pendek berisi token di dalam fragmen URL (`${APP_ORIGIN}/s#<token>`). **Tidak ada data pasien di dalam QR.**
+
+**Format Token & URL [Usulan, 13 Okt 2026]:**
+- **Format token:** 128 bit acak kriptografis, di-encode ke 26 karakter Crockford Base32 (alfabet `0123456789ABCDEFGHJKMNPQRSTVWXYZ`, tanpa huruf ambigu I, L, O, U) agar mudah diketik manual saat kamera ditolak; diformat tampilan kelompok 4 karakter (`XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XX`).
+- **Normalisasi input:** huruf besar, buang spasi dan tanda hubung, `O` → `0`, `I`/`L` → `1`. Input salah format diperlakukan sama dengan token tak dikenal (menghasilkan status 422 yang identik).
+- **URL Fragmen:** `${APP_ORIGIN}/s#<token>`. Bagian fragmen (`#...`) tidak dikirim oleh browser ke server web/Vercel maupun header `Referer`, sehingga token mentah tidak pernah masuk log akses server. Halaman `/s` membaca fragmen di sisi klien lalu menghapusnya dari riwayat peramban.
 
 **Pemindaian (petugas):**
 1. Petugas memindai QR (atau memasukkan kode manual bila kamera ditolak).
-2. `POST /api/scan` dengan token. Server memeriksa berurutan: sesi petugas valid, petugas aktif di fasilitas yang sama dengan consent, token tidak kedaluwarsa dan tidak dicabut, tanggal berlaku.
-3. Bila lolos: server membaca **profil terkini**, **menyaring hanya field yang dicentang**, mengembalikannya, dan menulis `audit_events` (`qr_scanned`, `profile_read`).
-4. Bila gagal: server mengembalikan alasan generik (tanpa membocorkan apakah token pernah ada).
+2. `POST /api/scan` dengan body JSON `{ token }`. Server memeriksa:
+   - **Rate limit:** di Postgres (`rate_limit_hits`) sebelum apa pun: maks 20 percobaan/5 menit per petugas, maks 60 percobaan/5 menit per HMAC(IP) dengan pepper. Melebihi batas → HTTP 429 "Terlalu banyak percobaan. Coba lagi beberapa menit lagi." **[Usulan, 13 Okt 2026]**
+   - **Sesi petugas:** `requireSession` memastikan sesi aktif, akun petugas aktif, dan keanggotaan fasilitas aktif. Bila akun/keanggotaan nonaktif, catat `qr_scan_rejected` lalu kembalikan HTTP 403 "Akun tidak aktif. Hubungi admin fasilitas."
+   - **Pemeriksaan token berurutan:** token ada di `consent_qr`, belum dicabut (`revoked_at IS NULL`), belum kedaluwarsa (`expires_at > now()`), dalam masa berlaku (`valid_from <= now() < valid_until`), dan consent ditujukan untuk fasilitas petugas (`c.facility_id = app.facility_id`).
+3. **Bila lolos (200 OK):** dalam satu transaksi atomik:
+   - Baca profil terkini pasien dan katalog kebutuhan, menyaring hanya field dan kategori yang dicentang (`shared_fields`). Nama panggilan selalu ikut; catatan bebas pasien hanya bila dicentang.
+   - Buka kunjungan di tabel `visits` (`recorded_at = NULL`). Bila sudah ada kunjungan terbuka untuk consent dan faskes sama pada hari itu, pakai ulang `visitId` tersebut.
+   - Catat kejadian audit `qr_scanned` dan `profile_read` (mencatat nama field yang benar-benar dikirimkan).
+   - Commit transaksi sebelum mengembalikan respons.
+   - Body respons: `{ ok: true, visitId, namaPanggilan, preferredName, kebutuhan: [...], catatanPasien?, expiresAt, expiresSoon }`. Indikator `expiresSoon` aktif bila sisa masa berlaku < 15 menit. **[Usulan, 13 Okt 2026]** TIDAK memuat ID pasien, nomor telepon, atau data sensitif lain.
+4. **Bila gagal (422 Unprocessable Entity):** alasan apa pun (token tak dikenal, salah format, kedaluwarsa, dicabut, belum berlaku, fasilitas lain) menghasilkan **respons identik** sesuai Keputusan K-4:
+   - Status HTTP: 422.
+   - Body: `{ ok: false, code: "QR_UNUSABLE", title: "QR Tidak Dapat Dipakai", message: "Minta pasien membuat ConsentQR baru." }`.
+   - Jalur gagal melakukan pekerjaan setara (lookup + audit insert).
+   - Audit `qr_scan_rejected`: pelaku petugas, faskes, `subject_ref` diisi bila token dikenal di database; tanpa token dan tanpa alasan penolakan. **[Usulan, 13 Okt 2026]**
+5. **Header:** seluruh respons sukses maupun gagal wajib menyertakan `Cache-Control: no-store`. Permintaan `GET` ditolak (405).
 
 **Status tampilan** (ikon + teks + warna, `design.md` bagian 2B):
 
 | Kondisi | Status | Ikon | Label |
 | :--- | :--- | :--- | :--- |
 | Valid | Sukses | `CheckCircle2` | "QR Valid" |
-| Mendekati batas | Peringatan | `AlertTriangle` | "Hampir Kedaluwarsa" |
+| Mendekati batas (< 15 mnt) | Peringatan | `AlertTriangle` | "Hampir Kedaluwarsa" |
 | Token tak dikenal/kedaluwarsa/dicabut, atau fasilitas tidak cocok | Galat | `XCircle` | "QR Tidak Dapat Dipakai" + "Minta pasien membuat ConsentQR baru." Satu pesan yang sama untuk semua alasan **[Diputuskan, 13 Okt 2026]** |
 | Kamera ditolak | Galat | `Ban` | "Kamera Ditolak" + tombol input kode manual |
 
 **Konsekuensi dari "data dibaca saat dipindai":** perubahan profil langsung berlaku di QR yang masih aktif (sesuai revisi P-02). Sebaliknya, tangkapan layar QR tetap berlaku sampai kedaluwarsa. Mitigasi: masa berlaku pendek, pasien bisa mencabut kapan saja, pembatasan fasilitas, dan audit yang terlihat oleh pasien (riwayat "siapa membuka data saya").
 
-**Rate limit:** batasi percobaan pindai per petugas dan per alamat IP untuk menghambat penebakan token. Penghitung disimpan di Postgres dan diperiksa di route handler, bukan di middleware atau memori proses (aturan siap serverless, bagian 3).
+**Rate limit:** batasi percobaan pindai per petugas (20/5 mnt) dan per alamat IP (60/5 mnt) untuk menghambat penebakan token. Penghitung disimpan di Postgres (`rate_limit_hits`) dan diperiksa di route handler, bukan di middleware atau memori proses (aturan siap serverless, bagian 3). **[Usulan, 13 Okt 2026]**
 
 ---
 

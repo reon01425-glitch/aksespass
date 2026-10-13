@@ -16,6 +16,10 @@ export const CONSENT_SHARED_FIELDS = [
 
 export type ConsentSharedField = (typeof CONSENT_SHARED_FIELDS)[number];
 
+export function isConsentSharedField(field: string): field is ConsentSharedField {
+  return (CONSENT_SHARED_FIELDS as readonly string[]).includes(field);
+}
+
 export const ALLOWED_SHARED_FIELDS = [
   ...NEED_CATEGORIES,
   "catatan_pasien",

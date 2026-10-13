@@ -677,6 +677,7 @@ async function main() {
         "2026-10-13T08:00:00+07:00",
         "2026-10-14T08:00:00+07:00",
         IDS.users.p1,
+        IDS.auditSubjects.p1,
       ],
       [
         IDS.consents.c2,
@@ -686,6 +687,7 @@ async function main() {
         "2026-10-13T08:00:00+07:00",
         "2026-10-14T08:00:00+07:00",
         IDS.users.p2,
+        IDS.auditSubjects.p2,
       ],
       [
         IDS.consents.c3,
@@ -695,6 +697,7 @@ async function main() {
         "2026-10-13T08:00:00+07:00",
         "2026-10-14T08:00:00+07:00",
         IDS.users.p3,
+        IDS.auditSubjects.p3,
       ],
       [
         IDS.consents.c4,
@@ -704,6 +707,7 @@ async function main() {
         "2026-10-13T08:00:00+07:00",
         "2026-10-14T08:00:00+07:00",
         IDS.users.comp1,
+        IDS.auditSubjects.p4,
       ],
     ];
 
@@ -711,8 +715,8 @@ async function main() {
       await client.query(
         `
         INSERT INTO consents (
-          id, patient_user_id, facility_id, shared_fields, valid_from, valid_until, created_by_user_id, created_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $5);
+          id, patient_user_id, facility_id, shared_fields, valid_from, valid_until, created_by_user_id, created_at, subject_ref
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $5, $8);
         `,
         c
       );
@@ -1076,8 +1080,8 @@ async function main() {
         `
         INSERT INTO visits (
           id, patient_user_id, facility_id, staff_user_id, consent_id, channel,
-          recorded_need_codes, staff_note, client_id, created_at, synced_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10);
+          recorded_need_codes, staff_note, client_id, created_at, synced_at, recorded_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10, $10);
         `,
         [
           visitId,

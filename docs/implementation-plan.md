@@ -179,24 +179,24 @@
 - [x] `lib/audit`: satu fungsi tulis kejadian; modul lain tidak menulis ke `audit_events` secara langsung.
 - [x] `lib/privacy`: scrubber log dan daftar field terlarang.
 - [x] `lib/auth`: sesi cookie `httpOnly` + `SameSite=Lax`, guard peran, guard fasilitas.
-- [ ] `lib/consent`: buat consent + token acak ≥ 128 bit (simpan hash); validasi berurutan sesuai §7; cabut; baca profil terkini yang disaring ke field yang dicentang; tulis `qr_scanned`, `profile_read` (nama field saja), `qr_scan_rejected`.
-- [ ] Respons gagal mengikuti keputusan K-4.
-- [ ] Rate limit percobaan pindai per petugas dan per IP, disimpan di Postgres dan diperiksa di route handler.
+- [x] `lib/consent`: buat consent + token acak ≥ 128 bit (simpan hash); validasi berurutan sesuai §7; cabut; baca profil terkini yang disaring ke field yang dicentang; tulis `qr_scanned`, `profile_read` (nama field saja), `qr_scan_rejected`.
+- [x] Respons gagal mengikuti keputusan K-4.
+- [x] Rate limit percobaan pindai per petugas dan per IP, disimpan di Postgres dan diperiksa di route handler.
 - [x] Satu helper transaksi yang selalu meng-set konteks RLS dengan `set_config(..., true)`; tidak ada kueri data pasien di luar helper ini.
 - [x] Middleware hanya memeriksa cookie dan peran; tidak mengimpor modul database.
-- [ ] Route handler `POST /api/scan` hanya memanggil `lib/consent`.
+- [x] Route handler `POST /api/scan` hanya memanggil `lib/consent`.
 
 **Verifikasi** (tes otomatis, masing-masing punya kasus lolos dan gagal)
-- [ ] Pindai lolos: petugas aktif, fasilitas cocok, token valid → hanya field yang dicentang yang kembali.
-- [ ] Ditolak: fasilitas tidak cocok, kedaluwarsa, dicabut, petugas nonaktif, token tak dikenal.
-- [ ] Respons untuk token tak dikenal vs kedaluwarsa vs dicabut sesuai K-4 (bila generik: status dan body identik).
-- [ ] Setiap pindai lolos menulis `profile_read`; setiap penolakan menulis `qr_scan_rejected`; tidak ada token mentah atau nilai profil di audit.
-- [ ] Database berisi hash, bukan token asli (cek langsung ke tabel).
-- [ ] Rate limit memblokir setelah batas, dan tetap memblokir setelah server dev di-restart (bukti state tidak di memori).
-- [ ] Tes: dua request berurutan dengan petugas berbeda di koneksi pool yang sama tidak saling melihat konteks RLS.
+- [x] Pindai lolos: petugas aktif, fasilitas cocok, token valid → hanya field yang dicentang yang kembali.
+- [x] Ditolak: fasilitas tidak cocok, kedaluwarsa, dicabut, petugas nonaktif, token tak dikenal.
+- [x] Respons untuk token tak dikenal vs kedaluwarsa vs dicabut sesuai K-4 (bila generik: status dan body identik).
+- [x] Setiap pindai lolos menulis `profile_read`; setiap penolakan menulis `qr_scan_rejected`; tidak ada token mentah atau nilai profil di audit.
+- [x] Database berisi hash, bukan token asli (cek langsung ke tabel).
+- [x] Rate limit memblokir setelah batas, dan tetap memblokir setelah server dev di-restart (bukti state tidak di memori).
+- [x] Tes: dua request berurutan dengan petugas berbeda di koneksi pool yang sama tidak saling melihat konteks RLS.
 - [x] `grep`: file middleware tidak mengimpor modul database.
-- [ ] Tes kebocoran: data sintetis unik tidak muncul di log aplikasi saat pindai lolos maupun gagal.
-- [ ] `grep` memastikan tidak ada impor tabel profil pasien di luar `lib/consent` dan alur milik pasien sendiri.
+- [x] Tes kebocoran: data sintetis unik tidak muncul di log aplikasi saat pindai lolos maupun gagal.
+- [x] `grep` memastikan tidak ada impor tabel profil pasien di luar `lib/consent` dan alur milik pasien sendiri.
 - [x] `lint`, `typecheck`, `test` lolos.
 
 **Catatan hasil:**
@@ -221,6 +221,26 @@
   - Proxy Next 16 (`src/proxy.ts`): menjaga rute berprefiks peran (`/pasien`, `/pendamping`, `/petugas`, `/admin`, `/kurator`) tanpa akses database atau pg, mengalihkan tanpa cookie ke `/masuk`, mengalihkan peran salah ke beranda perannya, dan meloloskan rute publik (`/`, `/masuk`, `/s`, `/api/auth/*`).
   - Tes arsitektur diperluas: membuktikan file proxy/middleware tidak mengimpor `src/db` atau `pg`.
   - Hasil pemeriksaan: 72 tes di 11 test file lulus (termasuk 28 tes auth, 5 tes proxy, 4 tes route handler, 5 tes arsitektur); `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` lolos. Status Bagian 3: 2/3.
+- Bagian 3c (Prompt 7):
+  - Migrasi `006_scan_and_consent_improvements.sql`:
+    - `consents.subject_ref`: backfill dari `users.audit_subject_id` pasien dan dipasang `NOT NULL` serta index, memutus ketergantungan petugas pada tabel `users` pasien saat audit.
+    - `visits.recorded_at`: membedakan kunjungan baru dibuka (`NULL`) vs kunjungan selesai dicatat (T8). Kolom `recorded_need_codes` dapat bernilai `NULL` saat kunjungan dibuka. Kunjungan lampau di-backfill `recorded_at = created_at`.
+  - `src/lib/consent`:
+    - Format token: Crockford Base32 128 bit (26 karakter, alfabet `0123456789ABCDEFGHJKMNPQRSTVWXYZ`), pengelompokan 4 karakter (`XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XX`), normalisasi otomatis (`O`→`0`, `I`/`L`→`1`, hapus spasi/strip), dan hash SHA-256 tersimpan di `consent_qr`.
+    - URL QR fragmen: `${APP_ORIGIN}/s#<token>` (fragmen `#` tidak dikirim ke server maupun Referer).
+    - `createConsent`: validasi paspor terisi minimal 1 kebutuhan ("Simpan paspor dulu"), durasi 1 jam / hari ini (s.d. 23:59:59.999 WIB) / 24 jam, simpan consent + qr dalam satu transaksi dengan audit `qr_created`.
+    - `revokeQr` dan `revokeAllActive`: hanya pemilik (RLS), set `revoked_at`, tulis audit `qr_revoked` per QR.
+    - `scanToken`:
+      - Rate limit di Postgres per petugas (20/5 min) dan per IP (60/5 min).
+      - Pemeriksaan berurutan: token ada, belum dicabut, belum kedaluwarsa, dalam rentang valid, fasilitas cocok.
+      - Gagal: satu respons generik (status 422, code `QR_UNUSABLE`, message "Minta pasien membuat ConsentQR baru.") + audit `qr_scan_rejected` (pekerjaan setara: 1 lookup + 1 audit insert).
+      - Lolos: baca profil terkini, filter field dicentang, buka/pakai ulang kunjungan hari itu, tulis audit `qr_scanned` dan `profile_read` (fields sebenarnya), commit transaksi sebelum mengembalikan data. Indikator `expiresSoon` aktif jika sisa < 15 menit.
+  - Route handler `POST /api/scan`:
+    - `requireSession` (staff) + `wrapRouteHandler` + `scanToken`.
+    - Petugas nonaktif mengembalikan 403 "Akun tidak aktif. Hubungi admin fasilitas." dan mencatat `qr_scan_rejected`.
+    - Respons selalu ber-header `Cache-Control: no-store`; metode `GET` ditolak (405).
+  - Tes arsitektur diperluas: `patient_profiles` dan `patient_profile_needs` hanya muncul di `src/lib/consent`, `src/db`, dan tes; route scan hanya mengimpor dari `lib/auth`, `lib/consent`, `lib/http`.
+  - Hasil pemeriksaan: 91 tes di 12 test file lulus (termasuk 16 tes matriks consent & scan, 11 tes RLS, 7 tes arsitektur); `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` lolos. Status Bagian 3: 3/3 (SELESAI).
 
 ---
 
