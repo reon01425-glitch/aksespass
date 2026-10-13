@@ -175,10 +175,10 @@ Usulan aturan akses (keputusan akhir tetap di tim):
 
 Yang tersedia offline:
 
-- **Membaca ringkasan di kartu cetak** tidak butuh internet (T-05).
-- **Pencatatan kunjungan (T4b)** disimpan di perangkat petugas dan disinkronkan saat online.
+- **Membaca ringkasan di kartu cetak** tidak butuh internet (T-05). Kartu cetak adalah media fisik murni (ringkasan teks kebutuhan dan kontak darurat) tanpa QR dinamis, agar dapat dibaca langsung tanpa daya/sinyal dan tidak melanggar kontrol persetujuan dinamis.
+- **Pencatatan kunjungan (T4b)** disimpan di perangkat petugas dan disinkronkan saat online. Catatan kunjungan offline merujuk pada `patient_id` atau kode identitas fisik pasien yang dibaca dari kartu cetak / sesi aktif sebelumnya, disimpan lokal di IndexedDB petugas, lalu disinkronkan saat online.
 
-Yang **tidak** tersedia offline: pemindaian ConsentQR (membutuhkan server untuk memvalidasi dan membaca data terkini) dan konfirmasi pasien (P16), yang baru bisa dikirim **setelah sinkron**.
+Yang **tidak** tersedia offline: pemindaian ConsentQR (membutuhkan server untuk memvalidasi token acak, masa berlaku, status pencabutan, dan membaca data terkini) dan konfirmasi pasien (P16/CareProof), yang baru bisa dikirim **setelah sinkron**.
 
 Mekanisme **[Usulan]**:
 
@@ -187,6 +187,12 @@ Mekanisme **[Usulan]**:
 3. Saat online, antrean dikirim berurutan ke `POST /api/sync`. Server menolak duplikat berdasarkan `client_id` (idempotent).
 4. Status antrean ditampilkan: "Menunggu Sinkron" (peringatan) lalu "Tersinkron" (sukses), sesuai `design.md`.
 5. Data di IndexedDB dibatasi ke yang diperlukan, dihapus setelah sinkron, dan dikunci saat petugas keluar.
+
+**Resolusi Kepemilikan Konfirmasi CareProof (Pasien vs Pendamping):**
+- Suara pasien adalah *single source of truth*.
+- Jika pasien mengonfirmasi sendiri, nilainya menjadi penentu utama.
+- Pendamping hanya dapat mengonfirmasi jika pasien berhalangan/mendelegasikan. Konfirmasi oleh pendamping dicatat dengan penanda eksplisit `confirmed_by = 'companion'`.
+- Pada agregat *Accessibility Gap Dashboard*, metrik konfirmasi pasien dan konfirmasi pendamping dipisahkan atau diberi anotasi sub-metrik ("Diverifikasi oleh Pendamping") untuk menjaga integritas data.
 
 **[Verifikasi]** Perilaku penyimpanan PWA di iOS Safari (pembersihan data situs yang lama tidak dibuka) perlu diuji pada perangkat nyata sebelum klaim offline dipakai di presentasi.
 
@@ -199,11 +205,18 @@ Mekanisme **[Usulan]**:
 2. Lapisan layanan: fungsi di `lib/consent` memeriksa fasilitas, consent, dan masa berlaku.
 3. Basis data: kebijakan row-level security sebagai jaring pengaman terakhir.
 
-**Pemulihan akun lewat pendamping (P3):**
-1. Pendamping memulai permintaan pemulihan.
-2. Server mengirim **kode verifikasi ke kontak pasien yang terdaftar** (bukan ke pendamping) dan **notifikasi ke pasien**.
-3. Pendamping memasukkan kode. **[Usulan]** akses baru aktif setelah **jeda tunggu 24 jam**, sehingga pasien punya waktu membatalkan.
-4. Semua langkah dicatat di `audit_events`.
+**Pemisahan Alur Pemulihan Akun & Delegasi Darurat:**
+1. **Delegasi Sementara di Tempat (*On-site Emergency Delegate*):**
+   - Kasus: Ponsel pasien rusak/mati saat tiba di faskes darurat.
+   - Pendamping yang sudah terdaftar di `companions` mengajukan akses sementara di hadapan petugas faskes.
+   - Petugas faskes memverifikasi fisik pasien dan mengesahkan (*sign-off*) izin baca profil kebutuhan untuk kunjungan hari itu saja.
+   - Tanpa jeda 24 jam; langsung aktif dengan cakupan terbatas pada faskes dan tanggal tersebut. Dicatat di `audit_events` dengan peran pengesah petugas.
+2. **Pemulihan Akun Penuh (*Full Account Recovery*):**
+   - Pendamping memulai permintaan pemulihan kepemilikan akun permanen.
+   - Server mengirim **kode verifikasi ke kontak pasien yang terdaftar** (bukan ke pendamping) dan notifikasi peringatan ke pasien.
+   - Pendamping memasukkan kode verifikasi.
+   - Berlaku jeda tunggu keselamatan **24 jam** (*cooling-off period*) sebelum hak pengalihan akun diberikan, memberi kesempatan pasien membatalkan jika terjadi penyalahgunaan.
+   - Semua langkah dicatat di `audit_events`.
 
 ---
 
@@ -283,12 +296,16 @@ Mekanisme **[Usulan]**:
 
 ## 16. Roadmap dan Keputusan Terbuka
 
-**Prototipe (inti):** profil, ConsentQR, pindai + baca saat pindai, brief, kartu cetak tanpa QR, pencatatan kunjungan offline, konfirmasi P16, audit P19, pemulihan lewat pendamping.
+**Prototipe (inti):** profil, ConsentQR, pindai + baca saat pindai, brief, kartu cetak tanpa QR (media fisik murni), pencatatan kunjungan offline (T4b berbasis ID pasien fisik), konfirmasi CareProof (pasien single source of truth), audit P19, delegasi darurat di tempat + pemulihan lewat pendamping.
 
 **Roadmap:** diagnosis lokal terenkripsi, K4-K6 (kurasi lanjutan), transfer antar-perangkat untuk pendamping.
+
+**Keputusan yang diselesaikan / ditutup:**
+1. Kartu cetak adalah media fisik murni tanpa QR dinamis, terbaca offline tanpa daya/sinyal (A).
+2. Resolusi CareProof: suara pasien adalah sumber kebenaran tunggal; konfirmasi pendamping diberi label dan sub-metrik terpisah (C).
+3. Pemulihan akun dipisah: Delegasi Darurat di Tempat (langsung, disahkan petugas) vs Pemulihan Penuh Permanen (jeda keselamatan 24 jam) (D).
 
 **Keputusan yang masih perlu ditutup:**
 1. P-04 (naik ke Must) dan K-01 (tetap Should) — usulan campuran ada di dokumen revisi, menunggu persetujuan.
 2. Penyedia basis data dan hosting (bagian 3, A1-A3 masih usulan).
-3. Jeda tunggu pemulihan (24 jam) disetujui atau diubah.
-4. Hasil verifikasi iOS Safari dan UU PDP (bagian 12).
+3. Hasil verifikasi iOS Safari dan UU PDP (bagian 12).
