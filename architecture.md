@@ -175,8 +175,8 @@ Usulan aturan akses (keputusan akhir tetap di tim):
 
 Yang tersedia offline:
 
-- **Membaca ringkasan di kartu cetak** tidak butuh internet (T-05). Kartu cetak adalah media fisik murni (ringkasan teks kebutuhan dan kontak darurat) tanpa QR dinamis, agar dapat dibaca langsung tanpa daya/sinyal dan tidak melanggar kontrol persetujuan dinamis.
-- **Pencatatan kunjungan (T4b)** disimpan di perangkat petugas dan disinkronkan saat online. Catatan kunjungan offline merujuk pada `patient_id` atau kode identitas fisik pasien yang dibaca dari kartu cetak / sesi aktif sebelumnya, disimpan lokal di IndexedDB petugas, lalu disinkronkan saat online.
+- **Membaca ringkasan di kartu cetak** tidak butuh internet (T-05). Kartu cetak adalah media fisik murni (ringkasan teks kebutuhan dan kontak darurat) **sama sekali tanpa QR code dalam bentuk apa pun**, agar dapat dibaca langsung dengan mata telanjang tanpa alat/daya/sinyal dan tidak melanggar kontrol persetujuan dinamis (revocable).
+- **Pencatatan kunjungan (T4b)** disimpan di perangkat petugas dan disinkronkan saat online. Catatan kunjungan offline merujuk pada kode identitas/nomor rekam medis pasien yang tertera secara tertulis di kartu cetak fisik (atau sesi aktif sebelumnya), disimpan lokal di IndexedDB petugas, lalu disinkronkan saat online.
 
 Yang **tidak** tersedia offline: pemindaian ConsentQR (membutuhkan server untuk memvalidasi token acak, masa berlaku, status pencabutan, dan membaca data terkini) dan konfirmasi pasien (P16/CareProof), yang baru bisa dikirim **setelah sinkron**.
 
@@ -301,7 +301,7 @@ Mekanisme **[Usulan]**:
 **Roadmap:** diagnosis lokal terenkripsi, K4-K6 (kurasi lanjutan), transfer antar-perangkat untuk pendamping.
 
 **Keputusan yang diselesaikan / ditutup:**
-1. Kartu cetak adalah media fisik murni tanpa QR dinamis, terbaca offline tanpa daya/sinyal (A).
+1. Kartu cetak adalah media fisik murni (teks ringkasan) **sama sekali tanpa QR code**, terbaca langsung tanpa gawai/daya/sinyal (A).
 2. Resolusi CareProof: suara pasien adalah sumber kebenaran tunggal; konfirmasi pendamping diberi label dan sub-metrik terpisah (C).
 3. Pemulihan akun dipisah: Delegasi Darurat di Tempat (langsung, disahkan petugas) vs Pemulihan Penuh Permanen (jeda keselamatan 24 jam) (D).
 
