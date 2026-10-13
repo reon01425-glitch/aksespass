@@ -12,10 +12,15 @@ export const DESIGN_TOKENS = {
   "--disabled-text": "#64748B",
   "--success-bg": "#ECFDF5",
   "--success-fg": "#047857",
+  "--success-border": "#A7F3D0",
   "--warning-bg": "#FFFBEB",
   "--warning-fg": "#B45309",
+  "--warning-border": "#FDE68A",
   "--error-bg": "#FEF2F2",
   "--error-fg": "#B91C1C",
+  "--error-border": "#FECACA",
+  "--bg-surface-hover": "#A5F3FC",
+  "--color-white": "#FFFFFF",
 } as const;
 
 export type DesignTokenName = keyof typeof DESIGN_TOKENS;

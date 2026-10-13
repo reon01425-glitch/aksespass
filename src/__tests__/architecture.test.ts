@@ -253,5 +253,179 @@ describe("Tes Arsitektur Kode (Statik & Tanpa DB)", () => {
       ).toBe(true);
     }
   });
+
+  it("tidak ada kode hex di src di luar blok token globals.css dan tokens.ts", () => {
+    const violations: { file: string; matches: string[] }[] = [];
+
+    for (const file of allSrcFiles) {
+      if (isTestFile(file)) continue;
+
+      const relPath = path.relative(srcDir, file);
+      // Diizinkan di src/app/globals.css dan src/lib/tokens.ts
+      if (
+        relPath === "app/globals.css" ||
+        relPath === "app\\globals.css" ||
+        relPath === "lib/tokens.ts" ||
+        relPath === "lib\\tokens.ts"
+      ) {
+        continue;
+      }
+
+      const content = fs.readFileSync(file, "utf8");
+      const matches = content.match(
+        /#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b/g
+      );
+      if (matches && matches.length > 0) {
+        violations.push({ file: relPath, matches });
+      }
+    }
+
+    expect(
+      violations,
+      `Kode warna hex ditemukan di luar globals.css dan tokens.ts: ${JSON.stringify(
+        violations
+      )}`
+    ).toEqual([]);
+  });
+
+  it("tidak ada kelas warna palet Tailwind selain yang tercantum di design.md §2 dan token langkah 2", () => {
+    const forbiddenFamilies = [
+      "gray",
+      "zinc",
+      "neutral",
+      "stone",
+      "orange",
+      "yellow",
+      "lime",
+      "green",
+      "teal",
+      "sky",
+      "blue",
+      "indigo",
+      "violet",
+      "purple",
+      "fuchsia",
+      "pink",
+      "rose",
+    ];
+
+    const allowedShades: Record<string, string[]> = {
+      cyan: ["50", "100", "200", "400", "600", "700", "800", "900"],
+      slate: ["200", "500", "600"],
+      emerald: ["50", "200", "700"],
+      amber: ["50", "200", "700"],
+      red: ["50", "200", "700"],
+    };
+
+    const violations: string[] = [];
+
+    for (const file of allSrcFiles) {
+      if (isTestFile(file)) continue;
+
+      const relPath = path.relative(srcDir, file);
+      const content = fs.readFileSync(file, "utf8");
+
+      // Cek forbidden color families
+      for (const family of forbiddenFamilies) {
+        const regex = new RegExp(
+          `(?:bg|text|border|ring|divide|from|to|via)-${family}-\\d+`,
+          "g"
+        );
+        const matches = content.match(regex);
+        if (matches) {
+          violations.push(
+            `${relPath} memakai warna terlarang: ${matches.join(", ")}`
+          );
+        }
+      }
+
+      // Cek allowed colors tapi unallowed shades
+      const colorRegex =
+        /(?:bg|text|border|ring|divide|from|to|via)-(cyan|slate|emerald|amber|red)-(\d+)/g;
+      let m: RegExpExecArray | null;
+      while ((m = colorRegex.exec(content)) !== null) {
+        const [, color, shade] = m;
+        if (!allowedShades[color]?.includes(shade)) {
+          violations.push(
+            `${relPath} memakai shade tidak terdaftar ${m[0]}`
+          );
+        }
+      }
+    }
+
+    expect(
+      violations,
+      `Pelanggaran palet Tailwind ditemukan: ${violations.join("; ")}`
+    ).toEqual([]);
+  });
+
+  it("token warna status hanya dipakai di StatusBanner dan CareProofScale (architecture.md §14)", () => {
+    const violations: string[] = [];
+
+    for (const file of allSrcFiles) {
+      if (isTestFile(file)) continue;
+
+      const relPath = path.relative(srcDir, file);
+      // Diizinkan di StatusBanner, CareProofScale, tokens.ts, dan halaman katalog dev
+      if (
+        relPath === "components/status-banner.tsx" ||
+        relPath === "components\\status-banner.tsx" ||
+        relPath === "components/care-proof-scale.tsx" ||
+        relPath === "components\\care-proof-scale.tsx" ||
+        relPath === "lib/tokens.ts" ||
+        relPath === "lib\\tokens.ts" ||
+        relPath.startsWith("app/dev/katalog") ||
+        relPath.startsWith("app\\dev\\katalog")
+      ) {
+        continue;
+      }
+
+      const content = fs.readFileSync(file, "utf8");
+      const statusClassRegex =
+        /(?:bg|text|border|ring|divide)-(?:emerald|amber|red|success|warning|error)[a-zA-Z0-9_-]*/g;
+      const matches = content.match(statusClassRegex);
+      if (matches && matches.length > 0) {
+        violations.push(`${relPath}: ${matches.join(", ")}`);
+      }
+    }
+
+    expect(
+      violations,
+      `Warna status ditemukan di luar StatusBanner, CareProofScale, dan katalog: ${violations.join(
+        "; "
+      )}`
+    ).toEqual([]);
+  });
+
+  it("tidak ada font-medium/font-semibold, atribut placeholder, atau kelas animate-*", () => {
+    const violations: string[] = [];
+
+    for (const file of allSrcFiles) {
+      if (isTestFile(file)) continue;
+
+      const relPath = path.relative(srcDir, file);
+      const content = fs.readFileSync(file, "utf8");
+
+      if (content.includes("font-medium")) {
+        violations.push(`${relPath} mengandung font-medium`);
+      }
+      if (content.includes("font-semibold")) {
+        violations.push(`${relPath} mengandung font-semibold`);
+      }
+      if (/\bplaceholder\s*=/i.test(content)) {
+        violations.push(`${relPath} mengandung atribut placeholder`);
+      }
+      if (/\banimate-[a-zA-Z0-9_-]+/i.test(content)) {
+        violations.push(`${relPath} mengandung kelas animate-*`);
+      }
+    }
+
+    expect(
+      violations,
+      `Pelanggaran tipografi/placeholder/animasi ditemukan: ${violations.join(
+        "; "
+      )}`
+    ).toEqual([]);
+  });
 });
 

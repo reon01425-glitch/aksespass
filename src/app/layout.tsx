@@ -16,6 +16,17 @@ export const metadata: Metadata = {
     "Sampaikan kebutuhan layanan kesehatan dengan kontrol persetujuan di tangan pasien.",
 };
 
+import dynamic from "next/dynamic";
+
+const DevAuditPanel =
+  process.env.NODE_ENV === "development"
+    ? dynamic(() =>
+        import("@/components/dev-audit-panel").then(
+          (mod) => mod.DevAuditPanel
+        )
+      )
+    : () => null;
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -27,7 +38,14 @@ export default function RootLayout({
       className={`${atkinson.variable} ${atkinson.className} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-page text-main font-normal">
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-3 focus:bg-cyan-700 focus:text-white focus:font-bold focus:rounded-lg focus:shadow-sm"
+        >
+          Lewati ke konten utama
+        </a>
         {children}
+        {process.env.NODE_ENV === "development" && <DevAuditPanel />}
       </body>
     </html>
   );

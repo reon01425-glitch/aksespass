@@ -250,22 +250,50 @@
 **Baca:** `design.md` §1–§5; `architecture.md` §14.
 
 **Checklist**
-- [ ] Button (primer, sekunder), Input teks/OTP, Chip pilihan bergambar, Toggle, `StatusBanner` (sukses/peringatan/galat), Pop-up konfirmasi, Skala ikon CareProof.
-- [ ] Kerangka halaman: header dengan tombol kembali, area konten `max-width: 60ch` untuk teks.
-- [ ] Halaman katalog komponen (hanya di mode pengembangan) untuk uji visual.
+- [x] Button (primer, sekunder), Input teks/OTP, Chip pilihan bergambar, Toggle, `StatusBanner` (sukses/peringatan/galat), Pop-up konfirmasi, Skala ikon CareProof.
+- [x] Kerangka halaman: header dengan tombol kembali, area konten `max-width: 60ch` untuk teks.
+- [x] Halaman katalog komponen (hanya di mode pengembangan) untuk uji visual.
 
 **Verifikasi** (per komponen)
-- [ ] Semua target interaktif ≥ 48 × 48 px (diukur di DevTools).
-- [ ] Dapat dioperasikan dengan keyboard saja; focus ring terlihat.
-- [ ] Status memakai ikon + teks + warna; tidak ada status yang hanya warna.
-- [ ] Input 16 px, label terlihat di luar input, tidak memakai placeholder sebagai label.
-- [ ] Lebar 320 px dan zoom teks 200%: tidak ada horizontal scroll atau teks terpotong.
-- [ ] `prefers-reduced-motion` aktif: tidak ada animasi.
-- [ ] Alat uji aksesibilitas otomatis: tidak ada pelanggaran pada halaman katalog.
-- [ ] `grep` tidak menemukan `font-medium`, `font-semibold`, atau warna hex di luar token.
-- [ ] `lint`, `typecheck`, `test`, `build` lolos.
+- [x] Semua target interaktif ≥ 48 × 48 px (diukur di DevTools).
+- [x] Dapat dioperasikan dengan keyboard saja; focus ring terlihat.
+- [x] Status memakai ikon + teks + warna; tidak ada status yang hanya warna.
+- [x] Input 16 px, label terlihat di luar input, tidak memakai placeholder sebagai label.
+- [x] Lebar 320 px dan zoom teks 200%: tidak ada horizontal scroll atau teks terpotong.
+- [x] `prefers-reduced-motion` aktif: tidak ada animasi.
+- [x] Alat uji aksesibilitas otomatis: tidak ada pelanggaran pada halaman katalog.
+- [x] `grep` tidak menemukan `font-medium`, `font-semibold`, atau warna hex di luar token.
+- [x] `lint`, `typecheck`, `test`, `build` lolos.
 
 **Catatan hasil:**
+- Komponen UI bersama selesai dibuat di `src/components/`:
+  - `Button` (primer `bg-cyan-700` font-bold; sekunder `bg-cyan-100 border-cyan-700` font-bold; default `type="button"`; tinggi ≥ 48 px; nonaktif memakai `bg-disabled-surface text-disabled-text`; memproses dengan `aria-busy="true"` dan teks "Memproses…", tanpa animasi).
+  - `TextLink` (`text-link` dengan underline, opsi `standalone` dengan area sentuh ≥ 48×48 px).
+  - `TextField` (label terlihat di atas; tanpa atribut placeholder; teks bantuan opsional; pesan galat dengan ikon `CircleX` + teks; `aria-invalid` dan `aria-describedby` tersinkron; teks 16 px; border-input; varian telepon `type="tel" autocomplete="tel"`; varian OTP SATU kolom `inputMode="numeric" autocomplete="one-time-code" maxLength={6}`).
+  - `ChoiceChip` & `ChoiceGroup` (input checkbox asli di dalam `fieldset`/`legend`; ikon + teks; terpilih memakai `bg-surface` DAN ikon `CircleCheck`; area sentuh ≥ 48×48 px; Spasi untuk memilih).
+  - `Toggle` (input checkbox asli dengan `role="switch"`; label teks; tulisan status "Aktif"/"Nonaktif" terlihat berdampingan; area sentuh ≥ 48×48 px).
+  - `StatusBanner` (sukses/peringatan/galat; ikon wajib `CircleCheck`, `TriangleAlert`, `CircleX`, atau `Ban` untuk kamera ditolak; judul tebal + pesan; `role="alert"` khusus galat, `role="status"` untuk sukses/peringatan; slot aksi opsional).
+  - `ConfirmDialog` (elemen `<dialog>` native dengan `showModal()`; judul via `aria-labelledby`; deskripsi via `aria-describedby`; fokus awal ke tombol batal; Esc menutup; fokus kembali ke pemicu; tombol aksi menyebut tindakan spesifik seperti "Ya, Cabut", bukan "OK").
+  - `CareProofScale` (`fieldset` + `legend` + 3 radio asli bergaya ubin besar — Terpenuhi pola sukses, Sebagian pola peringatan, Belum pola galat; masing-masing ikon + teks; terpilih ditandai border tebal 4px + ikon centang `Check`; navigasi panah keyboard native).
+  - `PageShell` (header dengan tombol Kembali opsional aria-label "Kembali" ≥ 48 px menuju href halaman; tepat satu H1; main content dengan pembatasan paragraf `max-width: 60ch`).
+- Halaman katalog pengembangan: `/dev/katalog` menampilkan semua komponen dalam seluruh keadaannya (normal, terpilih, nonaktif, galat, memproses); mengembalikan 404 pada build produksi.
+- Panel pemeriksaan khusus pengembangan (`DevAuditPanel`): komponen client dipasang di root `layout.tsx` via import dinamis hanya bila `NODE_ENV === "development"`, mengecualikan dirinya sendiri dari audit, menyediakan:
+  - "Cek aksesibilitas": import dinamis `axe-core`, menjalankan `axe.run` pada halaman.
+  - "Cek target sentuh": mendeteksi elemen interaktif < 48×48 px.
+  - "Cek scroll horizontal": membandingkan `scrollWidth` dan `clientWidth`.
+  - "Simulasi Teks 200%": toggle `document.documentElement.style.fontSize = "200%"`.
+  - **Cara memakai untuk prompt berikutnya:** buka halaman aplikasi di mode dev, klik tombol melayang "🛠️ Dev Audit" di pojok kanan bawah, lalu tekan tombol pemeriksaan yang diinginkan untuk audit langsung di peramban. Panel dan `axe-core` terbukti tidak ikut ke build produksi.
+- Bukti verifikasi:
+  - axe-core di `/dev/katalog`: 0 pelanggaran (`✓ 0 pelanggaran aksesibilitas ditemukan oleh axe-core.`).
+  - Target sentuh: 16 dari 16 elemen interaktif di `/dev/katalog` memenuhi target ≥ 48×48 px.
+  - Lebar 320 px (emulasi viewport 320×640): `scrollWidth: 320px`, `clientWidth: 320px`, selisih 0 px (tidak ada horizontal scroll).
+  - Lebar 320 px + zoom teks 200%: `scrollWidth: 320px`, `clientWidth: 320px`, selisih 0 px (tidak ada horizontal scroll dan teks membungkus rapi).
+  - Keyboard: Tab, Spasi, Enter, Panah radio, Esc pada ConfirmDialog (fokus masuk ke dialog pada tombol Batal, Esc menutup dialog, fokus kembali ke tombol pemicu). Focus ring cyan-900 terlihat jelas.
+  - Status multimodal: ikon + teks + warna pada StatusBanner dan CareProofScale.
+  - Animasi: tidak ada animasi pada komponen, aturan global `prefers-reduced-motion` aktif.
+  - Produksi: `pnpm build && pnpm start` menghasilkan status HTTP 404 pada `/dev/katalog` dan panel dev tidak dirender di HTML. Bundle static/server bersih dari `axe-core`.
+  - 110 tes lolos di 13 test file (termasuk 15 tes komponen baru dan 4 tes arsitektur baru untuk hex code, palet Tailwind, pembatasan warna status, dan tipografi/placeholder/animasi).
+  - `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` lolos. Status Bagian 4: SELESAI.
 
 ---
 

@@ -52,6 +52,8 @@ Rasio kontras di tabel adalah hasil perhitungan, **[Verifikasi]** dengan alat uj
 | **Peringatan (Warning)**| `bg-amber-50` (`#FFFBEB`) | `text-amber-700` (`#B45309`) | `AlertTriangle` | "Hampir Kedaluwarsa", "Menunggu Sinkron" |
 | **Galat (Error)** | `bg-red-50` (`#FEF2F2`) | `text-red-700` (`#B91C1C`) | `XCircle` / `Ban` | "QR Tidak Dapat Dipakai" (petugas), "QR Kedaluwarsa" (layar pasien sendiri, P12), "Kamera Ditolak" |
 
+*Catatan padanan ikon Lucide React (v1.x):* `CheckCircle2` ↔ `CircleCheck`, `AlertTriangle` ↔ `TriangleAlert`, `XCircle` ↔ `CircleX`. Semua ikon dekoratif wajib `aria-hidden="true"`.
+
 ### C. Token Siap Pakai
 Nilai sama persis dengan tabel A dan B. Bentuk integrasi ke Tailwind mengikuti versi Tailwind yang dipakai saat scaffold.
 
@@ -72,6 +74,13 @@ Nilai sama persis dengan tabel A dan B. Bentuk integrasi ke Tailwind mengikuti v
   --success-bg: #ECFDF5;  --success-fg: #047857;
   --warning-bg: #FFFBEB;  --warning-fg: #B45309;
   --error-bg:   #FEF2F2;  --error-fg:   #B91C1C;
+
+  /* Token Tambahan [Usulan] (Prompt 8) */
+  --bg-surface-hover: #A5F3FC; /* Hover tombol sekunder di §4A */
+  --success-border: #A7F3D0;   /* Border kontainer status sukses */
+  --warning-border: #FDE68A;   /* Border kontainer status peringatan */
+  --error-border:   #FECACA;   /* Border kontainer status galat (§4B border-red-200) */
+  --color-white:    #FFFFFF;   /* Putih: teks tombol primer, latar input */
 }
 ```
 
@@ -135,3 +144,5 @@ Belum ada spesifikasi visual final. Aturan di bawah hanya menurunkan prinsip §1
 | Tombol geser (toggle) | P11 | Area sentuh ≥ 48 × 48 px; label teks di sebelahnya; status Aktif/Nonaktif ditulis, bukan hanya posisi |
 | Skala ikon CareProof | P16, D8, T9 | Tiga tombol besar berlabel teks: Terpenuhi (pola Sukses, `CheckCircle2`), Sebagian (pola Peringatan, `AlertTriangle`), Belum (pola Galat, `XCircle`) |
 | Pop-up konfirmasi tindakan merusak | P20, P21, P23, A4, K4 | Fokus pindah ke pop-up; tombol batal selalu ada; tombol aksi menyebut tindakannya ("Ya, Cabut"), bukan "OK" |
+
+*Catatan implementasi:* Seluruh komponen turunan di atas telah diimplementasikan sebagai komponen bersama di `src/components/` pada Prompt 8 (status spesifikasi tetap **[Usulan]** hingga seluruh alur diverifikasi penuh).
