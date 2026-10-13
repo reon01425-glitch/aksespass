@@ -16,6 +16,27 @@ export function formatTimeWib(date: Date): string {
   return `${hours}:${minutes} WIB`;
 }
 
+const BULAN_WIB = [
+  "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
+  "Jul", "Agu", "Sep", "Okt", "Nov", "Des"
+];
+
+/**
+ * Memformat objek Date ke string tanggal dan jam WIB (UTC+7):
+ * Contoh: "13 Okt 2026, 14:35 WIB"
+ */
+export function formatDateTimeWib(date: Date): string {
+  const wibMs = date.getTime() + 7 * 60 * 60 * 1000;
+  const wibDate = new Date(wibMs);
+  const day = wibDate.getUTCDate();
+  const month = BULAN_WIB[wibDate.getUTCMonth()];
+  const year = wibDate.getUTCFullYear();
+  const hours = String(wibDate.getUTCHours()).padStart(2, "0");
+  const minutes = String(wibDate.getUTCMinutes()).padStart(2, "0");
+  return `${day} ${month} ${year}, ${hours}:${minutes} WIB`;
+}
+
+
 /**
  * Menghitung dan memformat sisa waktu dalam bahasa Indonesia:
  * - diff <= 0: "sudah kedaluwarsa"

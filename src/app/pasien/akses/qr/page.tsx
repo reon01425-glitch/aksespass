@@ -1,22 +1,41 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { PageShell } from "@/components";
+import { COOKIE_NAME, SECURE_COOKIE_NAME } from "@/lib/auth/constants";
+import { verifySessionCookie } from "@/lib/auth/session";
+import { listOwnActiveQrs } from "@/lib/consent";
+import { ActiveQrClient } from "./active-qr-client";
 
 export const metadata: Metadata = {
   title: "QR Aktif — AKSESPASS",
+  description: "Daftar ConsentQR aktif dan pembatalan izin akses.",
 };
 
-export default function PasienAksesQrPage() {
+export default async function PasienAksesQrPage() {
+  const cookieStore = await cookies();
+  const sessionCookie =
+    cookieStore.get(SECURE_COOKIE_NAME)?.value ||
+    cookieStore.get(COOKIE_NAME)?.value;
+
+  if (!sessionCookie) {
+    redirect("/masuk");
+  }
+
+  const session = await verifySessionCookie(sessionCookie);
+  if (!session || session.role !== "patient") {
+    redirect("/masuk");
+  }
+
+  const activeQrs = await listOwnActiveQrs(session);
+
   return (
     <PageShell
       title="QR Aktif"
-      backHref="/pasien"
-      backLabel="Kembali ke Beranda"
+      backHref="/pasien/akses"
+      backLabel="Kembali ke Kontrol Akses"
     >
-      <div className="flex flex-col gap-4">
-        <p className="text-base text-main">
-          Daftar seluruh ConsentQR aktif dan riwayat pembatalan sedang dibangun (Prompt 12).
-        </p>
-      </div>
+      <ActiveQrClient initialQrs={activeQrs} />
     </PageShell>
   );
 }

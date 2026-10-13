@@ -303,7 +303,20 @@ Nama kejadian baru di atas **[Usulan]**; maknanya mengikuti `docs/user-flows.md`
 - Tabel append-only: aplikasi hanya punya izin `INSERT` dan `SELECT`.
 - Isi: pelaku, subjek, tipe, waktu, fasilitas. **Tanpa isi data pasien.** Untuk `profile_read`, yang dicatat adalah **nama field** yang dibuka (agar P19 bisa menampilkan "data yang dilihat"), bukan nilainya.
 - Pasien dapat melihat riwayat pembukaan datanya sendiri (P19).
+
+**Fungsi Pembaca Riwayat Akses SECURITY DEFINER [Usulan, 13 Okt 2026]:**
+- Karena RLS melarang peran pasien (`patient`) membaca tabel `users` milik petugas faskes, pembacaan riwayat akses di P19 dilakukan melalui fungsi `SECURITY DEFINER` sempit `get_patient_access_history(p_from, p_to, p_facility_id)`.
+- Fungsi dimiliki oleh `aksespass_owner`, menetapkan `SET search_path = public, pg_temp`, izin `EXECUTE` dicabut dari `PUBLIC` dan hanya diberikan ke `aksespass_app`.
+- Fungsi memvalidasi bahwa `app_role() = 'patient'` dan mengambil `audit_subject_id` pasien dari `app_user_id()`. Jika pemanggil bukan pasien, fungsi mengembalikan 0 baris.
+- Mengembalikan hanya event audit yang memiliki `subject_ref` milik pasien pemanggil, mengaburkan identitas aksi sendiri menjadi label `"Anda"`, nama tampilan petugas/pendamping untuk pelaku eksternal, nama fasilitas, serta daftar nama field (tanpa token, tanpa nilai profil pasien).
+- **Pemetaan Event ke Tampilan Pasien:**
+  - `profile_read`: `"Data dibuka oleh <petugas> — <fasilitas>"` + daftar field bahasa manusiawi (`Komunikasi`, `Mobilitas`, `Nama panggilan`, `Catatan`). `qr_scanned` tidak ditampilkan terpisah karena selalu berpasangan dengan `profile_read`.
+  - `qr_scan_rejected`: `"Percobaan pindai ditolak — <fasilitas>"`.
+  - `qr_created` / `qr_revoked`: `"Anda membuat/mencabut QR untuk <fasilitas>"`.
+  - Event lain: label umum tanpa detail sensitif. Field tak dikenal tidak pernah dicetak mentah.
+
 - **Hapus akun (P23):** identitas pasien harus dapat dipisahkan dari audit log tanpa melanggar append-only. **[Usulan]** `subjek` memakai pengenal pseudonim; saat akun dihapus, pemetaan pseudonim → pasien yang dihapus, bukan baris log. **[Verifikasi]** UU PDP.
+
 
 ---
 

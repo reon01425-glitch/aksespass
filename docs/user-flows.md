@@ -181,10 +181,10 @@ Pasien tetap memegang kendali atas data dan siapa yang bisa bertindak atas naman
 - **US:** P-05, P-06.
 
 ### [P19] Riwayat Akses (Audit Log)
-- **Tampilan:** daftar kronologis setiap pembukaan data: tanggal dan jam, nama petugas, fasilitas, dan data yang dilihat. Filter tanggal dan fasilitas.
-- **Aksi Utama:** membaca riwayat. Jika ada akses yang tidak dikenali: [Laporkan] dan [Cabut Semua QR].
+- **Tampilan:** daftar kronologis setiap pembukaan data: tanggal dan jam, nama petugas, fasilitas, dan data yang dilihat. Filter periode (7 hari, 30 hari, semua waktu) dan fasilitas.
+- **Aksi Utama:** membaca riwayat. [Cabut Semua QR] → konfirmasi di dialog → mencabut semua ConsentQR aktif dan mencatat kejadian `qr_revoked`. Tombol [Laporkan] belum dibuat hari ini karena belum ada layar admin yang menerima laporan, agar tidak menjanjikan tindak lanjut yang belum tersedia.
 - **Aksi Alternatif:** daftar kosong → "Belum ada akses".
-- **Navigasi:** [Laporkan] mengirim laporan ke admin fasilitas terkait; [Cabut Semua QR] → konfirmasi di [P20].
+- **Navigasi:** [Cabut Semua QR] membuka konfirmasi langsung di P19.
 - **US:** P-06.
 
 ### [P20] QR Aktif dan Cabut

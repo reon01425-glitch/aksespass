@@ -123,3 +123,222 @@ export async function recordAuditEvent(
     ]
   );
 }
+
+import { withContext } from "../../db";
+import { formatDateTimeWib } from "../consent/time";
+
+export const HUMAN_FIELD_LABELS: Record<string, string> = {
+  nama_panggilan: "Nama panggilan",
+  preferred_name: "Nama panggilan",
+  komunikasi: "Komunikasi",
+  penglihatan: "Penglihatan",
+  pendengaran: "Pendengaran",
+  mobilitas: "Mobilitas",
+  sensorik_lingkungan: "Sensorik Lingkungan",
+  pendampingan: "Pendampingan",
+  catatan_pasien: "Catatan",
+  catatan: "Catatan",
+};
+
+/**
+ * Memetakan daftar nama field mentah di audit ke label bahasa Indonesia yang ramah manusia.
+ * Field yang tidak dikenal TIDAK AKAN dicetak mentah (diabaikan).
+ */
+export function mapAuditFieldsToHumanLabels(
+  fields: readonly string[] | null | undefined
+): string[] {
+  if (!fields || !Array.isArray(fields)) return [];
+  const labels: string[] = [];
+  for (const f of fields) {
+    if (typeof f !== "string") continue;
+    const key = f.toLowerCase().trim();
+    if (HUMAN_FIELD_LABELS[key]) {
+      labels.push(HUMAN_FIELD_LABELS[key]);
+    }
+  }
+  return labels;
+}
+
+export interface RawAccessHistoryRow {
+  occurred_at: Date | string;
+  event_type: AuditEventType;
+  actor_label: string;
+  facility_name: string | null;
+  fields: string[];
+}
+
+export interface AccessHistoryEntry {
+  id: string;
+  occurredAt: string;
+  occurredAtDate: Date;
+  timeTextWib: string;
+  eventType: AuditEventType;
+  title: string;
+  actorLabel: string;
+  facilityName: string | null;
+  fieldLabels: string[];
+}
+
+/**
+ * Fungsi murni untuk memetakan baris event audit ke entri tampilan riwayat pasien (P19).
+ * - qr_scanned disaring (return null) karena selalu berpasangan dengan profile_read.
+ * - profile_read memuat nama petugas/pelaku dan fasilitas, serta field yang dilihat.
+ * - qr_scan_rejected memuat label penolakan dan fasilitas.
+ * - qr_created / qr_revoked memuat aksi "Anda membuat/mencabut QR untuk <fasilitas>".
+ * - Event lain memiliki label umum tanpa detail sensitif.
+ */
+export function mapAuditEventToDisplayEntry(
+  row: RawAccessHistoryRow,
+  index: number = 0
+): AccessHistoryEntry | null {
+  if (row.event_type === "qr_scanned") {
+    return null;
+  }
+
+  const occurredAtDate = new Date(row.occurred_at);
+  const timeTextWib = formatDateTimeWib(occurredAtDate);
+  const actor = row.actor_label?.trim() || "Sistem";
+  const facility = row.facility_name?.trim() || null;
+
+  let title = "";
+  let fieldLabels: string[] = [];
+
+  switch (row.event_type) {
+    case "profile_read": {
+      title = facility
+        ? `Data dibuka oleh ${actor} — ${facility}`
+        : `Data dibuka oleh ${actor}`;
+      fieldLabels = mapAuditFieldsToHumanLabels(row.fields);
+      break;
+    }
+    case "qr_scan_rejected": {
+      title = facility
+        ? `Percobaan pindai ditolak — ${facility}`
+        : "Percobaan pindai ditolak";
+      break;
+    }
+    case "qr_created": {
+      title = facility
+        ? `Anda membuat QR untuk ${facility}`
+        : "Anda membuat QR";
+      break;
+    }
+    case "qr_revoked": {
+      title = facility
+        ? `Anda mencabut QR untuk ${facility}`
+        : "Anda mencabut QR";
+      break;
+    }
+    case "brief_sent": {
+      title = facility ? `Brief dikirim ke ${facility}` : "Brief dikirim";
+      break;
+    }
+    case "brief_opened": {
+      title = facility ? `Brief dibuka — ${facility}` : "Brief dibuka";
+      break;
+    }
+    case "visit_recorded": {
+      title = facility ? `Kunjungan dicatat — ${facility}` : "Kunjungan dicatat";
+      break;
+    }
+    case "visit_synced": {
+      title = "Kunjungan tersinkron";
+      break;
+    }
+    case "visit_confirmed": {
+      title = "Konfirmasi kunjungan dikirim";
+      break;
+    }
+    case "companion_link_requested": {
+      title = "Permintaan tautan pendamping";
+      break;
+    }
+    case "companion_linked": {
+      title = "Pendamping ditautkan";
+      break;
+    }
+    case "companion_unlinked": {
+      title = "Tautan pendamping dicabut";
+      break;
+    }
+    case "profile_changed_by_companion": {
+      title = "Paspor diubah oleh pendamping";
+      break;
+    }
+    case "delegation_signed_off": {
+      title = "Delegasi darurat disahkan";
+      break;
+    }
+    case "access_reported": {
+      title = "Akses dilaporkan";
+      break;
+    }
+    case "account_deleted": {
+      title = "Akun dihapus";
+      break;
+    }
+    default: {
+      title = "Aktivitas akun";
+      break;
+    }
+  }
+
+  return {
+    id: `history-${occurredAtDate.getTime()}-${index}`,
+    occurredAt: occurredAtDate.toISOString(),
+    occurredAtDate,
+    timeTextWib,
+    eventType: row.event_type,
+    title,
+    actorLabel: actor,
+    facilityName: facility,
+    fieldLabels,
+  };
+}
+
+export interface AccessHistoryFilter {
+  from?: Date | string | null;
+  to?: Date | string | null;
+  facilityId?: string | null;
+}
+
+/**
+ * Mengambil riwayat akses khusus milik pasien pemanggil (P19) lewat fungsi SECURITY DEFINER.
+ * Hanya pasien yang diizinkan memanggil fungsi ini (peran lain menghasilkan []).
+ */
+export async function getOwnAccessHistory(
+  session: { userId: string; role: AppDbRole },
+  filter?: AccessHistoryFilter
+): Promise<AccessHistoryEntry[]> {
+  if (session.role !== "patient") {
+    return [];
+  }
+
+  return await withContext(
+    {
+      userId: session.userId,
+      role: session.role,
+    },
+    async (tx) => {
+      const fromParam = filter?.from ? new Date(filter.from).toISOString() : null;
+      const toParam = filter?.to ? new Date(filter.to).toISOString() : null;
+      const facilityIdParam = filter?.facilityId ? filter.facilityId : null;
+
+      const res = await tx.query<RawAccessHistoryRow>(
+        `SELECT
+           occurred_at,
+           event_type,
+           actor_label,
+           facility_name,
+           fields
+         FROM get_patient_access_history($1::timestamptz, $2::timestamptz, $3::uuid);`,
+        [fromParam, toParam, facilityIdParam]
+      );
+
+      return res.rows
+        .map((row, idx) => mapAuditEventToDisplayEntry(row, idx))
+        .filter((entry): entry is AccessHistoryEntry => entry !== null);
+    }
+  );
+}
+

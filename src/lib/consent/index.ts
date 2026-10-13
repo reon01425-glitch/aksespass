@@ -1,12 +1,16 @@
 import crypto from "node:crypto";
 import { type AppDbRole, withContext } from "../../db";
-import { recordAuditEvent } from "../audit";
+import { mapAuditFieldsToHumanLabels, recordAuditEvent } from "../audit";
 import {
   isConsentSharedField,
   NEED_CATEGORIES,
 } from "./constants";
 import { checkScanRateLimit } from "./rate-limit";
-import { type ConsentDuration } from "./time";
+import {
+  type ConsentDuration,
+  formatRemainingTime,
+  formatExpiryText,
+} from "./time";
 import {
   buildConsentQrUrl,
   generateConsentToken,
@@ -841,3 +845,82 @@ export async function countActiveConsents(
     }
   );
 }
+
+export interface ActiveQrItem {
+  id: string;
+  consentId: string;
+  facilityId: string;
+  facilityName: string;
+  expiresAt: string;
+  remainingTimeText: string;
+  expiryText: string;
+  sharedFields: string[];
+  sharedFieldLabels: string[];
+  createdAt: string;
+}
+
+/**
+ * Mengambil daftar seluruh ConsentQR aktif milik pasien (P20):
+ * Hanya menyertakan QR yang belum kedaluwarsa dan belum dicabut.
+ */
+export async function listOwnActiveQrs(
+  actor: ConsentActor,
+  options?: { now?: Date }
+): Promise<ActiveQrItem[]> {
+  const now = options?.now ?? new Date();
+
+  return await withContext(
+    {
+      userId: actor.userId,
+      role: actor.role,
+    },
+    async (tx) => {
+      const res = await tx.query<{
+        qr_id: string;
+        consent_id: string;
+        facility_id: string;
+        facility_name: string;
+        expires_at: Date;
+        created_at: Date;
+        shared_fields: string[];
+      }>(
+        `SELECT
+           cq.id AS qr_id,
+           cq.consent_id,
+           c.facility_id,
+           f.name AS facility_name,
+           cq.expires_at,
+           cq.created_at,
+           c.shared_fields
+         FROM consent_qr cq
+         JOIN consents c ON c.id = cq.consent_id
+         JOIN facilities f ON f.id = c.facility_id
+         WHERE c.patient_user_id = $1
+           AND cq.revoked_at IS NULL
+           AND cq.expires_at > $2
+         ORDER BY cq.created_at DESC;`,
+        [actor.userId, now.toISOString()]
+      );
+
+      return res.rows.map((row) => {
+        const expiresAtDate = new Date(row.expires_at);
+        return {
+          id: row.qr_id,
+          consentId: row.consent_id,
+          facilityId: row.facility_id,
+          facilityName: row.facility_name,
+          expiresAt: expiresAtDate.toISOString(),
+          remainingTimeText: formatRemainingTime(expiresAtDate, now),
+          expiryText: formatExpiryText(expiresAtDate, now),
+          sharedFields: row.shared_fields || [],
+          sharedFieldLabels: mapAuditFieldsToHumanLabels([
+            "preferred_name",
+            ...(row.shared_fields || []),
+          ]),
+          createdAt: new Date(row.created_at).toISOString(),
+        };
+      });
+    }
+  );
+}
+

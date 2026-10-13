@@ -362,18 +362,18 @@
 - [x] P6 pratinjau persis seperti yang akan dilihat petugas; simpan.
 - [x] P9 pilih fasilitas (jalur "sudah di fasilitas").
 - [x] P11 pilih field (P-04) dan masa berlaku.
-- [x] P12 QR besar berisi URL dengan token saja, hitung mundur, cabut dengan konfirmasi; berubah menjadi "Dipindai oleh petugas".
-- [ ] P18–P20 riwayat akses (siapa, kapan, fasilitas, nama field) dan daftar QR aktif dengan cabut.
+- [x] P18–P20 riwayat akses (siapa, kapan, fasilitas, nama field) dan daftar QR aktif dengan cabut.
 
 **Verifikasi**
 - [x] Dekode isi QR: hanya URL + token, tanpa nama, kebutuhan, atau ID pasien.
 - [x] Tes: draft belum disimpan tidak bisa dibagikan lewat QR (K-8 draft hanya di memori).
 - [x] Tes: profil diubah → QR aktif membaca profil terbaru (perilaku "dibaca saat dipindai").
 - [x] Tes: QR dicabut di P12 atau P20 → pindai berikutnya ditolak dan pencabutan tampil di P19.
-- [ ] P19 hanya menampilkan riwayat milik pasien yang masuk (tes akses silang antarpasien ditolak).
+- [x] P19 hanya menampilkan riwayat milik pasien yang masuk (tes akses silang antarpasien ditolak).
 - [x] Halaman token memakai `Referrer-Policy: no-referrer`.
 - [x] Uji manual keyboard + 320 px + zoom 200% pada P5 dan P6.
 - [x] Uji manual keyboard + 320 px + zoom 200% pada P9, P11, dan P12 (termasuk ConfirmDialog terbuka).
+- [x] Uji manual keyboard + 320 px + zoom 200% pada P18, P19 (berisi & kosong), dan P20 (termasuk ConfirmDialog terbuka).
 - [x] `lint`, `typecheck`, `test`, `build` lolos.
 
 **Catatan hasil:**
@@ -437,6 +437,39 @@
     - Log dev server: diperiksa dengan grep, token tidak pernah muncul di log server.
     - Dev Audit Panel: 0 pelanggaran axe, semua elemen interaktif ≥ 48×48 px, 0 scroll horizontal pada 320 px dan zoom teks 200% (termasuk saat `ConfirmDialog` terbuka).
     - `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` lolos 100%. Status Bagian 6: 2/3 (Bagian 6b SELESAI).
+- Bagian 6 (3 dari 3 / Prompt 12 — P18–P20):
+  - Migrasi Basis Data 007 (`src/db/migrations/007_access_history.sql`):
+    - Fungsi `SECURITY DEFINER` sempit `get_patient_access_history(p_from, p_to, p_facility_id)` milik `aksespass_owner`.
+    - `SET search_path = public, pg_temp`, izin `EXECUTE` dicabut dari `PUBLIC` dan diberikan khusus ke `aksespass_app`.
+    - Hanya berjalan jika `app.role = 'patient'`, mengambil `audit_subject_id` pasien pemanggil dari `app.user_id`. Mengembalikan HANYA event audit dengan `subject_ref` tersebut.
+    - Kolom dikembalikan: `occurred_at`, `event_type`, `actor_label` (`"Anda"` untuk aksi sendiri, `display_name` petugas/pendamping untuk orang lain), `facility_name`, `fields`.
+    - Tidak membocorkan token, nomor telepon, ID pasien, atau nilai profil paspor ke hasil riwayat.
+  - Modul Audit Domain (`src/lib/audit/index.ts`):
+    - `getOwnAccessHistory(session, filter)` memanggil fungsi SECURITY DEFINER via `withContext`.
+    - `mapAuditEventToDisplayEntry`: fungsi murni memetakan event ke label bahasa Indonesia yang ramah manusia.
+      - `profile_read` → `"Data dibuka oleh <petugas> — <fasilitas>"` + field manusiawi (`Nama panggilan`, `Komunikasi`, `Pendengaran`, `Mobilitas`, `Sensorik Lingkungan`, `Pendampingan`, `Catatan`).
+      - `qr_scanned` disaring otomatis (tidak ditampilkan terpisah karena selalu berpasangan dengan `profile_read`).
+      - `qr_scan_rejected` → `"Percobaan pindai ditolak — <fasilitas>"`.
+      - `qr_created` / `qr_revoked` → `"Anda membuat/mencabut QR untuk <fasilitas>"`.
+      - Field tak dikenal tidak pernah dicetak mentah (`mapAuditFieldsToHumanLabels`).
+  - Modul Consent Domain (`src/lib/consent/index.ts`):
+    - `listOwnActiveQrs(session)`: mengambil QR milik pasien yang belum kedaluwarsa dan belum dicabut (`id`, `facilityName`, sisa waktu / `expiryText`, `sharedFieldLabels`).
+  - Layar Pasien (P18–P20):
+    - P18 (`/pasien/akses`): dua kartu [Riwayat Akses] dan [QR Aktif]. Kartu QR Aktif menampilkan jumlah QR aktif sebagai teks dinamis (misal `"1 QR aktif"` atau `"Tidak ada QR aktif"`).
+    - P19 (`/pasien/akses/riwayat`): daftar kronologis pembukaan data, terbaru di atas (tanggal + jam WIB, pelaku, faskes, data yang dilihat). Bila kosong → `"Belum ada akses"`. Tombol [Cabut Semua QR] membuka `ConfirmDialog` dan memanggil `revokeAllActive` dengan `StatusBanner` sukses. Filter periode (7 hari, 30 hari, semua waktu) dan fasilitas tersedia. Tombol [Laporkan] sengaja tidak dibuat hari ini agar tidak menjanjikan tindak lanjut tanpa layar admin.
+    - P20 (`/pasien/akses/qr`): daftar QR aktif. Tiap item memiliki tombol [Cabut] → `ConfirmDialog` `"QR ini tidak akan bisa dipakai lagi."` → `revokeQr` → item hilang dari daftar + `StatusBanner` sukses, fokus keyboard berpindah otomatis ke judul daftar (`<h2>`). Bila kosong → `"Tidak ada QR aktif."`.
+  - Route Handlers Pasien:
+    - `POST /api/pasien/qr/revoke-all`: mencabut seluruh QR aktif pasien.
+    - `GET /api/pasien/akses/riwayat`: endpoint riwayat akses dengan filter.
+    - `GET /api/pasien/akses/qr`: endpoint daftar QR aktif.
+  - Bukti verifikasi:
+    - Vitest: 160 tes di 18 test file lolos 100% (termasuk 7 tes unit, hak akses DB, dan rute di `src/lib/audit/access-history-p18-p20.test.ts`).
+    - Database `pg_proc`: `prosecdef = true`, `proconfig = ["search_path=public, pg_temp"]`, `proacl` hanya memberi `EXECUTE` ke `aksespass_app` dan `aksespass_owner`.
+    - Isolasi & Akses Silang: Pasien 2 tidak dapat melihat atau mencabut QR maupun riwayat akses Pasien 1 (percobaan cabut via API mengembalikan 404 tanpa kebocoran). Peran petugas/pendamping memanggil riwayat mengembalikan 0 baris.
+    - Ujung ke ujung via peramban & curl: Buat QR di P11/P12 → pindai via curl sebagai petugas → P19 menampilkan `"Data dibuka oleh Petugas Contoh Aktif A — Puskesmas Contoh A"` beserta data yang dilihat → cabut di P20 → P19 menampilkan pencabutan → curl pindai lagi mengembalikan 422 `QR_UNUSABLE` → P19 menampilkan `"Percobaan pindai ditolak — Puskesmas Contoh A"`.
+    - Dev Audit Panel: 0 pelanggaran axe, semua elemen interaktif ≥ 48×48 px, 0 scroll horizontal pada lebar 320 px dan zoom teks 200% pada P18, P19 (berisi & kosong), dan P20 (termasuk saat `ConfirmDialog` terbuka).
+    - `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` lolos 100%. Status Bagian 6: SELESAI (3/3).
+
 
 ---
 
