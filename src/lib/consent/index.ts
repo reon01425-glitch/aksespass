@@ -598,10 +598,10 @@ export async function scanToken(
         const newVisitRes = await tx.query<{ id: string }>(
           `INSERT INTO visits (
              patient_user_id, facility_id, staff_user_id, consent_id, channel,
-             client_id, created_at, recorded_at
+             client_id, created_at, recorded_at, subject_ref
            ) VALUES (
              $1, $2, $3, $4, 'qr',
-             $5, $6, NULL
+             $5, $6, NULL, $7
            ) RETURNING id;`,
           [
             qrRow.patient_user_id,
@@ -610,6 +610,7 @@ export async function scanToken(
             qrRow.consent_id,
             serverClientId,
             now.toISOString(),
+            qrRow.subject_ref,
           ]
         );
         visitId = newVisitRes.rows[0].id;

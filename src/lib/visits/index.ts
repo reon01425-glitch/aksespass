@@ -86,3 +86,162 @@ export async function listTodayVisits(
     }
   );
 }
+
+export class VisitActionError extends Error {
+  status: number;
+  code: string;
+
+  constructor(message: string, status: number = 400, code: string = "BAD_REQUEST") {
+    super(message);
+    this.name = "VisitActionError";
+    this.status = status;
+    this.code = code;
+  }
+}
+
+export interface RecordAssistanceInput {
+  visitId: string;
+  ruleIds: string[];
+  note?: string | null;
+}
+
+export interface RecordAssistanceResult {
+  ok: true;
+  visitId: string;
+  recordedAt: string;
+}
+
+/**
+ * Mencatat bantuan yang diberikan oleh petugas pada kunjungan (T8):
+ * - Kunjungan harus milik fasilitas petugas (terisolasi via RLS & WHERE facility_id).
+ * - Kunjungan belum dicatat; jika sudah dicatat -> 409 "Kunjungan ini sudah dicatat".
+ * - ruleIds harus merupakan aturan yang berstatus 'published'.
+ * - Catatan opsional divalidasi batas panjang STAFF_NOTE_MAX_LENGTH (280 karakter); melebihi -> ditolak.
+ * - Mengupdate baris kunjungan yang sama (idempoten / no duplicate).
+ * - Menulis audit event 'visit_recorded' (pelaku petugas, subject_ref dari visits, fasilitas; tanpa catatan).
+ */
+export async function recordAssistance(
+  session: VisitSessionParam | SessionClaims,
+  input: RecordAssistanceInput,
+  options?: { now?: Date }
+): Promise<RecordAssistanceResult> {
+  if (session.role !== "staff" || !session.facilityId) {
+    throw new VisitActionError(
+      "Hanya petugas fasilitas yang dapat mencatat bantuan",
+      403,
+      "FORBIDDEN"
+    );
+  }
+
+  const trimmedNote =
+    input.note !== undefined && input.note !== null ? input.note.trim() : null;
+
+  // Batas panjang CHECK di DB
+  if (trimmedNote && trimmedNote.length > 280) {
+    throw new VisitActionError(
+      "Catatan petugas melebihi batas maksimum 280 karakter",
+      400,
+      "NOTE_TOO_LONG"
+    );
+  }
+
+  const now = options?.now ?? new Date();
+
+  return await withContext(
+    {
+      userId: session.userId,
+      role: "staff",
+      facilityId: session.facilityId,
+    },
+    async (tx) => {
+      // 1. Periksa kunjungan di fasilitas petugas
+      const visitRes = await tx.query<{
+        id: string;
+        facility_id: string;
+        recorded_at: string | null;
+        subject_ref: string;
+      }>(
+        `SELECT id, facility_id, recorded_at, subject_ref
+         FROM visits
+         WHERE id = $1 AND facility_id = $2;`,
+        [input.visitId, session.facilityId]
+      );
+
+      if (visitRes.rows.length === 0) {
+        throw new VisitActionError(
+          "Kunjungan tidak ditemukan pada fasilitas Anda",
+          404,
+          "NOT_FOUND"
+        );
+      }
+
+      const visitRow = visitRes.rows[0];
+      if (visitRow.recorded_at !== null) {
+        throw new VisitActionError(
+          "Kunjungan ini sudah dicatat",
+          409,
+          "ALREADY_RECORDED"
+        );
+      }
+
+      // 2. Validasi ruleIds: seluruh ruleId harus berstatus 'published'
+      const distinctRuleIds = Array.from(new Set(input.ruleIds.filter(Boolean)));
+      if (distinctRuleIds.length > 0) {
+        const rulesCheckRes = await tx.query<{ id: string }>(
+          `SELECT id FROM accommodation_rules WHERE id = ANY($1) AND status = 'published';`,
+          [distinctRuleIds]
+        );
+        if (rulesCheckRes.rows.length !== distinctRuleIds.length) {
+          throw new VisitActionError(
+            "Sebagian atau seluruh aturan tidak valid atau belum diterbitkan",
+            400,
+            "INVALID_RULES"
+          );
+        }
+      }
+
+      // 3. Update kunjungan dalam transaksi
+      const updateRes = await tx.query<{ id: string; recorded_at: string }>(
+        `UPDATE visits
+         SET recorded_at = $1,
+             recorded_rule_ids = $2,
+             staff_note = $3
+         WHERE id = $4 AND facility_id = $5 AND recorded_at IS NULL
+         RETURNING id, recorded_at;`,
+        [
+          now.toISOString(),
+          distinctRuleIds,
+          trimmedNote || null,
+          input.visitId,
+          session.facilityId,
+        ]
+      );
+
+      if (updateRes.rows.length === 0) {
+        throw new VisitActionError(
+          "Kunjungan ini sudah dicatat",
+          409,
+          "ALREADY_RECORDED"
+        );
+      }
+
+      // 4. Catat kejadian audit visit_recorded (tanpa catatan petugas)
+      const { recordAuditEvent } = await import("../audit");
+      await recordAuditEvent(tx, {
+        eventType: "visit_recorded",
+        actorId: session.userId,
+        actorRole: "staff",
+        subjectRef: visitRow.subject_ref,
+        facilityId: session.facilityId,
+        occurredAt: now,
+      });
+
+      return {
+        ok: true,
+        visitId: input.visitId,
+        recordedAt: now.toISOString(),
+      };
+    }
+  );
+}
+

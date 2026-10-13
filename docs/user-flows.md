@@ -321,30 +321,26 @@ Dirancang ringan: pindai, lihat satu layar, layani, catat paling banyak tiga ket
 - **US:** T-02.
 
 ### [T6] Saran Tindakan dan Panggilan
-- **Tampilan:** saran tindakan dari Smart Accommodation Engine sesuai profil (misalnya Tuli: komunikasi tertulis, antrean visual), berlabel "Saran, bukan instruksi klinis". Tombol [Panggil Pasien].
-- **Aksi Utama:** siapkan akomodasi, lalu [Panggil Pasien] untuk mengirim notifikasi sesuai kebutuhan.
-- **Aksi Alternatif:** jika notifikasi tidak terkirim, sistem menyarankan panggilan visual lewat layar atau langsung.
-- **Navigasi:** → [T7].
-- **US:** T-03, P-13.
+- **Tampilan:** saran tindakan dari Smart Accommodation Engine sesuai profil kebutuhan yang dibagikan pada pemindaian ini, berlabel "Saran, bukan instruksi klinis. Keputusan tetap di tangan tenaga kesehatan." Setiap saran memuat ikon, teks besar, serta versi dan sumber aturan. Kebutuhan tanpa aturan ditampilkan terpisah sebagai "belum ada saran". Teks panduan: "Panggil pasien secara langsung dan visual sesuai saran di atas."
+- **Catatan Implementasi:** tombol [Panggil Pasien] (P-13, Could) tidak dibuat hari ini; petugas langsung diarahkan dengan tombol [Lanjut: Catat Bantuan] → [T8].
+- **Aksi Utama:** baca saran, lalu [Lanjut: Catat Bantuan].
+- **Navigasi:** → [T8] (T7 dilewati).
+- **US:** T-03.
 
-### [T7] Layani Pasien
-- **Tampilan:** [Teks Langsung] untuk menampilkan ucapan petugas sebagai teks, dan [Papan Bergambar] untuk melihat pilihan pasien.
-- **Aksi Utama:** melayani pasien; teks langsung dipakai bila perlu.
-- **Aksi Alternatif:** bila mikrofon atau browser tidak mendukung, tersedia input ketik. Pengingat: teks langsung bukan pengganti juru bahasa isyarat.
-- **Navigasi:** → [T8].
-- **US:** P-10, P-09.
+### [T7] Layani Pasien (KomunikaCare)
+- **Status:** Fitur KomunikaCare (10B: teks langsung & papan komunikasi interaktif) dilewati hari ini sesuai prioritas Bagian 7. Alur langsung berpindah dari [T6] ke [T8].
 
-### [T8] Catat Bantuan
-- **Tampilan:** daftar bantuan sesuai kebutuhan pasien sebagai kotak centang yang sebagian sudah terisi dari saran tindakan.
-- **Aksi Utama:** paling banyak tiga ketukan: (1) centang bantuan yang diberikan, (2) catatan singkat bila perlu (opsional), (3) [Simpan].
-- **Simpan Draft:** bila terputus, catatan tersimpan sebagai draft di perangkat dan tampil di beranda sebagai "Belum dikirim".
-- **Navigasi:** → [T9].
+### [T8] Catat Bantuan (≤ 3 Ketukan)
+- **Tampilan:** daftar saran tindakan dari [T6] disajikan melalui `ChoiceGroup` dengan **semua opsi tercentang di awal** [Usulan] dan instruksi "Hapus centang bantuan yang tidak diberikan." Catatan petugas bersifat opsional via varian textarea `TextField` (maks 280 karakter, dengan penghitung karakter dan teks bantuan "Jangan menulis diagnosis atau data sensitif.").
+- **Aksi Utama:** paling banyak tiga ketukan (misal: 1 ketuk hapus centang bantuan yang tidak diberikan + 1 ketuk [Simpan] = 2 ketukan, ≤ 3). Tombol [Simpan] memiliki status `aria-busy` dan cegah double-click.
+- **Catatan Implementasi:** draft lokal dan antrean offline dilewati hari ini (dijadwalkan pada Bagian 9). Bila gagal jaringan, isian formulir tetap dipertahankan di memori dengan pesan "Tidak ada koneksi. Coba simpan lagi."
+- **Navigasi:** berhasil disimpan → [T9]. Jika kunjungan sudah dicatat sebelumnya (409 Conflict), UI menawarkan langsung lanjut ke [T9].
 - **US:** T-04.
 
 ### [T9] Kirim Permintaan Konfirmasi
-- **Tampilan:** ringkasan bantuan yang dicatat dan [Kirim ke Pasien]. Setelah dikirim: "Menunggu konfirmasi pasien".
-- **Aksi Utama:** [Kirim ke Pasien]; pasien menerima permintaan di [P16].
-- **Aksi Alternatif:** bila pasien tidak membawa ponsel, [Konfirmasi di Tempat] menampilkan ikon untuk pasien (hasil ditandai "di tempat" karena bisa bias). Jika offline, permintaan antre dan terkirim saat online.
+- **Tampilan:** ringkasan bantuan yang dicatat (tanpa menyertakan catatan petugas ke audit log) dengan dua opsi konfirmasi:
+  1. **[Kirim ke Pasien] / [Selesai dan Kembali ke Beranda]:** kunjungan beralih ke status "Menunggu konfirmasi pasien". Tanpa push notification; pasien akan melihat permintaan konfirmasi saat membuka aplikasinya ([P16]). Petugas kembali ke [T3] dan data pasien segera dibersihkan dari memori peramban.
+  2. **[Konfirmasi di Tempat]:** membuka `CareProofScale` langsung di perangkat petugas dengan penanda jelas "Jawaban ini ditandai 'di tempat'". Jika pasien memilih "Sebagian" atau "Belum", pasien memilih kebutuhan yang belum terpenuhi dari daftar kebutuhan yang dibagikan pada kunjungan ini, lalu `confirmVisit(on_site)` disimpan dan kembali ke [T3] dengan status "Dikonfirmasi: Sebagian (di tempat)" atau "Dikonfirmasi: Belum (di tempat)".
 - **Navigasi:** → [T3].
 - **US:** T-04, P-07, D-03.
 

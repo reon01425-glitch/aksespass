@@ -497,7 +497,7 @@ describe("Tes Arsitektur Kode (Statik & Tanpa DB)", () => {
         const line = lines[i];
         if (/\bdiagnos/i.test(line)) {
           const isAllowedPrivacyDisclaimer =
-            /tidak meminta diagnosis|tidak perlu menulis diagnosis|diagnosis tidak diminta/i.test(
+            /tidak meminta diagnosis|tidak perlu menulis diagnosis|jangan menulis diagnosis|diagnosis tidak diminta/i.test(
               line
             );
           if (!isAllowedPrivacyDisclaimer) {
@@ -513,6 +513,42 @@ describe("Tes Arsitektur Kode (Statik & Tanpa DB)", () => {
       violations,
       `Pelanggaran kata 'diagnos' ditemukan di src/app atau src/components: ${violations.join(
         "; "
+      )}`
+    ).toEqual([]);
+  });
+
+  it("tabel visits dan visit_confirmations hanya disentuh dari src/lib/consent, src/lib/visits, src/lib/careproof, src/db, dan tes", () => {
+    const violations: string[] = [];
+
+    for (const file of allSrcFiles) {
+      if (isTestFile(file)) continue;
+
+      const relPath = path.relative(srcDir, file);
+      // Diizinkan di lib/consent, lib/visits, lib/careproof, dan db
+      if (
+        relPath.startsWith("lib/consent/") ||
+        relPath.startsWith("lib\\consent\\") ||
+        relPath.startsWith("lib/visits/") ||
+        relPath.startsWith("lib\\visits\\") ||
+        relPath.startsWith("lib/careproof/") ||
+        relPath.startsWith("lib\\careproof\\") ||
+        relPath.startsWith("db/") ||
+        relPath.startsWith("db\\")
+      ) {
+        continue;
+      }
+
+      const content = fs.readFileSync(file, "utf8");
+      const tableQueryRegex = /\b(?:from|join|into|update)\s+(?:visits|visit_confirmations)\b/i;
+      if (tableQueryRegex.test(content)) {
+        violations.push(relPath);
+      }
+    }
+
+    expect(
+      violations,
+      `Tabel visits atau visit_confirmations disentuh langsung di luar modul yang diizinkan: ${violations.join(
+        ", "
       )}`
     ).toEqual([]);
   });

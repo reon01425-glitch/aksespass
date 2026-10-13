@@ -24,6 +24,7 @@ export function KatalogClient() {
   const [textVal, setTextVal] = useState("");
   const [telVal, setTelVal] = useState("081234567890");
   const [otpVal, setOtpVal] = useState("123456");
+  const [textareaVal, setTextareaVal] = useState("Bantuan berjalan lancar.");
   const [isErrorShown, setIsErrorShown] = useState(true);
 
   // Choice chips
@@ -157,6 +158,16 @@ export function KatalogClient() {
               value={otpVal}
               onChange={(e) => setOtpVal(e.target.value)}
               helperText="Satu kolom 6 digit, angka saja."
+            />
+
+            <TextField
+              id="katalog-textarea"
+              label="Catatan Bebas Petugas (Varian Textarea)"
+              variant="textarea"
+              value={textareaVal}
+              onChange={(e) => setTextareaVal(e.target.value)}
+              maxLength={280}
+              helperText="Jangan menulis diagnosis atau data sensitif."
             />
           </div>
         </section>

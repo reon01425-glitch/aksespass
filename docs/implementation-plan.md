@@ -483,18 +483,18 @@
 - [x] T3 beranda petugas.
 - [x] T4 pindai kamera + input kode manual bila kamera ditolak (status "Kamera Ditolak").
 - [x] T5 satu layar kebutuhan: nama panggilan, ikon + teks besar, tanpa diagnosis.
-- [ ] T6 saran tindakan dari `accommodation_rules` (aturan bawaan), berlabel "Saran, bukan instruksi klinis".
-- [ ] T8 catat bantuan: centang terisi dari saran; catatan bebas opsional dengan batas panjang dan peringatan "jangan menulis diagnosis".
-- [ ] T9 kirim permintaan konfirmasi; opsi "Konfirmasi di Tempat".
+- [x] T6 saran tindakan dari `accommodation_rules` (aturan bawaan), berlabel "Saran, bukan instruksi klinis".
+- [x] T8 catat bantuan: centang terisi dari saran; catatan bebas opsional dengan batas panjang dan peringatan "jangan menulis diagnosis".
+- [x] T9 kirim permintaan konfirmasi; opsi "Konfirmasi di Tempat".
 
 **Verifikasi**
 - [x] Demo end-to-end: pasien P12 → petugas T4 → T5 menampilkan field yang dicentang saja.
-- [ ] Hitung manual T8: maksimal 3 ketukan dari layar terbuka sampai tersimpan, dengan saran terisi otomatis.
-- [ ] Tes: setiap profil seed menghasilkan saran yang sesuai aturan; aturan berstatus Draft tidak tampil.
-- [ ] Tes: catatan petugas melebihi batas ditolak di server.
+- [x] Hitung manual T8: maksimal 3 ketukan dari layar terbuka sampai tersimpan, dengan saran terisi otomatis (terbukti: 2 ketukan: hapus 1 centang bantuan + [Simpan]).
+- [x] Tes: setiap profil seed menghasilkan saran yang sesuai aturan; aturan berstatus Draft tidak tampil; kebutuhan tanpa aturan dilaporkan terpisah.
+- [x] Tes: catatan petugas melebihi batas (280 karakter) ditolak di server.
 - [x] Pesan galat pindai sesuai K-4 dan memberi langkah lanjut.
 - [x] Kamera ditolak → jalur kode manual berfungsi.
-- [ ] Uji di perangkat seluler nyata (kamera belakang) — belum diverifikasi pada perangkat fisik nyata (tersedia panduan demo di README.md).
+- [ ] Uji di perangkat seluler nyata (kamera belakang) — sisa pekerjaan di perangkat fisik nyata (panduan pengujian tersedia di README.md).
 - [x] `lint`, `typecheck`, `test`, `build` lolos.
 
 **Catatan hasil:**
@@ -544,6 +544,39 @@
       • Log server dev selama semua pengujian diverifikasi: 0 token mentah, kode manual, atau nama panggilan bocor.
       • Dev Audit Panel pada T3, T4 (galat & manual), T5, dan /s: 0 pelanggaran axe, semua target sentuh ≥ 48×48 px, 0 scroll horizontal pada lebar 320 px dan zoom teks 200%.
     - `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` lolos 100%. Status Bagian 7: 1/2.
+- Bagian 7b (2 dari 2 / Prompt 14 — T6 Saran Tindakan, T8 Catat Bantuan ≤3 Ketukan, T9 Konfirmasi di Tempat):
+  - Migrasi Database 008 (`008_visits_subject_and_rules.sql`):
+    - Menambah `visits.subject_ref` dengan referensi FK ke `users(audit_subject_id)`, trigger otomatis `set_visit_subject_ref()`, dan backfill data kunjungan lama.
+    - Menambah `visits.recorded_rule_ids uuid[] DEFAULT '{}'` untuk menyimpan ID aturan akomodasi yang dikunci pada versi saat pelayanan diberikan, dan backfill dari `recorded_need_codes`.
+    - Diterapkan secara idempoten pada database pengembangan (`aksespass_dev`) dan database pengujian (`aksespass_test`).
+  - Smart Accommodation Engine (`src/lib/accommodation`):
+    - `getPublishedRules(needCodes)`: membaca aturan akomodasi yang berstatus `published` dari basis data hanya untuk kode kebutuhan yang dibagikan.
+    - Fungsi murni `buildSuggestions(rules, needCodes)`: menggabungkan teks duplikat, mengurutkan berdasarkan urutan kanonikal kategori, dan memisahkan kebutuhan tanpa aturan sebagai `uncoveredNeeds`.
+    - Route handler `POST /api/petugas/saran` dilindungi sesi petugas.
+  - Pencatatan Bantuan Petugas (`src/lib/visits`):
+    - `recordAssistance`: memvalidasi kunjungan milik fasilitas petugas (RLS), menolak pencatatan ulang (409 Conflict: "Kunjungan ini sudah dicatat"), memvalidasi bahwa seluruh aturan berstatus `published`, menolak catatan > 280 karakter, meng-update baris kunjungan secara idempoten (`recorded_at`), dan mencatat audit `visit_recorded` (pelaku petugas, fasilitas, `subject_ref` pasien, TANPA isi catatan).
+    - Route handler `POST /api/petugas/kunjungan/catat` dilindungi sesi petugas.
+  - Resolusi Kepemilikan CareProof (`src/lib/careproof`):
+    - `confirmVisit(actor, visitId, input)`: memvalidasi status (`terpenuhi`, `sebagian`, `belum`), memvalidasi bahwa `unmetNeedCodes` adalah subset kebutuhan sah, memverifikasi bahwa kunjungan telah dicatat (`recorded_at IS NOT NULL`).
+    - Aturan kepemilikan §9: jawaban pasien adalah penentu utama. Pasien dapat menimpa jawaban konfirmasi di tempat atau pendamping; konfirmasi di tempat atau pendamping TIDAK boleh menimpa jawaban pasien (409 Conflict: "Pasien sudah mengonfirmasi").
+    - Mencatat audit `visit_confirmed` dengan `confirmed_by`, tanpa isi jawaban.
+    - Route handler `POST /api/petugas/kunjungan/konfirmasi` dilindungi sesi petugas.
+  - Komponen & Antarmuka Alur Pemindaian (`src/components/petugas-pindai-flow.tsx` & `src/components/text-field.tsx`):
+    - `TextField`: varian baru `variant="textarea"`, `rows`, dan live counter karakater (`current / maxLength`) dengan kepatuhan `aria-live="polite"`.
+    - T6 Saran Tindakan: label disclaimer klinis "Saran, bukan instruksi klinis. Keputusan tetap di tangan tenaga kesehatan.", kartu saran dengan ikon, teks besar, versi, dan sumber aturan, panduan panggilan visual langsung, dan tombol [Lanjut: Catat Bantuan].
+    - T8 Catat Bantuan: saran T6 disajikan melalui `ChoiceGroup` dengan semua opsi tercentang di awal [Usulan], instruksi "Hapus centang bantuan yang tidak diberikan.", catatan bebas opsional dengan teks bantuan "Jangan menulis diagnosis atau data sensitif."
+    - Hitung ketukan T8: hapus centang 1 opsi (ketukan 1) + [Simpan] (ketukan 2) = 2 ketukan (≤ 3 ketukan). Tombol memiliki `aria-busy` dan cegah double-click.
+    - T9 Kirim Permintaan Konfirmasi: ringkasan bantuan yang dicatat, tombol [Kirim ke Pasien] / [Selesai dan Kembali ke Beranda] (berpindah ke T3 dengan status "Menunggu konfirmasi"), dan tombol [Konfirmasi di Tempat] yang menampilkan `CareProofScale` untuk pasien di perangkat petugas.
+    - Konfirmasi di Tempat: bila pasien memilih "Sebagian" atau "Belum", daftar kebutuhan belum terpenuhi tampil dinamis dari kebutuhan pemindaian ini; setelah disimpan, T3 menampilkan "Dikonfirmasi: Sebagian (di tempat)".
+  - Bukti Verifikasi:
+    - Vitest: 190 tes di 22 test file lolos 100% (termasuk tes unit `accommodation.test.ts`, `visits.test.ts`, `careproof.test.ts`, dan tes arsitektur `architecture.test.ts` yang memverifikasi tabel `visits` dan `visit_confirmations` hanya disentuh oleh modul yang diizinkan).
+    - DevTools Browser Ujung ke Ujung:
+      • Masuk petugas seed A (`+620000000011`) → T3 menampilkan fasilitas "Puskesmas Contoh A".
+      • Kunjungan 1 (Pasien 1, Tuli): pemindaian token manual → T5 kebutuhan terbuka → [Lihat Saran] → T6 menampilkan 4 aturan akomodasi spesifik Tuli (BISINDO, bicara hadap, instruksi tertulis, panggilan visual) lengkap dengan nomor versi 1 dan sumber komunitas → [Lanjut: Catat Bantuan] → T8 semua tercentang di awal → uncheck BISINDO (ketukan 1) + isi catatan sintetis unik `SYNTHETIC_STAFF_SECRET_MARKER_9981` + [Simpan] (ketukan 2, total 2 ketukan ≤ 3) → T9 ringkasan menampilkan 3 bantuan tersimpan + [Selesai dan Kembali ke Beranda] → T3 menampilkan kunjungan berstatus "Menunggu konfirmasi".
+      • Kunjungan 2 (Pasien 2, Autistik): pemindaian token manual → T5 terbuka → T6 menampilkan 3 aturan akomodasi (papan gambar, ruang tenang, langkah bertahap) → T8 simpan → T9 [Konfirmasi di Tempat] → pilih "Sebagian" pada CareProofScale → pilih kebutuhan belum terpenuhi "Area tunggu yang lebih tenang" → [Kirim Jawaban di Tempat] → banner sukses konfirmasi di tempat → kembali ke beranda → T3 menampilkan "Dikonfirmasi: Sebagian (di tempat)".
+      • Verifikasi Privasi Log & Audit: penanda sintetis `SYNTHETIC_STAFF_SECRET_MARKER_9981` diperiksa pada tabel `audit_events` (0 kebocoran) dan berkas log server `.next` (0 kebocoran). Audit `visit_recorded` tercatat bersih dengan `subject_ref` tanpa teks catatan.
+      • Dev Audit Panel: 0 pelanggaran axe, semua elemen interaktif memenuhi target sentuh ≥ 48×48 px, 0 scroll horizontal pada lebar 320 px dan zoom teks 200% pada T6, T8 (dengan/tanpa catatan), T9, dan skala konfirmasi di tempat. Alur dapat diselesaikan penuh dengan keyboard.
+    - `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` lolos 100%. Status Bagian 7: SELESAI (2/2).
 
 ---
 

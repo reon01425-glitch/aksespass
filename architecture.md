@@ -140,7 +140,7 @@ Route groups dengan tanda kurung `(pasien)` di App Router tidak menghasilkan seg
 | `facilities` | nama, status | Didaftarkan manual oleh admin sistem |
 | `staff_memberships` | petugas, fasilitas, unit, status (Menunggu Aktivasi/Aktif/Nonaktif) | Petugas hanya aktif di fasilitas terdaftar; nonaktif langsung menolak pindai (A4) |
 | `briefs` | pasien, fasilitas, tanggal kunjungan, field terpilih, `expires_at` | Pre-Arrival Brief (bagian 8) |
-| `visits` | pasien, fasilitas, petugas, jalur (`qr` / `kartu`), bantuan dicatat, catatan opsional, `client_id`, `synced_at`, `recorded_at` | Dibuka saat pindai lolos dengan `recorded_at = NULL` (dipakai ulang bila sudah ada kunjungan terbuka untuk consent dan faskes sama hari itu). `recorded_at` dan bantuan dicatat diisi saat T8. `client_id` untuk deduplikasi sinkron (bagian 9). **[Usulan, 13 Okt 2026]** |
+| `visits` | pasien, fasilitas, petugas, jalur (`qr` / `kartu`), bantuan dicatat (`recorded_rule_ids uuid[]`), catatan opsional, `client_id`, `synced_at`, `recorded_at`, `subject_ref` | Dibuka saat pindai lolos dengan `recorded_at = NULL` (dipakai ulang bila sudah ada kunjungan terbuka untuk consent dan faskes sama hari itu). `subject_ref` (UUID pseudonim pasien) diisi dari consent/users saat kunjungan dibuka agar audit tidak memerlukan pembacaan tabel users. Bantuan disimpan sebagai array ID aturan (`recorded_rule_ids`) sehingga versi aturan yang dipakai terkunci dan terlacak. Catatan petugas opsional maks 280 karakter (tidak pernah dicatat ke audit/log). **[Usulan, 13 Okt 2026]** |
 | `visit_confirmations` | visit_id, status (terpenuhi/sebagian/belum), kebutuhan belum terpenuhi, `confirmed_by` (`patient`/`companion`/`on_site`) | Hanya bisa dibuat setelah visit tersinkron. Tanpa jawaban = "belum dikonfirmasi", **tidak** dihitung terpenuhi (P16) |
 | `follow_ups` | kategori kebutuhan, fasilitas, status, catatan langkah, tanggal | Tindak lanjut admin (A8) dan status untuk pasien (P17). **[Usulan]** |
 | `recovery_requests` | pasien, pendamping, kode (hash), `eligible_at`, status | Bagian 10 |
@@ -242,11 +242,14 @@ Mekanisme **[Usulan]**:
 4. Status antrean ditampilkan: "Menunggu Sinkron" (peringatan) lalu "Tersinkron" (sukses), sesuai `design.md`.
 5. Data di IndexedDB dibatasi ke yang diperlukan, dihapus setelah sinkron, dan dikunci saat petugas keluar.
 
-**Resolusi Kepemilikan Konfirmasi CareProof (Pasien vs Pendamping):**
-- Suara pasien adalah *single source of truth*.
-- Jika pasien mengonfirmasi sendiri, nilainya menjadi penentu utama.
-- Pendamping hanya dapat mengonfirmasi jika pasien berhalangan/mendelegasikan. Konfirmasi oleh pendamping dicatat dengan penanda eksplisit `confirmed_by = 'companion'`.
-- Pada agregat *Accessibility Gap Dashboard*, metrik konfirmasi pasien dan konfirmasi pendamping dipisahkan atau diberi anotasi sub-metrik ("Diverifikasi oleh Pendamping") untuk menjaga integritas data.
+**Resolusi Kepemilikan Konfirmasi CareProof (Pasien vs Pendamping vs Di Tempat) [Usulan, 13 Okt 2026]:**
+- Suara pasien adalah *single source of truth* (penentu utama):
+  - Jika belum ada konfirmasi, pihak yang berwenang (pasien, pendamping aktif, atau petugas atas nama konfirmasi di tempat) dapat mencatat konfirmasi pertama kali.
+  - Pasien selalu memiliki hak veto dan dapat **menimpa** konfirmasi sebelumnya yang diberikan oleh pendamping (`companion`) maupun konfirmasi di tempat (`on_site`).
+  - Sebaliknya, pendamping atau konfirmasi di tempat **TIDAK boleh menimpa** konfirmasi yang sudah diberikan oleh pasien sendiri. Upaya konfirmasi oleh pendamping atau di tempat setelah pasien mengonfirmasi ditolak dengan galat HTTP 409 Conflict ("Pasien sudah mengonfirmasi").
+- Konfirmasi oleh pendamping dicatat dengan penanda eksplisit `confirmed_by = 'companion'`; konfirmasi di perangkat petugas dicatat dengan `confirmed_by = 'on_site'`.
+- Pada agregat *Accessibility Gap Dashboard*, metrik konfirmasi pasien, pendamping, dan di tempat dipisahkan atau dianotasikan sub-metrik ("Diverifikasi oleh Pendamping", "Di Tempat") untuk menjaga integritas data tanpa bias.
+- Audit `visit_confirmed` mencatat pelaku dan nilai `confirmed_by`, tanpa menyalin isi jawaban konfirmasi atau kode kebutuhan yang belum terpenuhi.
 
 **[Verifikasi]** Perilaku penyimpanan PWA di iOS Safari (pembersihan data situs yang lama tidak dibuka) perlu diuji pada perangkat nyata sebelum klaim offline dipakai di presentasi.
 
