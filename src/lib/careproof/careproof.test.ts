@@ -2,11 +2,12 @@ import crypto from "node:crypto";
 import pg from "pg";
 import { describe, expect, it } from "vitest";
 import { withContext } from "../../db";
-import { confirmVisit } from "./index";
+import { confirmVisit, listOwnConfirmations, getOwnConfirmableVisit, CareProofError } from "./index";
 
 const FACILITY_A = "11111111-1111-4111-8111-111111111101"; // Puskesmas Contoh A
 const STAFF_A = "22222222-2222-4222-8222-222222222301"; // Petugas Faskes A
 const PATIENT_1 = "22222222-2222-4222-8222-222222222101"; // Pasien Contoh 1
+const PATIENT_2 = "22222222-2222-4222-8222-222222222102"; // Pasien Contoh 2
 const PATIENT_4 = "22222222-2222-4222-8222-222222222104"; // Pasien Contoh 4 (tertaut aktif dengan COMP_1)
 const COMP_1 = "22222222-2222-4222-8222-222222222201"; // Pendamping Contoh 1
 
@@ -212,6 +213,132 @@ describe("src/lib/careproof: Konfirmasi Pelayanan CareProof & Resolusi §9", () 
       ).rejects.toThrowError(/Pasien sudah mengonfirmasi/i);
     } finally {
       await adminClient.query("DELETE FROM visits WHERE id = $1;", [visitId]);
+      await adminClient.end();
+    }
+  });
+});
+
+describe("src/lib/careproof: listOwnConfirmations & getOwnConfirmableVisit (P16)", () => {
+  it("listOwnConfirmations hanya mengembalikan kunjungan milik pasien pemanggil sendiri", async () => {
+    const adminClient = new pg.Client({ connectionString: getAdminTestDbUrl() });
+    await adminClient.connect();
+
+    const visitOwn = crypto.randomUUID();
+    const visitOther = crypto.randomUUID();
+    const now = new Date();
+
+    try {
+      await adminClient.query(
+        `INSERT INTO visits (
+           id, patient_user_id, facility_id, staff_user_id, channel,
+           client_id, created_at, recorded_at
+         ) VALUES ($1, $2, $3, $4, 'kartu', $5, $6, $6);`,
+        [visitOwn, PATIENT_1, FACILITY_A, STAFF_A, `test-list-own-${visitOwn}`, now.toISOString()]
+      );
+      await adminClient.query(
+        `INSERT INTO visits (
+           id, patient_user_id, facility_id, staff_user_id, channel,
+           client_id, created_at, recorded_at
+         ) VALUES ($1, $2, $3, $4, 'kartu', $5, $6, $6);`,
+        [visitOther, PATIENT_2, FACILITY_A, STAFF_A, `test-list-other-${visitOther}`, now.toISOString()]
+      );
+
+      const items = await listOwnConfirmations({ userId: PATIENT_1, role: "patient" });
+      const ids = items.map((i) => i.visitId);
+
+      expect(ids).toContain(visitOwn);
+      expect(ids).not.toContain(visitOther);
+    } finally {
+      await adminClient.query("DELETE FROM visits WHERE id = ANY($1::uuid[]);", [
+        [visitOwn, visitOther],
+      ]);
+      await adminClient.end();
+    }
+  });
+
+  it("pasien mengganti jawaban on_site yang sudah ada -> tersimpan confirmed_by = patient", async () => {
+    const adminClient = new pg.Client({ connectionString: getAdminTestDbUrl() });
+    await adminClient.connect();
+
+    const visitId = crypto.randomUUID();
+    const confId = crypto.randomUUID();
+    const now = new Date();
+
+    try {
+      await adminClient.query(
+        `INSERT INTO visits (
+           id, patient_user_id, facility_id, staff_user_id, channel,
+           client_id, created_at, recorded_at
+         ) VALUES ($1, $2, $3, $4, 'kartu', $5, $6, $6);`,
+        [visitId, PATIENT_1, FACILITY_A, STAFF_A, `test-onsite-override-${visitId}`, now.toISOString()]
+      );
+      await adminClient.query(
+        `INSERT INTO visit_confirmations (
+           id, visit_id, status, unmet_need_codes, confirmed_by, confirmed_by_user_id, confirmed_at
+         ) VALUES ($1, $2, 'sebagian', $3, 'on_site', $4, $5);`,
+        [confId, visitId, ["komunikasi_bisindo"], STAFF_A, now.toISOString()]
+      );
+
+      // Muncul di daftar milik pasien dengan jawaban saat ini "on_site" dan masih dapat diubah
+      const beforeOverride = await getOwnConfirmableVisit(
+        { userId: PATIENT_1, role: "patient" },
+        visitId
+      );
+      expect(beforeOverride.currentAnswer?.confirmedBy).toBe("on_site");
+
+      // Pasien menimpa jawaban on_site
+      await confirmVisit({ userId: PATIENT_1, role: "patient" }, visitId, {
+        status: "terpenuhi",
+        unmetNeedCodes: [],
+      });
+
+      const dbConf = await adminClient.query<{
+        status: string;
+        confirmed_by: string;
+      }>("SELECT status, confirmed_by FROM visit_confirmations WHERE visit_id = $1;", [
+        visitId,
+      ]);
+      expect(dbConf.rows[0].status).toBe("terpenuhi");
+      expect(dbConf.rows[0].confirmed_by).toBe("patient");
+
+      // Setelah dikonfirmasi pasien sendiri, tidak lagi muncul di daftar yang perlu dikonfirmasi
+      const afterOverride = await listOwnConfirmations({ userId: PATIENT_1, role: "patient" });
+      expect(afterOverride.map((i) => i.visitId)).not.toContain(visitId);
+    } finally {
+      await adminClient.query("DELETE FROM visit_confirmations WHERE visit_id = $1;", [visitId]);
+      await adminClient.query("DELETE FROM visits WHERE id = $1;", [visitId]);
+      await adminClient.end();
+    }
+  });
+
+  it("getOwnConfirmableVisit menolak kunjungan milik pasien lain (CareProofError 404, tidak membocorkan keberadaan)", async () => {
+    const adminClient = new pg.Client({ connectionString: getAdminTestDbUrl() });
+    await adminClient.connect();
+
+    const visitOfPatient2 = crypto.randomUUID();
+    const now = new Date();
+
+    try {
+      await adminClient.query(
+        `INSERT INTO visits (
+           id, patient_user_id, facility_id, staff_user_id, channel,
+           client_id, created_at, recorded_at
+         ) VALUES ($1, $2, $3, $4, 'kartu', $5, $6, $6);`,
+        [
+          visitOfPatient2,
+          PATIENT_2,
+          FACILITY_A,
+          STAFF_A,
+          `test-cross-patient-${visitOfPatient2}`,
+          now.toISOString(),
+        ]
+      );
+
+      await expect(
+        getOwnConfirmableVisit({ userId: PATIENT_1, role: "patient" }, visitOfPatient2)
+      ).rejects.toThrowError(CareProofError);
+    } finally {
+      await adminClient.query("DELETE FROM visits WHERE id = $1;", [visitOfPatient2]);
       await adminClient.end();
     }
   });

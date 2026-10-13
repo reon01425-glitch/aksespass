@@ -1,5 +1,7 @@
 import { withContext, type AppDbRole } from "../../db";
 import { recordAuditEvent } from "../audit";
+import { NEED_CATEGORIES, type NeedCategory } from "../consent/constants";
+import type { SessionClaims } from "../auth/session";
 
 export type CareProofStatus = "terpenuhi" | "sebagian" | "belum";
 export type CareProofConfirmedBy = "patient" | "companion" | "on_site";
@@ -226,4 +228,175 @@ export async function confirmVisit(
       };
     }
   );
+}
+
+export const OWN_CONFIRMATIONS_WINDOW_DAYS = 30;
+
+export interface RecordedAssistanceItem {
+  ruleId: string;
+  actionText: string;
+  iconName: string;
+}
+
+export interface OwnConfirmationCurrentAnswer {
+  status: CareProofStatus;
+  confirmedBy: CareProofConfirmedBy;
+  unmetNeedCodes: string[];
+}
+
+export interface OwnConfirmationItem {
+  visitId: string;
+  recordedAt: string;
+  facilityName: string;
+  assistance: RecordedAssistanceItem[];
+  /** Kategori kebutuhan yang relevan/dibagikan pada kunjungan ini (dari consent atau bantuan tercatat). */
+  sharedCategories: NeedCategory[];
+  currentAnswer: OwnConfirmationCurrentAnswer | null;
+}
+
+/**
+ * P16: daftar kunjungan tercatat ${OWN_CONFIRMATIONS_WINDOW_DAYS} hari terakhir milik pasien
+ * sendiri yang (a) belum dikonfirmasi, atau (b) dijawab pendamping/di tempat dan masih bisa
+ * diubah pasien (resolusi kepemilikan §9 -- pasien selalu bisa menimpa). Kunjungan yang sudah
+ * dikonfirmasi oleh pasien sendiri TIDAK muncul lagi di daftar ini (sudah final).
+ */
+export async function listOwnConfirmations(
+  session: { userId: string; role: string } | SessionClaims
+): Promise<OwnConfirmationItem[]> {
+  if (session.role !== "patient") {
+    return [];
+  }
+
+  return withContext({ userId: session.userId, role: "patient" }, async (tx) => {
+    const res = await tx.query<{
+      id: string;
+      recorded_at: string;
+      facility_name: string;
+      recorded_rule_ids: string[] | null;
+      consent_shared_fields: string[] | null;
+      status: CareProofStatus | null;
+      confirmed_by: CareProofConfirmedBy | null;
+      unmet_need_codes: string[] | null;
+    }>(
+      `SELECT
+         v.id,
+         v.recorded_at,
+         f.name AS facility_name,
+         v.recorded_rule_ids,
+         c.shared_fields AS consent_shared_fields,
+         vc.status,
+         vc.confirmed_by,
+         vc.unmet_need_codes
+       FROM visits v
+       JOIN facilities f ON f.id = v.facility_id
+       LEFT JOIN consents c ON c.id = v.consent_id
+       LEFT JOIN visit_confirmations vc ON vc.visit_id = v.id
+       WHERE v.patient_user_id = $1
+         AND v.recorded_at IS NOT NULL
+         AND v.recorded_at >= now() - interval '30 days'
+         AND (vc.id IS NULL OR vc.confirmed_by IN ('companion', 'on_site'))
+       ORDER BY v.recorded_at DESC;`,
+      [session.userId]
+    );
+
+    if (res.rows.length === 0) {
+      return [];
+    }
+
+    const allRuleIds = Array.from(
+      new Set(res.rows.flatMap((r) => r.recorded_rule_ids || []))
+    );
+
+    const ruleMap = new Map<
+      string,
+      { actionText: string; iconName: string; category: string }
+    >();
+    if (allRuleIds.length > 0) {
+      const rulesRes = await tx.query<{
+        id: string;
+        action_text: string;
+        icon_name: string;
+        category: string;
+      }>(
+        `SELECT ar.id, ar.action_text, ar.icon_name, nc.category
+         FROM accommodation_rules ar
+         JOIN needs_catalog nc ON nc.code = ar.trigger_need_code
+         WHERE ar.id = ANY($1);`,
+        [allRuleIds]
+      );
+      for (const row of rulesRes.rows) {
+        ruleMap.set(row.id, {
+          actionText: row.action_text,
+          iconName: row.icon_name,
+          category: row.category,
+        });
+      }
+    }
+
+    return res.rows.map((row) => {
+      const ruleIds = row.recorded_rule_ids || [];
+      const assistance: RecordedAssistanceItem[] = ruleIds
+        .map((ruleId) => {
+          const rule = ruleMap.get(ruleId);
+          if (!rule) return null;
+          return { ruleId, actionText: rule.actionText, iconName: rule.iconName };
+        })
+        .filter((r): r is RecordedAssistanceItem => r !== null);
+
+      const categoriesFromRules = ruleIds
+        .map((id) => ruleMap.get(id)?.category)
+        .filter((c): c is string => Boolean(c));
+      const categoriesFromConsent = (row.consent_shared_fields || []).filter(
+        (f): f is NeedCategory => (NEED_CATEGORIES as readonly string[]).includes(f)
+      );
+      const sharedCategories = Array.from(
+        new Set([...categoriesFromRules, ...categoriesFromConsent])
+      ) as NeedCategory[];
+
+      return {
+        visitId: row.id,
+        recordedAt: new Date(row.recorded_at).toISOString(),
+        facilityName: row.facility_name,
+        assistance,
+        sharedCategories,
+        currentAnswer: row.status
+          ? {
+              status: row.status,
+              confirmedBy: row.confirmed_by as CareProofConfirmedBy,
+              unmetNeedCodes: row.unmet_need_codes || [],
+            }
+          : null,
+      };
+    });
+  });
+}
+
+/**
+ * P16 detail: satu kunjungan milik pasien sendiri yang masih bisa dikonfirmasi/diubah.
+ * Melempar CareProofError 404 bila kunjungan bukan milik pasien, belum dicatat, di luar
+ * jendela waktu, atau sudah final dikonfirmasi oleh pasien sendiri -- pesan galat yang sama
+ * untuk seluruh kasus tersebut agar tidak membocorkan keberadaan kunjungan milik orang lain.
+ */
+export async function getOwnConfirmableVisit(
+  session: { userId: string; role: string } | SessionClaims,
+  visitId: string
+): Promise<OwnConfirmationItem> {
+  if (session.role !== "patient") {
+    throw new CareProofError(
+      "Hanya pasien yang dapat membuka layar ini",
+      403,
+      "FORBIDDEN"
+    );
+  }
+
+  const items = await listOwnConfirmations(session);
+  const found = items.find((i) => i.visitId === visitId);
+  if (!found) {
+    throw new CareProofError(
+      "Kunjungan tidak ditemukan atau sudah Anda konfirmasi sebelumnya",
+      404,
+      "NOT_FOUND"
+    );
+  }
+  return found;
 }

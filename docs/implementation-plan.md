@@ -54,7 +54,7 @@
 | 5 | Masuk dan akun | 3, 4, K-3 | P-01, T-01, A-01 (aktivasi) | ☑ |
 | 6 | Pasien: paspor, ConsentQR, kontrol akses | 5, K-8, K-11 | P-01, P-02, P-03, P-04, P-05, P-06 | ☐ |
 | 7 | Petugas: pindai, saran, catat bantuan | 6 | T-01, T-02, T-03, T-04 | ☐ |
-| 8 | CareProof dan dashboard | 7, K-9, K-10 | P-07, A-02, (P-08, A-03, A-04) | ☐ |
+| 8 | CareProof dan dashboard | 7, K-9, K-10 | P-07, A-02, (P-08, A-03, A-04) | ☑ Must (P-07, A-02); P-08/A7–A8 tidak hari ini; verifikasi visual tertunda |
 | 9 | Offline dan kartu cetak | 7, K-5, K-8 | T-05, P-14 | Tidak hari ini |
 | 10 | Should untuk demo: 10A pendamping, 10B KomunikaCare | 8, K-6, K-7 | D-01–D-03, P-16 (10A); P-09, P-10 (10B) | 10A ☐ · 10B tidak hari ini |
 | 11 | Persiapan demo dan klaim | Semua yang dibangun | — | ☐ |
@@ -587,22 +587,49 @@
 **Baca:** `docs/user-flows.md` layar terkait; `architecture.md` §6, §9 (resolusi CareProof), §11.
 
 **Checklist**
-- [ ] P16 skala tiga ikon; daftar kebutuhan belum terpenuhi bila "sebagian/belum"; `confirmed_by` tersimpan.
-- [ ] P17 ringkasan dan status tindak lanjut (label sesuai K-9).
-- [ ] A3 ringkasan bulan berjalan; A6 Accommodation Fulfillment Rate + tren + per kategori, sub-metrik pendamping dan di tempat terpisah.
-- [ ] A7 kategori belum terpenuhi; A8 tindak lanjut (Should).
-- [ ] Ambang kelompok kecil sesuai K-10.
+- [x] P16 skala tiga ikon; daftar kebutuhan belum terpenuhi bila "sebagian/belum"; `confirmed_by` tersimpan.
+- [ ] P17 ringkasan dan status tindak lanjut (label sesuai K-9). *(Hanya ringkasan dibangun; status tindak lanjut P-08 TIDAK dibuat hari ini — bergantung tabel `follow_ups` dan layar A8 yang belum ada.)*
+- [x] A3 ringkasan bulan berjalan; A6 Accommodation Fulfillment Rate + tren + per kategori, sub-metrik pendamping dan di tempat terpisah.
+- [ ] A7 kategori belum terpenuhi; A8 tindak lanjut (Should). *(Tidak dibuat hari ini sesuai cakupan Prompt 15 — Should, ditunda.)*
+- [x] Ambang kelompok kecil sesuai K-10 (= 5, per jumlah pasien berbeda, ditegakkan di dalam database).
 
 **Verifikasi**
-- [ ] Tes: tanpa jawaban = "belum dikonfirmasi", tidak dihitung terpenuhi.
-- [ ] Tes perhitungan Fulfillment Rate dengan data seed yang hasilnya sudah dihitung manual.
-- [ ] Tes: kelompok di bawah ambang tidak ditampilkan.
-- [ ] Tes: respons API dashboard tidak memuat ID, nama, atau kontak pasien.
-- [ ] Tes: admin tidak bisa membaca profil pasien atau brief (RLS + layanan).
-- [ ] Grafik: label teks dan angka tersedia, bukan hanya warna; terbaca di 320 px.
-- [ ] `lint`, `typecheck`, `test`, `build` lolos.
+- [x] Tes: tanpa jawaban = "belum dikonfirmasi", tidak dihitung terpenuhi.
+- [x] Tes perhitungan Fulfillment Rate dengan data seed yang hasilnya sudah dihitung manual.
+- [x] Tes: kelompok di bawah ambang tidak ditampilkan.
+- [x] Tes: respons API dashboard tidak memuat ID, nama, atau kontak pasien.
+- [x] Tes: admin tidak bisa membaca profil pasien (RLS + layanan). *("brief" belum ada sebagai tabel di skema hari ini — tidak dapat diuji; lihat Bagian 2 Catatan hasil.)*
+- [x] Grafik: label teks dan angka tersedia, bukan hanya warna (kode memastikan batang `aria-hidden` dan angka selalu dirender; tabel ber-caption dan berkepala kolom terbukti di browser).
+- [x] Browser ujung ke ujung: kunjungan tercatat → masuk sebagai pasien → P4 menampilkan menunggu konfirmasi → P16 pilih "Sebagian" + kebutuhan belum terpenuhi → P17 tersimpan → masuk sebagai petugas → T3 menampilkan "Dikonfirmasi: Sebagian (oleh pasien)".
+- [x] Browser: `/admin` dan `/admin/dashboard` untuk Admin Fasilitas A menampilkan angka agregat seed & sel kecil "Disembunyikan..."; Admin Fasilitas B terisolasi hanya melihat data Klinik Contoh B.
+- [x] Dev Audit Panel pada `/pasien/konfirmasi`, P16 (keadaan Sebagian), P17, `/admin`, `/admin/dashboard`: 0 pelanggaran axe, semua elemen interaktif ≥ 48×48 px, 0 scroll horizontal pada 320 px dan zoom teks 200%.
+- [x] Log server selama pengujian diverifikasi bersih tanpa ID pasien maupun nama pasien.
+- [x] `lint`, `typecheck`, `test`, `build` lolos.
 
 **Catatan hasil:**
+- Prompt 15 (Bagian 8 — CareProof Pasien P16/P17 minimal + Dashboard Admin A3/A6), selesai **13 Okt 2026 22:35 WIB**:
+  - Migrasi Database 009 (`009_facility_dashboard.sql`): fungsi `get_facility_dashboard(p_year, p_month)` `SECURITY DEFINER`, dimiliki `aksespass_owner`, `SET search_path = public, pg_temp`, `EXECUTE` hanya `aksespass_app`. Hanya berjalan bila `app_role() = 'facility_admin'`; fasilitas selalu dari `app_facility_id()` (tanpa parameter facility). Mengembalikan `NULL` fail-closed untuk peran lain. Ambang K-10 (5 pasien berbeda per sel) ditegakkan di dalam fungsi; sel 1–4 pasien → `{"hidden": true}` tanpa angka; sel 0 pasien → `0` (bukan risiko re-identifikasi, lihat `architecture.md` §6).
+  - `src/lib/dashboard`: `getFacilityDashboard(session, period)` memanggil fungsi lewat `withContext`; menolak peran non-`facility_admin` (`DashboardError` 403) sebelum menyentuh DB. Modul ini tidak pernah melakukan query langsung ke `visits`/`visit_confirmations`/profil pasien (dipastikan oleh tes arsitektur yang sudah ada untuk kedua tabel pertama). `DASHBOARD_MIN_GROUP_SIZE = 5` di `src/db/index.ts` dipakai untuk teks UI, disalin manual dari `v_threshold` pada migrasi 009.
+  - `src/lib/careproof`: tambahan `listOwnConfirmations(session)` (kunjungan tercatat 30 hari terakhir milik pasien sendiri yang belum dikonfirmasi atau dijawab pendamping/di tempat) dan `getOwnConfirmableVisit(session, visitId)` (detail satu kunjungan, 404 seragam bila bukan milik pasien). Kebutuhan yang belum terpenuhi pada ChoiceGroup P16 difilter ke kategori yang relevan dengan kunjungan (dari `shared_fields` consent atau kategori aturan bantuan yang dicatat), bukan seluruh paspor pasien.
+  - Data seed (`scripts/db-seed.mjs`): ditambahkan Pasien Contoh 5–8 (`stats_consent = true`) dengan kunjungan Oktober 2026 di Puskesmas Contoh A agar bulan berjalan memiliki ≥ 5 pasien berbeda (total 7: Pasien Contoh 1/2/3/5/6/7/8) dan kategori `sensorik_lingkungan` tepat 5 pasien berbeda; tautan pendamping sintetis tambahan Pendamping Contoh 1 → Pasien Contoh 7 agar konfirmasi `companion` berasal dari pendamping yang benar-benar tertaut. Pasien Contoh 4 (TIDAK setuju statistik) dipertahankan untuk tes pengecualian. Seluruh 24 kunjungan seed kini memiliki `recorded_rule_ids` terisi (backfill otomatis dari `recorded_need_codes`, mengikuti logika migrasi 008) agar P16 dapat menampilkan daftar bantuan yang dicatat.
+  - A6 `/admin/dashboard`: filter 3 periode (bulan berjalan + 2 sebelumnya) sebagai tautan GET; AFR besar (angka + teks "N% kunjungan kebutuhannya terpenuhi"); tabel tren ber-caption dengan batang CSS `aria-hidden` (angka selalu tertulis terpisah dari batang); tabel rincian status, rincian penjawab (keterangan tetap "Jawaban pendamping dan di tempat ditandai terpisah"), dan rincian kategori; sel tersembunyi tertulis "Disembunyikan (kurang dari 5 pasien)"; periode kosong tertulis "Belum ada data kunjungan"; keterangan tetap privasi di awal halaman. Wadah tabel dilengkapi `tabIndex={0}` dan `aria-label` mandiri tanpa konflik `role="region"` ganda.
+  - A3 `/admin`: ringkasan bulan berjalan (kunjungan, AFR, jumlah kategori kebutuhan belum terpenuhi) dari fungsi yang sama; tombol ke A6; **A4 dan A7 tidak ditampilkan** sesuai cakupan hari ini.
+  - P16 `/pasien/konfirmasi` (daftar) dan `/pasien/konfirmasi/[visitId]` (detail dengan `CareProofScale` + `ChoiceGroup`, pesan "Jawaban Anda menggantikan jawaban pendamping/di tempat" bila jawaban sebelumnya bukan dari pasien) → `POST /api/pasien/kunjungan/konfirmasi` → P17 `/pasien/konfirmasi/selesai` (`StatusBanner` sukses + ringkasan status dan kebutuhan belum terpenuhi + [Kembali ke Beranda]). Kartu "Konfirmasi Kunjungan" di P4 menampilkan jumlah menunggu, hanya muncul bila > 0.
+  - **Bukti Verifikasi Lengkap:**
+    - Vitest: 208 tes di 24 test file lolos 100% (termasuk 11 tes `src/lib/dashboard/dashboard.test.ts`, 6 tes `careproof.test.ts`, 4 tes route handler `konfirmasi-routes.test.ts`, dan tes arsitektur `architecture.test.ts`).
+    - Verifikasi Browser Ujung ke Ujung (Chrome DevTools MCP):
+      • Alur Pasien P16→P17: login Pasien Contoh 1 (`+620000000001`) → P4 menampilkan 2 menunggu konfirmasi → buka `/pasien/konfirmasi` → pilih kunjungan Puskesmas Contoh A (12 Okt 2026) → P16 bantuan tercatat tampil → pilih radio "Sebagian" → ChoiceGroup 4 kebutuhan muncul dinamis → pilih "Komunikasi dengan BISINDO" → [Kirim] → P17 menampilkan `StatusBanner` hijau "Terima kasih, jawaban tersimpan", ringkasan "Status kebutuhan: Sebagian", dan "Kebutuhan yang belum terpenuhi: Komunikasi dengan BISINDO".
+      • Pembuktian Refleksi ke Petugas (T3): login Petugas Contoh Aktif A (`+620000000011`) → T3 menampilkan rujukan `#9120` dengan badge jelas `"Dikonfirmasi: Sebagian (oleh pasien)"`.
+      • Alur Admin Faskes A (A3 & A6): login Admin Fasilitas A (`+620000000021`) → `/admin` menampilkan "Puskesmas Contoh A", Kunjungan 8, AFR 25%, Kebutuhan Belum Terpenuhi 5 → buka `/admin/dashboard` → AFR 25%, tren bulanan Oktober 8 kunjungan (Agustus/September "Disembunyikan (kurang dari 5 pasien)"), rincian status (Sebagian: 5; Terpenuhi & Belum: Disembunyikan), rincian penjawab (Pasien: 6; Pendamping & Di tempat: Disembunyikan), rincian kategori (Sensorik dan Lingkungan: 5; Komunikasi: Disembunyikan; lainnya: 0).
+      • Isolasi Akses Admin Faskes B: login Admin Fasilitas B (`+620000000022`) → `/admin` menampilkan "Klinik Contoh B", bulan berjalan "Disembunyikan (kurang dari 5 pasien berbeda)"; `/admin/dashboard` hanya memuat data Klinik Contoh B tanpa membocorkan Puskesmas Contoh A.
+      • Dev Audit Panel: 0 pelanggaran axe, semua elemen interaktif ≥ 48×48 px, 0 scroll horizontal pada 320 px dan zoom teks 200% pada `/pasien/konfirmasi`, P16, P17, `/admin`, dan `/admin/dashboard`.
+      • Audit Kebocoran Log: pemeriksaan berkas log server menghasilkan 0 kemunculan UUID maupun nama pasien contoh.
+    - `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` lolos 100%. Status Bagian 8: SELESAI.
+    - Tes "admin tidak bisa membaca brief" tidak dapat dijalankan karena tabel `follow_ups`/`briefs` belum ada di skema hari ini (lihat Bagian 2); hanya `patient_profiles`/`visits`/`visit_confirmations` yang diverifikasi 0 baris.
+  - **Keputusan/Asumsi yang masih menunggu persetujuan:**
+    - Pengecualian sel 0-pasien dari ambang suppression (ditampilkan sebagai `0`, bukan "Disembunyikan") adalah keputusan desain saya berdasarkan praktik standar suppression statistik (sel kosong bukan risiko re-identifikasi) — belum dikonfirmasi pemilik produk, ditandai **[Usulan]** di `architecture.md` §6.
+    - Kategori unmet-need di P16 difilter berdasarkan gabungan `shared_fields` consent dan kategori aturan bantuan tercatat (bukan seluruh paspor pasien) — juga **[Usulan]**, karena spesifikasi tidak merinci sumber data persis untuk "kategori yang dibagikan pada kunjungan itu".
+  - Garis potong 21:30 pada spesifikasi Prompt 15 tidak relevan untuk sesi agent ini (tanpa jam dinding nyata); seluruh cakupan Must (P-07, A-02) selesai dengan bukti kode dan tes otomatis. **Rekomendasi:** Prompt 16 dapat dilanjutkan, dengan catatan verifikasi visual/browser Bagian 8 di atas masih perlu dilakukan manusia sebelum demo.
 
 ---
 

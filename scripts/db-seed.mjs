@@ -18,10 +18,14 @@
  *      phone: +620000000002 | user_id: 22222222-2222-4222-8222-222222222102
  *    - Pasien Contoh 3 (Profil kebutuhan low vision / tunanetra)
  *      phone: +620000000003 | user_id: 22222222-2222-4222-8222-222222222103
- *    - Pasien Contoh 4 (Profil kebutuhan mobilitas, tertaut pendamping aktif)
+ *    - Pasien Contoh 4 (Profil kebutuhan mobilitas, tertaut pendamping aktif, TIDAK setuju statistik)
  *      phone: +620000000004 | user_id: 22222222-2222-4222-8222-222222222104
+ *    - Pasien Contoh 5..8 (setuju statistik; kunjungan Oktober 2026 di Puskesmas Contoh A
+ *      khusus untuk memenuhi ambang kelompok dashboard K-10 >= 5 pasien berbeda; Bagian 8)
+ *      phone: +620000000006..+620000000009
+ *      user_id: 22222222-2222-4222-8222-222222222105..108
  *
- * 3. Pendamping (tertaut aktif ke Pasien Contoh 4):
+ * 3. Pendamping (tertaut aktif ke Pasien Contoh 4 dan Pasien Contoh 7):
  *    - Pendamping Contoh 1
  *      phone: +620000000005 | user_id: 22222222-2222-4222-8222-222222222201
  *
@@ -67,6 +71,10 @@ const IDS = {
     p2: "22222222-2222-4222-8222-222222222102",
     p3: "22222222-2222-4222-8222-222222222103",
     p4: "22222222-2222-4222-8222-222222222104",
+    p5: "22222222-2222-4222-8222-222222222105",
+    p6: "22222222-2222-4222-8222-222222222106",
+    p7: "22222222-2222-4222-8222-222222222107",
+    p8: "22222222-2222-4222-8222-222222222108",
     comp1: "22222222-2222-4222-8222-222222222201",
     staffA1: "22222222-2222-4222-8222-222222222301",
     staffA2Inactive: "22222222-2222-4222-8222-222222222302",
@@ -80,6 +88,10 @@ const IDS = {
     p2: "aaaa1111-1111-4111-8111-111111111102",
     p3: "aaaa1111-1111-4111-8111-111111111103",
     p4: "aaaa1111-1111-4111-8111-111111111104",
+    p5: "aaaa1111-1111-4111-8111-111111111105",
+    p6: "aaaa1111-1111-4111-8111-111111111106",
+    p7: "aaaa1111-1111-4111-8111-111111111107",
+    p8: "aaaa1111-1111-4111-8111-111111111108",
     comp1: "aaaa1111-1111-4111-8111-111111111201",
     staffA1: "aaaa1111-1111-4111-8111-111111111301",
     staffA2Inactive: "aaaa1111-1111-4111-8111-111111111302",
@@ -182,6 +194,46 @@ async function main() {
         "active",
         false,
         IDS.auditSubjects.p4,
+      ],
+      [
+        IDS.users.p5,
+        "patient",
+        "+620000000006",
+        null,
+        "Pasien Contoh 5",
+        "active",
+        true,
+        IDS.auditSubjects.p5,
+      ],
+      [
+        IDS.users.p6,
+        "patient",
+        "+620000000007",
+        null,
+        "Pasien Contoh 6",
+        "active",
+        true,
+        IDS.auditSubjects.p6,
+      ],
+      [
+        IDS.users.p7,
+        "patient",
+        "+620000000008",
+        null,
+        "Pasien Contoh 7",
+        "active",
+        true,
+        IDS.auditSubjects.p7,
+      ],
+      [
+        IDS.users.p8,
+        "patient",
+        "+620000000009",
+        null,
+        "Pasien Contoh 8",
+        "active",
+        true,
+        IDS.auditSubjects.p8,
       ],
       [
         IDS.users.comp1,
@@ -667,6 +719,26 @@ async function main() {
       [IDS.users.p4, IDS.users.comp1]
     );
 
+    // 7b. Tautan pendamping sintetis tambahan: Pendamping Contoh 1 -> Pasien Contoh 7
+    // (dibutuhkan agar konfirmasi confirmed_by='companion' di seed Bagian 8 berasal dari
+    // pendamping yang benar-benar tertaut aktif ke pasien tersebut, bukan sekadar nilai bebas).
+    await client.query(
+      `
+      INSERT INTO companions (
+        id, patient_user_id, companion_user_id, status, requested_at, approved_at, revoked_at
+      ) VALUES (
+        '77777777-7777-4777-8777-777777777102',
+        $1,
+        $2,
+        'active',
+        '2026-10-01T09:00:00+07:00',
+        '2026-10-01T09:15:00+07:00',
+        NULL
+      );
+      `,
+      [IDS.users.p7, IDS.users.comp1]
+    );
+
     // 8. Consents (4) + Consent QR (4, hanya token_hash)
     const consentsData = [
       [
@@ -1058,6 +1130,76 @@ async function main() {
         at: "2026-10-12T10:00:00+07:00",
         conf: null, // Tanpa konfirmasi
       },
+      // Pasien Contoh 5..8 (Bagian 8): kunjungan Oktober 2026 di Puskesmas Contoh A untuk
+      // memenuhi ambang K-10 (>=5 pasien berbeda per sel) pada dashboard admin fasilitas.
+      {
+        idx: 21,
+        patient: IDS.users.p5,
+        facility: IDS.facilities.a,
+        staff: IDS.users.staffA1,
+        consent: null,
+        channel: "kartu",
+        recorded: ["lingkungan_tenang"],
+        note: "Contoh catatan petugas: area tunggu reguler, belum ada ruang tenang terpisah.",
+        at: "2026-10-05T09:10:00+07:00",
+        conf: {
+          status: "sebagian",
+          unmet: ["lingkungan_tenang"],
+          by: "patient",
+          byUser: IDS.users.p5,
+        },
+      },
+      {
+        idx: 22,
+        patient: IDS.users.p6,
+        facility: IDS.facilities.a,
+        staff: IDS.users.staffA1,
+        consent: null,
+        channel: "kartu",
+        recorded: ["lingkungan_tenang"],
+        note: "Contoh catatan petugas: dijawab di tempat sebelum pasien pulang.",
+        at: "2026-10-07T13:30:00+07:00",
+        conf: {
+          status: "sebagian",
+          unmet: ["lingkungan_tenang"],
+          by: "on_site",
+          byUser: IDS.users.p6,
+        },
+      },
+      {
+        idx: 23,
+        patient: IDS.users.p7,
+        facility: IDS.facilities.a,
+        staff: IDS.users.staffA1,
+        consent: null,
+        channel: "kartu",
+        recorded: ["lingkungan_tenang"],
+        note: "Contoh catatan petugas: pendamping menjawab atas nama pasien.",
+        at: "2026-10-09T10:45:00+07:00",
+        conf: {
+          status: "sebagian",
+          unmet: ["lingkungan_tenang"],
+          by: "companion",
+          byUser: IDS.users.comp1,
+        },
+      },
+      {
+        idx: 24,
+        patient: IDS.users.p8,
+        facility: IDS.facilities.a,
+        staff: IDS.users.staffA1,
+        consent: null,
+        channel: "kartu",
+        recorded: ["lingkungan_tenang"],
+        note: "Contoh catatan petugas: area tunggu disiapkan lebih sunyi namun belum sempurna.",
+        at: "2026-10-11T11:15:00+07:00",
+        conf: {
+          status: "sebagian",
+          unmet: ["lingkungan_tenang"],
+          by: "patient",
+          byUser: IDS.users.p8,
+        },
+      },
     ];
 
     // Add one more confirmation to make exactly 16 confirmations out of 20 visits (4 unconfirmed)
@@ -1117,6 +1259,19 @@ async function main() {
         );
       }
     }
+
+    // 9b. Isi recorded_rule_ids dari recorded_need_codes (sesuai logika backfill migrasi 008)
+    // agar P16 dapat menampilkan daftar bantuan yang dicatat petugas untuk kunjungan seed.
+    await client.query(`
+      UPDATE visits v
+      SET recorded_rule_ids = ARRAY(
+        SELECT ar.id
+        FROM accommodation_rules ar
+        WHERE ar.trigger_need_code = ANY(v.recorded_need_codes)
+          AND ar.status = 'published'
+      )
+      WHERE v.recorded_need_codes IS NOT NULL;
+    `);
 
     // 10. Audit events (10 contoh peristiwa deterministik, memakai audit_subject_id pasien)
     const auditSeed = [

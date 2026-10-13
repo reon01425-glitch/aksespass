@@ -7,6 +7,7 @@ import {
 } from "@/lib/auth/constants";
 import { verifySessionCookie } from "@/lib/auth/session";
 import { getOwnPassportStatus } from "@/lib/passport";
+import { listOwnConfirmations } from "@/lib/careproof";
 import {
   LogoutButton,
   PageShell,
@@ -17,6 +18,7 @@ import {
   Shield,
   Users,
   ChevronRight,
+  ClipboardCheck,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -42,8 +44,12 @@ export default async function PasienPage() {
     redirect("/masuk");
   }
 
-  const passport = await getOwnPassportStatus(session);
+  const [passport, pendingConfirmations] = await Promise.all([
+    getOwnPassportStatus(session),
+    listOwnConfirmations(session),
+  ]);
   const isComplete = passport.status === "complete";
+  const pendingCount = pendingConfirmations.length;
 
   return (
     <PageShell title="Beranda Pasien">
@@ -88,6 +94,34 @@ export default async function PasienPage() {
             </>
           )}
         </div>
+
+        {/* Kartu Konfirmasi Kunjungan (P16) */}
+        {pendingCount > 0 && (
+          <Link
+            href="/pasien/konfirmasi"
+            className="flex items-start justify-between p-5 rounded-2xl bg-white border border-cyan-200 hover:border-cyan-400 hover:bg-cyan-50 focus:outline-none focus:ring-4 focus:ring-cyan-900 transition-colors shadow-sm min-h-12"
+          >
+            <div className="flex items-start gap-4 min-w-0">
+              <div className="p-3 rounded-xl bg-cyan-100 text-cyan-900 shrink-0">
+                <ClipboardCheck className="w-6 h-6" aria-hidden="true" />
+              </div>
+              <div className="flex flex-col min-w-0">
+                <span className="text-lg font-bold text-main break-words">
+                  Konfirmasi Kunjungan
+                </span>
+                <span className="text-sm text-secondary mt-1 break-words">
+                  {pendingCount === 1
+                    ? "1 kunjungan menunggu konfirmasi Anda."
+                    : `${pendingCount} kunjungan menunggu konfirmasi Anda.`}
+                </span>
+              </div>
+            </div>
+            <ChevronRight
+              className="w-5 h-5 text-secondary shrink-0 mt-3 ml-2"
+              aria-hidden="true"
+            />
+          </Link>
+        )}
 
         {/* Menu Navigasi Utama */}
         <nav aria-label="Menu Pasien" className="flex flex-col gap-3">

@@ -162,12 +162,14 @@ Empat sub-layar yang dapat dibuka kapan saja selama kunjungan.
 - **Aksi Alternatif atau Error:** tidak menjawab → status tetap "belum dikonfirmasi" dan **tidak** dihitung terpenuhi. Pasien dapat meminta pendamping menjawab (ditandai "oleh pendamping"), atau menjawab di tempat lewat ikon yang ditunjukkan petugas (ditandai "di tempat"). Jawaban saat offline masuk antrean lokal dan tersinkron saat online.
 - **Navigasi:** → [P17].
 - **US:** P-07, D-03.
+- **Cakupan Bagian 8 (13 Okt 2026) [Diputuskan untuk rilis ini]:** daftar kunjungan tercatat 30 hari terakhir yang (a) belum dikonfirmasi, atau (b) dijawab pendamping/di tempat dan masih dapat ditimpa pasien (§9) → kartu "Konfirmasi Kunjungan" di [P4] menunjukkan jumlah menunggu. Pada layar detail, daftar kebutuhan yang belum terpenuhi hanya menampilkan kebutuhan milik pasien pada kategori yang relevan dengan kunjungan tersebut (dari consent atau bantuan yang dicatat), bukan seluruh kategori paspor. **Catatan bebas pasien di P16 TIDAK dibuat hari ini** (di luar cakupan K-8/catatan opsional unmet-need tetap ditunda); antrean offline untuk jawaban P16 juga belum dibuat (Bagian 9).
 
 ### [P17] Selesai dan Status Tindak Lanjut
 - **Tampilan:** ucapan terima kasih, ringkasan konfirmasi, daftar kebutuhan belum terpenuhi beserta status (Diterima, Sedang Ditindaklanjuti, Selesai).
 - **Aksi Utama:** [Kembali ke Beranda]. Status tindak lanjut dapat dibuka lagi dari beranda.
 - **Navigasi:** → [P4]; status diperbarui saat admin menandai tindak lanjut.
 - **US:** P-08.
+- **Cakupan Bagian 8 (13 Okt 2026) [Diputuskan untuk rilis ini]:** versi minimal P-07 saja — `StatusBanner` sukses "Terima kasih, jawaban tersimpan" + ringkasan status dan daftar kebutuhan belum terpenuhi yang dipilih pasien + [Kembali ke Beranda]. **Status tindak lanjut (Diterima/Sedang Ditindaklanjuti/Selesai) TIDAK ditampilkan hari ini** karena bergantung pada tabel `follow_ups` dan layar [A8] yang belum dibuat (P-08 ditunda, menunggu Bagian 8 lanjutan atau Bagian 10).
 
 ---
 
@@ -365,6 +367,7 @@ Mengelola akun petugas dan menindaklanjuti kebutuhan yang belum terpenuhi, tanpa
 - **Tampilan:** ringkasan bulan berjalan: jumlah kunjungan ber-AKSESPASS, Accommodation Fulfillment Rate, jumlah kebutuhan belum terpenuhi.
 - **Navigasi:** Akun Petugas → [A4]; Dashboard → [A6]; Belum Terpenuhi → [A7].
 - **US:** A-02.
+- **Cakupan Bagian 8 (13 Okt 2026) [Diputuskan untuk rilis ini]:** ringkasan bulan berjalan (3 angka di atas) dan tombol Dashboard → [A6] sudah dibangun dari fungsi `get_facility_dashboard`. **Menu Akun Petugas [A4] dan Belum Terpenuhi [A7] TIDAK ditampilkan hari ini** (menunggu Bagian 8 lanjutan/Bagian 10); beranda hanya menampilkan ringkasan, tombol Dashboard, dan [Keluar].
 
 ### [A4] Kelola Akun Petugas
 - **Tampilan:** daftar petugas: nama, peran, unit, status aktif atau nonaktif. [Tambah Petugas].
@@ -387,6 +390,7 @@ Mengelola akun petugas dan menindaklanjuti kebutuhan yang belum terpenuhi, tanpa
 - **Aksi Alternatif:** data belum cukup → "Belum ada data kunjungan".
 - **Navigasi:** → [A7] untuk rincian kebutuhan belum terpenuhi.
 - **US:** A-02.
+- **Cakupan Bagian 8 (13 Okt 2026) [Diputuskan untuk rilis ini]:** filter periode terbatas pada bulan berjalan dan 2 bulan sebelumnya (tanpa filter kategori terpisah — rincian kategori sudah tampil sebagai satu tabel). AFR besar (angka + teks), tren bulanan sebagai tabel ber-caption dengan batang CSS (`aria-hidden`, angka selalu tertulis), rincian status, rincian penjawab (pasien/pendamping/di tempat, dengan keterangan tetap "Jawaban pendamping dan di tempat ditandai terpisah"), dan rincian per kategori. Sel di bawah ambang K-10 tertulis "Disembunyikan (kurang dari 5 pasien)"; periode tanpa kunjungan tertulis "Belum ada data kunjungan". **Navigasi ke [A7] TIDAK dibuat hari ini** (layar [A7] ditunda ke Bagian 8 lanjutan/Bagian 10).
 
 ### [A7] Kebutuhan Belum Terpenuhi
 - **Tampilan:** kategori kebutuhan yang paling sering belum terpenuhi (misalnya antrean visual, juru bahasa isyarat) dengan jumlah dan tren, tanpa identitas pasien.
