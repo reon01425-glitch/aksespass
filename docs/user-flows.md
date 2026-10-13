@@ -106,10 +106,10 @@ Satu kelompok kebutuhan per layar, dengan indikator langkah (misalnya 2 dari 5).
 Berjalan di setiap kunjungan: bagikan kebutuhan, dipanggil sesuai kebutuhan, dilayani, lalu mengonfirmasi.
 
 ### [P9] Mulai Kunjungan
-- **Tampilan:** pilihan fasilitas (daftar atau pencarian), dua jalur: [Kirim kebutuhan sebelum datang] (opsional) dan [Saya sudah di fasilitas].
-- **Aksi Utama:** pilih fasilitas, lalu salah satu jalur.
-- **Aksi Alternatif:** tanpa sinyal atau ponsel bermasalah: [Pakai mode offline] → [P8], atau tunjukkan kartu cetak [P7].
-- **Navigasi:** sebelum datang → [P10]; di fasilitas → [P11].
+- **Tampilan:** pilihan fasilitas (daftar RadioList fasilitas aktif seed), satu jalur utama hari ini: [Saya sudah di fasilitas]. Jalur Pre-Arrival Brief [P10] dan tautan mode offline [P8] tidak ditampilkan pada rilis ini. Bila paspor belum diisi, menampilkan peringatan "Isi paspor dulu" + tautan ke [P5].
+- **Aksi Utama:** pilih fasilitas, lalu tekan [Saya sudah di fasilitas].
+- **Aksi Alternatif:** tanpa paspor → diarahkan mengisi paspor.
+- **Navigasi:** di fasilitas → [P11] dengan parameter `fasilitas=<id>`.
 - **US:** P-03, P-12, P-14.
 
 ### [P10] Pre-Arrival Brief (opsional, Could)
@@ -120,17 +120,17 @@ Berjalan di setiap kunjungan: bagikan kebutuhan, dipanggil sesuai kebutuhan, dil
 - **US:** P-12.
 
 ### [P11] Pengaturan ConsentQR
-- **Tampilan:** daftar data yang dibagikan dengan tombol geser (kebutuhan komunikasi, mobilitas, pendampingan), pilihan masa berlaku (misalnya 1 jam, hari ini, 24 jam), keterangan bahwa diagnosis tidak ikut.
+- **Tampilan:** toggle per kategori kebutuhan yang benar-benar ada di paspor pasien + "Catatan untuk petugas" (bila ada). Nama panggilan selalu dibagikan (teks tetap). Peringatan "Diagnosis tidak ikut". Bawaan toggle mengikuti shared_fields consent terakhir pasien (diiris dengan kategori paspor aktif); fallback semua aktif. Pilihan masa berlaku (1 jam [bawaan], Hari ini s.d. 23:59 WIB, 24 jam). Pratinjau langsung "Yang akan dilihat petugas" via PatientNeedsSummary.
 - **Aksi Utama:** pilih data dan masa berlaku, lalu [Buat QR].
-- **Aksi Alternatif:** [Batal] → [P9]. Pengaturan terakhir tersimpan sebagai bawaan.
-- **Navigasi:** → [P12].
+- **Aksi Alternatif:** [Batal] → [P9]. Tanpa kategori terpilih → peringatan "Pilih minimal satu kebutuhan untuk dibagikan".
+- **Navigasi:** setelah [Buat QR] → [P12] (pada komponen/URL yang sama di memori, tanpa navigasi rute bertoken).
 - **US:** P-03, P-04.
 
 ### [P12] Tampilan QR
-- **Tampilan:** QR besar, hitung mundur masa berlaku, ringkasan data yang dibagikan, [Cabut Sekarang].
-- **Aksi Utama:** tunjukkan QR ke petugas. Setelah dipindai, layar berubah menjadi "Dipindai oleh petugas" dengan nama fasilitas.
-- **Aksi Alternatif atau Error:** QR kedaluwarsa → [Buat QR Baru] → [P11]. [Cabut Sekarang] meminta konfirmasi, lalu QR langsung ditolak saat dipindai dan pencabutan tercatat. Jika petugas melaporkan QR ditolak, pasien diarahkan membuat QR baru.
-- **Navigasi:** setelah dipindai → [P13].
+- **Tampilan:** QR SVG besar (modul teks di atas putih, quiet zone 4 modul), kode manual berkelompok 4 karakter Crockford Base32, masa berlaku statis ("Berlaku sampai HH:mm WIB (sisa X menit)") dengan peringatan "Hampir Kedaluwarsa" (sisa ≤ 15 menit), ringkasan data tersaring, [Cabut Sekarang]. Teks peringatan privasi bahwa QR hanya tampil sekali di sesi memori ini.
+- **Aksi Utama:** tunjukkan QR ke petugas. Polling berkala (5 detik) ke endpoint status pasien memantau pemindaian. Setelah dipindai, QR dan kode diganti StatusBanner sukses "Dipindai oleh petugas — <fasilitas>" dan tombol [Ke Beranda]; [Cabut Sekarang] tetap tersedia.
+- **Aksi Alternatif atau Error:** QR kedaluwarsa atau dicabut → StatusBanner terkait + [Buat QR Baru]. Token dihapus dari memori halaman. [Cabut Sekarang] membuka ConfirmDialog konfirmasi pencabutan. Polling otomatis berhenti saat dipindai, kedaluwarsa, dicabut, atau tab tersembunyi.
+- **Navigasi:** selesai → [P4] (Ke Beranda).
 - **US:** P-03, P-05, P-06.
 
 ### [P13] Menunggu Dipanggil

@@ -15,6 +15,7 @@ import {
   PageShell,
   LogoutButton,
   PatientNeedsSummary,
+  RadioList,
 } from "@/components";
 import { MessageSquare, Eye, Volume2, Move } from "lucide-react";
 
@@ -42,6 +43,9 @@ export function KatalogClient() {
 
   // CareProofScale
   const [careProofVal, setCareProofVal] = useState<CareProofValue>("terpenuhi");
+
+  // RadioList
+  const [radioListVal, setRadioListVal] = useState("faskes-1");
 
   // ConfirmDialog
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -360,6 +364,41 @@ export function KatalogClient() {
             ]}
             patientNote="Mohon panggil giliran lewat tanda visual atau tepuk bahu pelan."
           />
+        </section>
+
+        {/* 12. RadioList (Pilihan Tunggal Bertumpuk) */}
+        <section className="flex flex-col gap-4">
+          <h2 className="text-xl font-bold text-main border-b border-cyan-100 pb-2">
+            12. RadioList (Pilihan Fasilitas & Masa Berlaku)
+          </h2>
+          <RadioList
+            name="demo-facility-radio"
+            legend="Pilih Fasilitas Kesehatan"
+            helperText="Pilih faskes tujuan untuk membagikan data kebutuhan layanan."
+            value={radioListVal}
+            onChange={setRadioListVal}
+            options={[
+              {
+                value: "faskes-1",
+                label: "Puskesmas Contoh A",
+                description: "Jl. Sehat No. 1, Buka 24 jam",
+              },
+              {
+                value: "faskes-2",
+                label: "Klinik Contoh B",
+                description: "Jl. Melati No. 42, Buka 08:00–16:00 WIB",
+              },
+              {
+                value: "faskes-nonaktif",
+                label: "Puskesmas Cadangan (Tutup)",
+                description: "Sedang renovasi",
+                disabled: true,
+              },
+            ]}
+          />
+          <p className="text-sm text-secondary">
+            Terpilih saat ini: <strong className="text-main">{radioListVal}</strong>
+          </p>
         </section>
       </div>
     </PageShell>

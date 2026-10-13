@@ -40,3 +40,28 @@ export async function getStaffFacilityInfo(
     }
   );
 }
+
+export interface FacilityOption {
+  id: string;
+  name: string;
+}
+
+/**
+ * Mengambil seluruh fasilitas aktif yang dapat dipilih oleh pasien/pengguna.
+ */
+export async function getActiveFacilities(
+  session: SessionClaims
+): Promise<FacilityOption[]> {
+  return withContext(
+    {
+      userId: session.userId,
+      role: session.role,
+    },
+    async (tx) => {
+      const res = await tx.query<FacilityOption>(
+        "SELECT id, name FROM facilities WHERE status = 'active' ORDER BY name ASC;"
+      );
+      return res.rows;
+    }
+  );
+}

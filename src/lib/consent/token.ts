@@ -1,5 +1,4 @@
 import crypto from "node:crypto";
-import { getAppOrigin } from "../http";
 
 /**
  * Alfabet Crockford Base32 (32 simbol, tanpa huruf ambigu I, L, O, U).
@@ -83,23 +82,8 @@ export function normalizeToken(input: string): string | null {
   return cleaned;
 }
 
-/**
- * Memformat token menjadi kelompok 4 karakter untuk kemudahan membaca / mengetik manual:
- * XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XX
- */
-export function formatTokenForDisplay(token: string): string {
-  const chunks: string[] = [];
-  for (let i = 0; i < token.length; i += 4) {
-    chunks.push(token.slice(i, i + 4));
-  }
-  return chunks.join("-");
-}
+import { buildQrPayload } from "./time";
 
-/**
- * Membangun URL tujuan QR dengan token di dalam URL fragment (#).
- * Fragmen tidak pernah dikirim ke server via HTTP request atau Referer header.
- */
 export function buildConsentQrUrl(token: string, appOrigin?: string): string {
-  const origin = appOrigin || getAppOrigin();
-  return `${origin}/s#${token}`;
+  return buildQrPayload(token, appOrigin);
 }

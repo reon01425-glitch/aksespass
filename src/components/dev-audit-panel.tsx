@@ -138,10 +138,10 @@ export function DevAuditPanel() {
       id="dev-audit-panel"
       data-dev-panel="true"
       aria-label="Panel Pemeriksaan Pengembangan"
-      className="fixed bottom-4 right-4 z-50 flex flex-col items-end font-sans text-sm text-cyan-900"
+      className="fixed bottom-4 right-4 z-50 flex flex-col items-end font-sans text-sm text-cyan-900 max-w-[calc(100vw-2rem)]"
     >
       {isOpen ? (
-        <div className="w-80 sm:w-96 p-4 rounded-xl bg-white border-2 border-cyan-700 shadow-2xl flex flex-col gap-3 max-h-[85vh] overflow-y-auto">
+        <div className="w-80 sm:w-96 max-w-full p-4 rounded-xl bg-white border-2 border-cyan-700 shadow-2xl flex flex-col gap-3 max-h-[85vh] overflow-y-auto">
           <div className="flex items-center justify-between border-b border-cyan-100 pb-2">
             <span className="font-bold text-base text-cyan-900">
               🛠️ Panel Pemeriksaan Dev

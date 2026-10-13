@@ -166,6 +166,15 @@ Agregat dashboard (A6–A7) dihitung dari `visit_confirmations`, memisahkan `con
 - **Normalisasi input:** huruf besar, buang spasi dan tanda hubung, `O` → `0`, `I`/`L` → `1`. Input salah format diperlakukan sama dengan token tak dikenal (menghasilkan status 422 yang identik).
 - **URL Fragmen:** `${APP_ORIGIN}/s#<token>`. Bagian fragmen (`#...`) tidak dikirim oleh browser ke server web/Vercel maupun header `Referer`, sehingga token mentah tidak pernah masuk log akses server. Halaman `/s` membaca fragmen di sisi klien lalu menghapusnya dari riwayat peramban.
 
+**Bawaan shared_fields & Endpoint Status QR [Usulan, 13 Okt 2026]:**
+- **Bawaan shared_fields:** saat membuka [P11], bawaan toggle kebutuhan diturunkan dari `shared_fields` consent terakhir milik pasien yang diiris (*intersected*) dengan kategori kebutuhan yang masih aktif di paspor terkini. Bila pasien belum pernah membuat consent, seluruh kategori paspor aktif diaktifkan sebagai bawaan. Tidak ada penyimpanan data profil baru di klien.
+- **Endpoint Status Pemindaian Pasien (`GET /api/pasien/qr/[qrId]/status`):** dipanggil berkala (polling 5 detik) oleh layar pasien [P12] tanpa membocorkan token. Menggunakan UUID `qrId` (bukan token). Dilindungi otentikasi sesi pasien dan RLS:
+  - Tanpa sesi → HTTP 401.
+  - Sesi non-pasien (petugas/admin) → HTTP 403.
+  - QR milik pasien lain atau ID tak dikenal → HTTP 404 identik tanpa membocorkan keberadaan QR.
+  - Status diturunkan secara langsung dari skema yang ada: bila dicabut → `"dicabut"`; bila `expires_at <= now()` → `"kedaluwarsa"`; bila terdapat baris di `visits` untuk consent tersebut → `"dipindai"` (disertai `facilityName`); jika belum ada kunjungan → `"aktif"`. Tanpa penambahan kolom status pada skema.
+  - Seluruh respons menyertakan header `Cache-Control: no-store`. Polling dihentikan saat status tidak lagi aktif atau tab browser tersembunyi.
+
 **Pemindaian (petugas):**
 1. Petugas memindai QR (atau memasukkan kode manual bila kamera ditolak).
 2. `POST /api/scan` dengan body JSON `{ token }`. Server memeriksa:

@@ -358,19 +358,22 @@
 **Checklist**
 - [x] P5 editor paspor per kelompok kebutuhan; tidak ada kolom diagnosis; draft sesuai K-8.
 - [x] P6 pratinjau persis seperti yang akan dilihat petugas; simpan.
-- [ ] P9 pilih fasilitas (jalur "sudah di fasilitas").
-- [ ] P11 pilih field (P-04) dan masa berlaku.
-- [ ] P12 QR besar berisi URL dengan token saja, hitung mundur, cabut dengan konfirmasi; berubah menjadi "Dipindai oleh petugas".
+- [x] P5 editor paspor per kelompok kebutuhan; tidak ada kolom diagnosis; draft sesuai K-8.
+- [x] P6 pratinjau persis seperti yang akan dilihat petugas; simpan.
+- [x] P9 pilih fasilitas (jalur "sudah di fasilitas").
+- [x] P11 pilih field (P-04) dan masa berlaku.
+- [x] P12 QR besar berisi URL dengan token saja, hitung mundur, cabut dengan konfirmasi; berubah menjadi "Dipindai oleh petugas".
 - [ ] P18–P20 riwayat akses (siapa, kapan, fasilitas, nama field) dan daftar QR aktif dengan cabut.
 
 **Verifikasi**
-- [ ] Dekode isi QR: hanya URL + token, tanpa nama, kebutuhan, atau ID pasien.
+- [x] Dekode isi QR: hanya URL + token, tanpa nama, kebutuhan, atau ID pasien.
 - [x] Tes: draft belum disimpan tidak bisa dibagikan lewat QR (K-8 draft hanya di memori).
 - [x] Tes: profil diubah → QR aktif membaca profil terbaru (perilaku "dibaca saat dipindai").
-- [ ] Tes: QR dicabut di P12 atau P20 → pindai berikutnya ditolak dan pencabutan tampil di P19.
+- [x] Tes: QR dicabut di P12 atau P20 → pindai berikutnya ditolak dan pencabutan tampil di P19.
 - [ ] P19 hanya menampilkan riwayat milik pasien yang masuk (tes akses silang antarpasien ditolak).
-- [ ] Halaman token memakai `Referrer-Policy: no-referrer`.
+- [x] Halaman token memakai `Referrer-Policy: no-referrer`.
 - [x] Uji manual keyboard + 320 px + zoom 200% pada P5 dan P6.
+- [x] Uji manual keyboard + 320 px + zoom 200% pada P9, P11, dan P12 (termasuk ConfirmDialog terbuka).
 - [x] `lint`, `typecheck`, `test`, `build` lolos.
 
 **Catatan hasil:**
@@ -404,6 +407,36 @@
       - Dialog konfirmasi keluar berfungsi dan mengembalikan fokus tombol [X] saat batal.
       - Dev Audit Panel pada Langkah 1, Langkah 2, Langkah 8, dan Pratinjau: 0 pelanggaran axe, target sentuh ≥ 48×48 px, 0 horizontal scroll pada lebar 320 px dan zoom teks 200%.
     - `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` lolos 100%. Status Bagian 6: 1/3 (Bagian 6a SELESAI).
+- Bagian 6 (2 dari 3 / Prompt 11 — P9, P11–P12):
+  - Komponen `RadioList` (`src/components/radio-list.tsx`):
+    - Komponen pilihan radio aksesibel dengan `<fieldset>` dan `<legend>`, target sentuh per opsi minimal 48×48 px, label + deskripsi pendukung, fokus keyboard yang jelas, dan diekspor ke katalog `/dev/katalog`.
+  - Utilitas Klien Bersih (`src/lib/consent/time.ts`):
+    - Fungsi murni tanpa ketergantungan DB: `formatTimeWib` (WIB UTC+7), `formatRemainingTime`, `formatExpiryText`, `getExpiryStatus`, `resolveDefaultSharedFields`, `formatTokenForDisplay`, `buildQrPayload`.
+  - Domain Consent Tambahan (`src/lib/consent/index.ts`, `src/lib/facility/index.ts`):
+    - `getLastConsentSharedFields`: mengambil `shared_fields` terakhir milik pasien.
+    - `getConsentQrStatus`: memeriksa status QR terkini (`aktif`, `dipindai`, `kedaluwarsa`, `dicabut`) dengan menanyakan riwayat kunjungan di tabel `visits` tanpa mengubah skema basis data.
+    - `countActiveConsents`: menghitung jumlah QR aktif milik pasien untuk memunculkan tautan Kontrol Akses.
+    - `getActiveFacilities`: kueri fasilitas aktif dengan RLS.
+  - Route Handlers Pasien:
+    - `POST /api/pasien/kunjungan/consent`: memvalidasi input dan memanggil `createConsent` dalam satu transaksi dengan audit `qr_created`.
+    - `GET /api/pasien/qr/[qrId]/status`: endpoint status ber-header `Cache-Control: no-store`, mengembalikan status QR tanpa membocorkan token. Menghasilkan 401 tanpa sesi, 403 untuk staf, dan 404 generik untuk QR milik pasien lain atau ID tak dikenal.
+    - `POST /api/pasien/qr/[qrId]/revoke`: pencabutan QR oleh pasien pemilik dengan audit `qr_revoked`.
+  - Alur Kunjungan & ConsentQR (`/pasien/kunjungan` [P9], `/pasien/kunjungan/qr` [P11 + P12]):
+    - P9: Jika paspor kosong → banner peringatan "Isi paspor dulu" + tautan `/pasien/paspor`. Jika paspor ada → daftar fasilitas radio + tombol [Saya sudah di fasilitas] menuju `/pasien/kunjungan/qr?fasilitas=<id>`.
+    - P11: Toggle per kategori yang ada di paspor + toggle catatan untuk petugas; nama panggilan selalu dibagikan (teks tetap); keterangan privasi diagnosis; bawaan toggle dari consent terakhir (fallback semua aktif); radio masa berlaku (1 jam, hari ini, 24 jam); pratinjau langsung `PatientNeedsSummary` tersaring.
+    - P12: Ditampilkan di URL yang sama di memori. QR SVG besar dari paket `qrcode` (modul teks di atas putih, quiet zone 4 modul), kode manual Crockford Base32 berkelompok 4 karakter, hitung mundur statis WIB, polling otomatis status tiap 5 detik (berhenti saat dipindai, kedaluwarsa, dicabut, atau tab tersembunyi).
+    - Status dipindai: QR diganti `StatusBanner` sukses "Dipindai oleh petugas — <fasilitas>" dan tombol [Ke Beranda]; [Cabut Sekarang] tetap tersedia.
+    - Pencabutan di P12: Membuka `ConfirmDialog`, memanggil API pencabutan, menampilkan banner sukses "QR dicabut" + [Buat QR Baru] [Ke Beranda]. Token segera dihapus dari memori.
+  - Bukti verifikasi:
+    - Vitest: 153 tes di 17 test file lolos 100% (termasuk 8 tes unit dan rute pada `consent-qr-p11-p12.test.ts`, 13 tes arsitektur statik).
+    - Dekode payload QR: tepat `${APP_ORIGIN}/s#<26 char Crockford Base32>` tanpa data pasien lain.
+    - Token privasi memori: diperiksa di DevTools console — URL address bar, `localStorage`, `sessionStorage`, `IndexedDB`, `document.cookie`, dan atribut `img.alt` bebas dari token mentah.
+    - Header: `curl -I /pasien/kunjungan/qr` mengembalikan `Referrer-Policy: no-referrer`.
+    - Simulasi pindai dengan curl: login petugas seed fasilitas yang sama → pindai via `POST /api/scan` → halaman P12 dalam peramban otomatis berubah menjadi "Dipindai oleh petugas — Puskesmas Contoh A" via polling dalam ≤ 6 detik.
+    - Pencabutan dan penolakan pindai: pencabutan di P12 mengubah status menjadi "QR dicabut"; percobaan pindai ulang dengan curl mengembalikan status 422 `QR_UNUSABLE`.
+    - Log dev server: diperiksa dengan grep, token tidak pernah muncul di log server.
+    - Dev Audit Panel: 0 pelanggaran axe, semua elemen interaktif ≥ 48×48 px, 0 scroll horizontal pada 320 px dan zoom teks 200% (termasuk saat `ConfirmDialog` terbuka).
+    - `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` lolos 100%. Status Bagian 6: 2/3 (Bagian 6b SELESAI).
 
 ---
 

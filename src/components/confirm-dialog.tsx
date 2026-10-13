@@ -58,9 +58,9 @@ export function ConfirmDialog({
       onCancel={handleCancel}
       aria-labelledby="confirm-dialog-title"
       aria-describedby="confirm-dialog-desc"
-      className="p-6 rounded-2xl bg-white border border-cyan-800 shadow-xl max-w-sm w-full backdrop:bg-cyan-900/50 m-auto focus:outline-none"
+      className="p-6 rounded-2xl bg-white border border-cyan-800 shadow-xl w-[calc(100vw-2rem)] max-w-sm backdrop:bg-cyan-900/50 m-auto focus:outline-none"
     >
-      <h2 id="confirm-dialog-title" className="text-xl font-bold text-main mb-2">
+      <h2 id="confirm-dialog-title" className="text-xl font-bold text-main mb-2 break-words">
         {title}
       </h2>
       <p id="confirm-dialog-desc" className="text-base font-normal text-secondary mb-6">

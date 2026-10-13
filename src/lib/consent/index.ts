@@ -6,6 +6,7 @@ import {
   NEED_CATEGORIES,
 } from "./constants";
 import { checkScanRateLimit } from "./rate-limit";
+import { type ConsentDuration } from "./time";
 import {
   buildConsentQrUrl,
   generateConsentToken,
@@ -16,14 +17,7 @@ import {
 export * from "./constants";
 export * from "./rate-limit";
 export * from "./token";
-
-export type ConsentDuration =
-  | "1 jam"
-  | "hari ini"
-  | "24 jam"
-  | "1_hour"
-  | "today"
-  | "24_hours";
+export * from "./time";
 
 export interface ConsentActor {
   userId: string;
@@ -675,6 +669,175 @@ export async function scanToken(
           expiresSoon,
         },
       };
+    }
+  );
+}
+
+export type ConsentQrStatusResult =
+  | { status: "not_found" }
+  | {
+      status: "aktif" | "dipindai" | "kedaluwarsa" | "dicabut";
+      facilityName: string;
+      facilityId: string;
+      expiresAt: string;
+      scannedAt?: string;
+    };
+
+/**
+ * 3d. Mengambil status ConsentQR milik pasien:
+ * Mengembalikan:
+ * - not_found (bila QR tidak ada atau bukan milik pasien - dijaga RLS)
+ * - dicabut (bila revoked_at tidak null)
+ * - kedaluwarsa (bila waktu kedaluwarsa telah lewat)
+ * - dipindai (bila terdapat baris kunjungan yang dibuka untuk consent ini)
+ * - aktif (bila masih berlaku dan belum dipindai)
+ */
+export async function getConsentQrStatus(
+  actor: ConsentActor,
+  qrId: string,
+  options?: { now?: Date }
+): Promise<ConsentQrStatusResult> {
+  const now = options?.now ?? new Date();
+
+  return await withContext(
+    {
+      userId: actor.userId,
+      role: actor.role,
+    },
+    async (tx) => {
+      // Lookup consent_qr JOIN consents JOIN facilities
+      // Dibatasi oleh RLS app_can_manage_consent(consent_id)
+      const qrRes = await tx.query<{
+        qr_id: string;
+        consent_id: string;
+        expires_at: Date;
+        revoked_at: Date | null;
+        facility_id: string;
+        facility_name: string;
+      }>(
+        `SELECT
+           cq.id AS qr_id,
+           cq.consent_id,
+           cq.expires_at,
+           cq.revoked_at,
+           c.facility_id,
+           f.name AS facility_name
+         FROM consent_qr cq
+         JOIN consents c ON c.id = cq.consent_id
+         JOIN facilities f ON f.id = c.facility_id
+         WHERE cq.id = $1;`,
+        [qrId]
+      );
+
+      if (qrRes.rows.length === 0) {
+        return { status: "not_found" };
+      }
+
+      const row = qrRes.rows[0];
+      const expiresAtDate = new Date(row.expires_at);
+
+      if (row.revoked_at !== null) {
+        return {
+          status: "dicabut",
+          facilityName: row.facility_name,
+          facilityId: row.facility_id,
+          expiresAt: expiresAtDate.toISOString(),
+        };
+      }
+
+      if (now.getTime() >= expiresAtDate.getTime()) {
+        return {
+          status: "kedaluwarsa",
+          facilityName: row.facility_name,
+          facilityId: row.facility_id,
+          expiresAt: expiresAtDate.toISOString(),
+        };
+      }
+
+      // Periksa apakah kunjungan telah dibuka oleh petugas untuk consent ini
+      // Diturunkan dari kunjungan yang dibuka Prompt 7 untuk consent itu
+      const visitRes = await tx.query<{
+        id: string;
+        created_at: Date;
+      }>(
+        `SELECT id, created_at
+         FROM visits
+         WHERE consent_id = $1
+         ORDER BY created_at DESC
+         LIMIT 1;`,
+        [row.consent_id]
+      );
+
+      if (visitRes.rows.length > 0) {
+        return {
+          status: "dipindai",
+          facilityName: row.facility_name,
+          facilityId: row.facility_id,
+          expiresAt: expiresAtDate.toISOString(),
+          scannedAt: new Date(visitRes.rows[0].created_at).toISOString(),
+        };
+      }
+
+      return {
+        status: "aktif",
+        facilityName: row.facility_name,
+        facilityId: row.facility_id,
+        expiresAt: expiresAtDate.toISOString(),
+      };
+    }
+  );
+}
+
+/**
+ * Mengambil shared_fields dari consent terakhir yang dibuat pasien.
+ * Mengembalikan null jika pasien belum pernah membuat consent sebelumnya.
+ */
+export async function getLastConsentSharedFields(
+  actor: ConsentActor
+): Promise<string[] | null> {
+  return await withContext(
+    {
+      userId: actor.userId,
+      role: actor.role,
+    },
+    async (tx) => {
+      const res = await tx.query<{ shared_fields: string[] }>(
+        `SELECT shared_fields
+         FROM consents
+         WHERE patient_user_id = $1
+         ORDER BY created_at DESC
+         LIMIT 1;`,
+        [actor.userId]
+      );
+      return res.rows[0]?.shared_fields ?? null;
+    }
+  );
+}
+
+/**
+ * Menghitung jumlah ConsentQR aktif milik pasien (belum dicabut dan belum kedaluwarsa).
+ */
+export async function countActiveConsents(
+  actor: ConsentActor,
+  options?: { now?: Date }
+): Promise<number> {
+  const now = options?.now ?? new Date();
+  return await withContext(
+    {
+      userId: actor.userId,
+      role: actor.role,
+    },
+    async (tx) => {
+      const res = await tx.query<{ count: number }>(
+        `SELECT count(*)::int AS count
+         FROM consent_qr cq
+         JOIN consents c ON c.id = cq.consent_id
+         WHERE c.patient_user_id = $1
+           AND cq.revoked_at IS NULL
+           AND cq.expires_at > $2;`,
+        [actor.userId, now.toISOString()]
+      );
+      return res.rows[0]?.count ?? 0;
     }
   );
 }

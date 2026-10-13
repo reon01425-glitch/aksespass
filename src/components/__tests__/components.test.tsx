@@ -267,5 +267,34 @@ describe("Komponen UI Bersama (renderToStaticMarkup, tanpa DOM)", () => {
       expect(html).toContain("Diagnosis tidak diminta");
       expect(html).toContain("Petugas hanya melihat bagian yang Anda pilih");
     });
+
+    it("RadioList: merender fieldset, legend, radio inputs, dan status terpilih", async () => {
+      const { RadioList } = await import("../radio-list");
+      const html = renderToStaticMarkup(
+        <RadioList
+          name="faskes-test"
+          legend="Pilih Fasilitas"
+          helperText="Keterangan fasilitas"
+          value="f1"
+          onChange={() => {}}
+          options={[
+            { value: "f1", label: "Puskesmas Contoh A", description: "Buka 24 jam" },
+            { value: "f2", label: "Klinik Contoh B", disabled: true },
+          ]}
+        />
+      );
+
+      expect(html).toContain("<fieldset");
+      expect(html).toContain("<legend");
+      expect(html).toContain("Pilih Fasilitas");
+      expect(html).toContain("Keterangan fasilitas");
+      expect(html).toContain('type="radio"');
+      expect(html).toContain('value="f1"');
+      expect(html).toContain("checked");
+      expect(html).toContain("Puskesmas Contoh A");
+      expect(html).toContain("Buka 24 jam");
+      expect(html).toContain('value="f2"');
+      expect(html).toContain("disabled");
+    });
   });
 });
