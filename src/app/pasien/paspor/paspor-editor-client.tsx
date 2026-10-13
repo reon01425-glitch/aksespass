@@ -17,11 +17,15 @@ import type {
   NeedsCategoryGroup,
   OwnPassportData,
 } from "@/lib/passport";
+import { formatDateTimeWib } from "@/lib/consent/time";
 import { X } from "lucide-react";
 
 export interface PassportEditorClientProps {
   catalog: NeedsCategoryGroup[];
   initialPassport: OwnPassportData | null;
+  submitUrl?: string;
+  backUrl?: string;
+  roleLabel?: string;
 }
 
 const CATEGORY_STEP_INDEXES = [
@@ -36,6 +40,9 @@ const CATEGORY_STEP_INDEXES = [
 export function PassportEditorClient({
   catalog,
   initialPassport,
+  submitUrl = "/api/pasien/paspor",
+  backUrl = "/pasien",
+  roleLabel,
 }: PassportEditorClientProps) {
   const router = useRouter();
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -158,7 +165,7 @@ export function PassportEditorClient({
     setSaveError(null);
 
     try {
-      const res = await fetch("/api/pasien/paspor", {
+      const res = await fetch(submitUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -211,9 +218,16 @@ export function PassportEditorClient({
       {/* Header Halaman dengan Tombol Keluar [X] */}
       <header className="w-full border-b border-cyan-100 bg-white px-4 py-3 sticky top-0 z-10">
         <div className="max-w-2xl mx-auto flex items-center justify-between gap-3 w-full min-w-0">
-          <h1 className="font-bold text-lg text-main break-words min-w-0 flex-1">
-            Paspor Saya
-          </h1>
+          <div className="flex flex-col min-w-0 flex-1">
+            <h1 className="font-bold text-lg text-main break-words">
+              {roleLabel ? `Paspor Layanan` : "Paspor Saya"}
+            </h1>
+            {roleLabel && (
+              <span className="text-xs font-bold text-cyan-900 break-words">
+                {roleLabel}
+              </span>
+            )}
+          </div>
           <button
             ref={exitButtonRef}
             type="button"
@@ -248,6 +262,12 @@ export function PassportEditorClient({
               >
                 Nama Panggilan
               </h2>
+              {initialPassport?.lastUpdatedByCompanion && (
+                <p className="text-xs text-secondary italic mt-1">
+                  Terakhir diubah oleh pendamping {initialPassport.lastUpdatedByCompanion.companionName},{" "}
+                  {formatDateTimeWib(new Date(initialPassport.lastUpdatedByCompanion.updatedAt))}
+                </p>
+              )}
             </div>
 
             <TextField
@@ -450,14 +470,16 @@ export function PassportEditorClient({
                   message="Perubahan langsung berlaku, termasuk untuk ConsentQR yang masih aktif."
                 />
                 <div className="flex flex-col sm:flex-row gap-3">
+                  {!roleLabel && (
+                    <Link
+                      href="/pasien/kunjungan"
+                      className="inline-flex items-center justify-center min-h-12 min-w-12 h-12 px-6 bg-cyan-700 text-white font-bold rounded-lg shadow-sm focus:outline-none focus:ring-4 focus:ring-cyan-900 focus:ring-offset-2 flex-1 text-center"
+                    >
+                      Mulai Kunjungan
+                    </Link>
+                  )}
                   <Link
-                    href="/pasien/kunjungan"
-                    className="inline-flex items-center justify-center min-h-12 min-w-12 h-12 px-6 bg-cyan-700 text-white font-bold rounded-lg shadow-sm focus:outline-none focus:ring-4 focus:ring-cyan-900 focus:ring-offset-2 flex-1 text-center"
-                  >
-                    Mulai Kunjungan
-                  </Link>
-                  <Link
-                    href="/pasien"
+                    href={backUrl}
                     className="inline-flex items-center justify-center min-h-12 min-w-12 h-12 px-6 bg-cyan-100 border border-cyan-700 text-cyan-900 font-bold rounded-lg hover:bg-cyan-200 focus:outline-none focus:ring-4 focus:ring-cyan-900 flex-1 text-center"
                   >
                     Ke Beranda
@@ -520,7 +542,7 @@ export function PassportEditorClient({
         onClose={() => setShowExitConfirm(false)}
         onConfirm={() => {
           setShowExitConfirm(false);
-          router.push("/pasien");
+          router.push(backUrl);
         }}
       />
     </div>

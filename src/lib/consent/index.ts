@@ -35,6 +35,7 @@ export interface CreateConsentInput {
   facilityId: string;
   sharedFields: readonly string[];
   duration: ConsentDuration;
+  targetPatientUserId?: string;
 }
 
 export interface CreateConsentResult {
@@ -109,10 +110,15 @@ export async function createConsent(
       role: actor.role,
     },
     async (tx) => {
+      const targetPatientUserId =
+        actor.role === "companion"
+          ? (input.targetPatientUserId || actor.userId)
+          : actor.userId;
+
       // 1. Cek apakah profil paspor sudah ada dan memiliki minimal satu kebutuhan
       const profileRes = await tx.query<{ id: string; user_id: string }>(
         "SELECT id, user_id FROM patient_profiles WHERE user_id = $1;",
-        [actor.userId]
+        [targetPatientUserId]
       );
 
       if (profileRes.rows.length === 0) {
@@ -130,11 +136,22 @@ export async function createConsent(
       }
 
       // 2. Ambil audit_subject_id pasien untuk disimpan sebagai subject_ref
-      let subjectRef = actor.auditSubjectId;
+      let subjectRef = actor.role === "companion" ? null : actor.auditSubjectId;
+
+      if (!subjectRef && actor.role === "companion") {
+        const compRes = await tx.query<{ patient_subject_ref: string }>(
+          `SELECT patient_subject_ref
+           FROM companions
+           WHERE patient_user_id = $1 AND companion_user_id = $2;`,
+          [targetPatientUserId, actor.userId]
+        );
+        subjectRef = compRes.rows[0]?.patient_subject_ref || null;
+      }
+
       if (!subjectRef) {
         const userRes = await tx.query<{ audit_subject_id: string }>(
           "SELECT audit_subject_id FROM users WHERE id = $1;",
-          [actor.userId]
+          [targetPatientUserId]
         );
         if (userRes.rows.length > 0) {
           subjectRef = userRes.rows[0].audit_subject_id;
@@ -153,6 +170,7 @@ export async function createConsent(
       const qrId = crypto.randomUUID();
 
       // 4. Simpan consents + consent_qr dalam transaksi yang sama
+      // created_by_user_id = actor.userId (pendamping atau pasien)
       await tx.query(
         `INSERT INTO consents (
            id, patient_user_id, facility_id, shared_fields, valid_from, valid_until,
@@ -160,7 +178,7 @@ export async function createConsent(
          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $5, $8);`,
         [
           consentId,
-          actor.userId,
+          targetPatientUserId,
           input.facilityId,
           [...input.sharedFields],
           now.toISOString(),
@@ -799,8 +817,10 @@ export async function getConsentQrStatus(
  * Mengembalikan null jika pasien belum pernah membuat consent sebelumnya.
  */
 export async function getLastConsentSharedFields(
-  actor: ConsentActor
+  actor: ConsentActor,
+  targetPatientUserId?: string
 ): Promise<string[] | null> {
+  const patientUserId = targetPatientUserId || actor.userId;
   return await withContext(
     {
       userId: actor.userId,
@@ -813,7 +833,7 @@ export async function getLastConsentSharedFields(
          WHERE patient_user_id = $1
          ORDER BY created_at DESC
          LIMIT 1;`,
-        [actor.userId]
+        [patientUserId]
       );
       return res.rows[0]?.shared_fields ?? null;
     }
@@ -825,9 +845,10 @@ export async function getLastConsentSharedFields(
  */
 export async function countActiveConsents(
   actor: ConsentActor,
-  options?: { now?: Date }
+  options?: { now?: Date; targetPatientUserId?: string }
 ): Promise<number> {
   const now = options?.now ?? new Date();
+  const patientUserId = options?.targetPatientUserId || actor.userId;
   return await withContext(
     {
       userId: actor.userId,
@@ -841,7 +862,7 @@ export async function countActiveConsents(
          WHERE c.patient_user_id = $1
            AND cq.revoked_at IS NULL
            AND cq.expires_at > $2;`,
-        [actor.userId, now.toISOString()]
+        [patientUserId, now.toISOString()]
       );
       return res.rows[0]?.count ?? 0;
     }

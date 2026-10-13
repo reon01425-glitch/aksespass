@@ -8,6 +8,7 @@ import {
 import { verifySessionCookie } from "@/lib/auth/session";
 import { getOwnPassportStatus } from "@/lib/passport";
 import { listOwnConfirmations } from "@/lib/careproof";
+import { formatDateTimeWib } from "@/lib/consent/time";
 import {
   LogoutButton,
   PageShell,
@@ -71,6 +72,12 @@ export default async function PasienPage() {
                 title="Paspor Layanan Lengkap"
                 message={`Paspor Anda memuat ${passport.needCount} kebutuhan layanan yang siap dibagikan ke fasilitas kesehatan.`}
               />
+              {passport.lastUpdatedByCompanion && (
+                <p className="text-xs text-secondary italic px-1">
+                  Terakhir diubah oleh pendamping {passport.lastUpdatedByCompanion.companionName},{" "}
+                  {formatDateTimeWib(new Date(passport.lastUpdatedByCompanion.updatedAt))}
+                </p>
+              )}
               <Link
                 href="/pasien/kunjungan"
                 className="flex items-center justify-center min-h-[48px] w-full px-6 py-3 bg-cyan-700 text-white font-bold rounded-lg shadow-sm focus:ring-4 focus:ring-cyan-900 focus:ring-offset-2 text-center text-lg"
@@ -85,6 +92,12 @@ export default async function PasienPage() {
                 title="Paspor Belum Diisi"
                 message="Isi kebutuhan layanan Anda agar petugas fasilitas dapat menyiapkan akomodasi yang sesuai sebelum Anda tiba."
               />
+              {passport.lastUpdatedByCompanion && (
+                <p className="text-xs text-secondary italic px-1">
+                  Terakhir diubah oleh pendamping {passport.lastUpdatedByCompanion.companionName},{" "}
+                  {formatDateTimeWib(new Date(passport.lastUpdatedByCompanion.updatedAt))}
+                </p>
+              )}
               <Link
                 href="/pasien/paspor"
                 className="flex items-center justify-center min-h-[48px] w-full px-6 py-3 bg-cyan-700 text-white font-bold rounded-lg shadow-sm focus:ring-4 focus:ring-cyan-900 focus:ring-offset-2 text-center text-lg"

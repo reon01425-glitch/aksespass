@@ -7,9 +7,13 @@ import type { FacilityOption } from "@/lib/facility";
 
 export interface KunjunganClientProps {
   facilities: FacilityOption[];
+  targetUrlPrefix?: string;
 }
 
-export function KunjunganClient({ facilities }: KunjunganClientProps) {
+export function KunjunganClient({
+  facilities,
+  targetUrlPrefix = "/pasien/kunjungan/qr",
+}: KunjunganClientProps) {
   const router = useRouter();
   const [selectedFacilityId, setSelectedFacilityId] = useState<string>(
     facilities[0]?.id ?? ""
@@ -18,7 +22,7 @@ export function KunjunganClient({ facilities }: KunjunganClientProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedFacilityId) return;
-    router.push(`/pasien/kunjungan/qr?fasilitas=${encodeURIComponent(selectedFacilityId)}`);
+    router.push(`${targetUrlPrefix}?fasilitas=${encodeURIComponent(selectedFacilityId)}`);
   };
 
   const radioOptions = facilities.map((f) => ({
@@ -30,7 +34,7 @@ export function KunjunganClient({ facilities }: KunjunganClientProps) {
   return (
     <form
       method="GET"
-      action="/pasien/kunjungan/qr"
+      action={targetUrlPrefix}
       onSubmit={handleSubmit}
       className="flex flex-col gap-6 max-w-full w-full"
     >

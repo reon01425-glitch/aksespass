@@ -552,5 +552,36 @@ describe("Tes Arsitektur Kode (Statik & Tanpa DB)", () => {
       )}`
     ).toEqual([]);
   });
+
+  it("tabel companion_link_codes hanya disentuh dari src/lib/companions, src/db, dan tes", () => {
+    const violations: string[] = [];
+
+    for (const file of allSrcFiles) {
+      if (isTestFile(file)) continue;
+
+      const relPath = path.relative(srcDir, file);
+      // Diizinkan di lib/companions dan db
+      if (
+        relPath.startsWith("lib/companions/") ||
+        relPath.startsWith("lib\\companions\\") ||
+        relPath.startsWith("db/") ||
+        relPath.startsWith("db\\")
+      ) {
+        continue;
+      }
+
+      const content = fs.readFileSync(file, "utf8");
+      if (content.includes("companion_link_codes")) {
+        violations.push(relPath);
+      }
+    }
+
+    expect(
+      violations,
+      `Tabel companion_link_codes disentuh langsung di luar modul yang diizinkan: ${violations.join(
+        ", "
+      )}`
+    ).toEqual([]);
+  });
 });
 

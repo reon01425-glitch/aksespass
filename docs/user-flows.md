@@ -234,43 +234,41 @@ Pendamping bertindak atas nama pasien hanya setelah pasien menyetujui tautan, da
 - **US:** D-01.
 
 ### [D3] Tautkan ke Pasien
-- **Tampilan:** kolom kode tautan dari pasien, atau pindai kode tautan di perangkat pasien. Status "Menunggu persetujuan pasien" setelah dikirim.
+- **Tampilan:** kolom input kode tautan 8 karakter Crockford Base32 dari pasien (tanpa pemindai kamera). Status "Menunggu persetujuan pasien" setelah dikirim.
 - **Aksi Utama:** masukkan kode, [Ajukan Tautan]. Pasien menyetujui di [P21].
-- **Aksi Alternatif atau Error:** kode kedaluwarsa atau ditolak → pesan dan opsi minta kode baru. **Pendamping belum bisa mengakses data apa pun sampai pasien menyetujui.**
+- **Aksi Alternatif atau Error:** kode salah, kedaluwarsa, atau sudah terpakai → pesan generik identik ("Kode tidak dapat dipakai. Minta kode baru ke pasien."). **Pendamping belum bisa mengakses data apa pun sampai pasien menyetujui (ditegakkan RLS).**
 - **Navigasi:** setelah disetujui → [D4].
 - **US:** D-01.
 
 ### [D4] Beranda Pendamping
-- **Tampilan:** daftar pasien yang didampingi dengan status paspor dan kunjungan aktif, [Tambah Tautan].
-- **Aksi Utama:** pilih seorang pasien.
-- **Aksi Alternatif:** jika tautan dicabut pasien, kartu pasien itu hilang dan muncul "Tautan berakhir".
-- **Navigasi:** Paspor → [D5]; QR dan Kartu → [D6]; Kunjungan → [D7].
+- **Tampilan:** daftar kartu pasien yang didampingi dengan status paspor dan jumlah konfirmasi CareProof menunggu, tombol [Tautkan Pasien]. Bila ada tautan yang berakhir: banner "Satu tautan telah berakhir." (tanpa identitas pasien).
+- **Aksi Utama:** pilih kartu pasien untuk mengelola paspor, QR, atau konfirmasi CareProof.
+- **Aksi Alternatif:** jika tautan dicabut pasien, kartu pasien langsung hilang dan akses DB seketika 0 baris.
+- **Navigasi:** Paspor → [D5]; QR → [D6]; Konfirmasi CareProof → [D8].
 - **US:** D-01, D-02, P-16.
 
 ### [D5] Kelola Paspor atas Nama Pasien
-- **Tampilan:** editor yang sama dengan [P5] dan [P6], berlabel "Atas nama [nama pasien]".
-- **Aksi Utama:** isi atau ubah kebutuhan, pratinjau, simpan. Draft tersimpan otomatis seperti [P5].
-- **Aksi Alternatif:** perubahan oleh pendamping tercatat dengan jejak "diubah oleh pendamping" dan dapat dilihat pasien.
+- **Tampilan:** editor paspor kebutuhan (P5/P6) dengan label "Atas nama [nama panggilan pasien]".
+- **Aksi Utama:** ubah nama panggilan, kebutuhan, catatan bebas, lalu simpan.
+- **Aksi Alternatif:** penyimpanan paspor mengisi `last_updated_by_companion_id` dan mencatat audit `profile_changed_by_companion` dengan actor_role `companion`. Pasien melihat "Terakhir diubah oleh pendamping [nama]" di [P4]/[P5] dan di riwayat [P19].
 - **Navigasi:** → [D4].
 - **US:** D-02, P-01, P-02.
 
-### [D6] Kelola QR dan Kartu
-- **Tampilan:** [Buat ConsentQR] (pengaturan seperti [P11]) dan [Kartu Cetak] (seperti [P7]).
-- **Aksi Utama:** buat QR atas nama pasien lalu tunjukkan ke petugas, atau cetak kartu bersama pasien.
-- **Aksi Alternatif:** QR kedaluwarsa atau dicabut ditolak seperti [P12].
+### [D6] Kelola ConsentQR atas Nama Pasien
+- **Tampilan:** alur [Buat ConsentQR] atas nama pasien (pemilihan faskes, durasi, kategori data) dan penampil QR aktif (P11/P12). Tanpa kartu cetak pada prototipe ini.
+- **Aksi Utama:** buat QR atas nama pasien (`consents.created_by_user_id` adalah pendamping, `patient_user_id` pasien) lalu tunjukkan ke petugas.
+- **Aksi Alternatif:** QR dapat dicabut oleh pasien maupun pendamping aktif.
 - **Navigasi:** → [D4].
 - **US:** D-02, P-03, P-14.
 
-### [D7] Dampingi Kunjungan
-- **Tampilan:** status antrean dan panggilan pasien (mirip [P13]), akses ke [P15] KomunikaCare, notifikasi giliran.
-- **Aksi Utama:** memantau panggilan dan mendampingi pasien ke ruangan.
-- **Navigasi:** setelah layanan selesai, permintaan konfirmasi membuka [D8].
+### [D7] Dampingi Kunjungan (Tidak Dibuat pada Prototipe)
+- **Status:** Dilewati / Tidak dibuat pada prototipe (fitur status antrean / panggilan P-13 berada di roadmap).
 - **US:** D-02, P-13.
 
 ### [D8] Konfirmasi CareProof atas Nama Pasien
-- **Tampilan:** tiga ikon seperti [P16], dengan penanda "Dijawab oleh pendamping".
-- **Aksi Utama:** pilih ikon bersama atau mewakili pasien, lalu [Kirim].
-- **Aksi Alternatif:** jawaban pendamping disimpan terpisah dari jawaban pasien dan dipisahkan di dashboard. Pasien tetap bisa mengubah jawaban melalui [P17].
+- **Tampilan:** daftar kunjungan pasien tertaut dan formulir tiga opsi pelayanan (terpenuhi/sebagian/belum) berpenanda "Dijawab oleh pendamping". Bila pasien sudah menjawab, formulir menampilkan jawaban pasien dalam mode baca-saja dan tidak bisa diubah pendamping.
+- **Aksi Utama:** pilih opsi kepuasan dan kebutuhan yang belum terpenuhi, lalu [Kirim].
+- **Aksi Alternatif:** jawaban pendamping dicatat dengan `confirmed_by = 'companion'`. Bila pasien sudah mengonfirmasi duluan, pendamping ditolak (409 "Pasien sudah mengonfirmasi"). Jika pasien mengonfirmasi setelah pendamping, jawaban pasien menimpa jawaban pendamping.
 - **Navigasi:** → [D4].
 - **US:** D-03.
 

@@ -51,6 +51,10 @@ export interface ConsentQrFlowClientProps {
   lastSharedFields: string[] | null;
   initialActiveCount: number;
   appOrigin: string;
+  createConsentUrl?: string;
+  patientLabel?: string;
+  cancelHref?: string;
+  homeHref?: string;
 }
 
 export function ConsentQrFlowClient({
@@ -59,6 +63,10 @@ export function ConsentQrFlowClient({
   lastSharedFields,
   initialActiveCount,
   appOrigin,
+  createConsentUrl = "/api/pasien/kunjungan/consent",
+  patientLabel,
+  cancelHref = "/pasien/kunjungan",
+  homeHref = "/pasien",
 }: ConsentQrFlowClientProps) {
   // 1. Kategori yang benar-benar ada di paspor
   const availableCategories = Array.from(
@@ -205,7 +213,7 @@ export function ConsentQrFlowClient({
     setErrorMessage(null);
 
     try {
-      const res = await fetch("/api/pasien/kunjungan/consent", {
+      const res = await fetch(createConsentUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -310,6 +318,11 @@ export function ConsentQrFlowClient({
         className="flex flex-col gap-6 max-w-full w-full"
       >
         <div className="flex flex-col gap-1">
+          {patientLabel && (
+            <span className="text-xs font-bold text-cyan-900 uppercase tracking-wider">
+              {patientLabel}
+            </span>
+          )}
           <p className="text-base text-secondary">
             Tujuan kunjungan:{" "}
             <strong className="text-main font-bold">{facility.name}</strong>
@@ -444,7 +457,7 @@ export function ConsentQrFlowClient({
             {isSubmitting ? "Memproses…" : "Buat QR"}
           </Button>
           <Link
-            href="/pasien/kunjungan"
+            href={cancelHref}
             className="inline-flex items-center justify-center min-h-12 py-2.5 px-6 bg-cyan-100 border border-cyan-700 text-cyan-900 font-bold rounded-lg hover:bg-cyan-200 focus:ring-4 focus:ring-cyan-900 text-center w-full sm:w-auto"
           >
             Batal
@@ -488,7 +501,7 @@ export function ConsentQrFlowClient({
             message="Petugas telah berhasil memindai QR dan membaca kebutuhan layanan yang Anda bagikan."
           />
           <Link
-            href="/pasien"
+            href={homeHref}
             className="inline-flex items-center justify-center min-h-12 py-2.5 px-6 bg-cyan-700 text-white font-bold rounded-lg shadow-sm hover:bg-cyan-800 focus:ring-4 focus:ring-cyan-900 focus:ring-offset-2 text-center w-full sm:w-auto"
           >
             Ke Beranda
@@ -521,7 +534,7 @@ export function ConsentQrFlowClient({
           <div className="flex flex-wrap gap-2">
             <Button onClick={handleResetToConfigure} className="w-full sm:w-auto">Buat QR Baru</Button>
             <Link
-              href="/pasien"
+              href={homeHref}
               className="inline-flex items-center justify-center min-h-12 py-2.5 px-6 bg-cyan-100 border border-cyan-700 text-cyan-900 font-bold rounded-lg hover:bg-cyan-200 focus:ring-4 focus:ring-cyan-900 text-center w-full sm:w-auto"
             >
               Ke Beranda
@@ -580,9 +593,15 @@ export function ConsentQrFlowClient({
         </p>
         {activeQrCount > 1 && (
           <p className="text-sm text-secondary">
-            Anda memiliki ConsentQR aktif lainnya. Buka{" "}
-            <TextLink href="/pasien/akses/qr">Kontrol Akses</TextLink> untuk
-            melihat atau mencabutnya.
+            {homeHref === "/pasien" ? (
+              <>
+                Anda memiliki ConsentQR aktif lainnya. Buka{" "}
+                <TextLink href="/pasien/akses/qr">Kontrol Akses</TextLink> untuk
+                melihat atau mencabutnya.
+              </>
+            ) : (
+              "Pasien memiliki ConsentQR aktif lainnya."
+            )}
           </p>
         )}
       </div>

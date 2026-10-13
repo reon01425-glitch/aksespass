@@ -667,14 +667,19 @@
 **Baca:** `docs/user-flows.md` layar terkait; `architecture.md` §2, §6, §11.
 
 ### 10A — Pendamping (D1–D8, P21)
-- [ ] Daftar pendamping, ajukan tautan, pasien menyetujui di P21, cabut tautan.
-- [ ] Kelola paspor dan QR atas nama pasien; konfirmasi CareProof atas nama pasien.
+- [x] Daftar pendamping, ajukan tautan, pasien menyetujui di P21, cabut tautan.
+- [x] Kelola paspor dan QR atas nama pasien; konfirmasi CareProof atas nama pasien.
 
 **Verifikasi 10A**
-- [ ] Tes: sebelum disetujui pendamping tidak bisa membaca data apa pun.
-- [ ] Tes: setelah dicabut akses berakhir seketika.
-- [ ] Tes: perubahan oleh pendamping tercatat (`profile_changed_by_companion`) dan terlihat pasien.
-- [ ] Tes: konfirmasi pendamping tersimpan `confirmed_by = companion` dan terpisah di dashboard.
+- [x] Tes: sebelum disetujui pendamping tidak bisa membaca data apa pun (0 baris via RLS).
+- [x] Tes: setelah dicabut akses berakhir seketika (0 baris via RLS tanpa perlu login ulang).
+- [x] Tes: perubahan oleh pendamping tercatat (`profile_changed_by_companion`) dan terlihat pasien di P4/P5 dan P19.
+- [x] Tes: konfirmasi pendamping tersimpan `confirmed_by = companion` dan terpisah di dashboard A6; pasien menimpa sukses; pendamping menimpa pasien ditolak 409.
+- [x] Tes: rate limit penukaran kode tautan memblokir percobaan berulang di Postgres (`rate_limit_hits`).
+- [x] Tes: pengajuan ulang tautan yang pernah dicabut tidak melanggar batasan UNIQUE(`patient_user_id`, `companion_user_id`).
+- [x] Tes: pendamping memanggil riwayat akses P19 menghasilkan 0 baris; pendamping tidak dapat menyetujui tautan sendiri secara langsung.
+- [x] `lint`, `typecheck`, `test`, `build` lolos 100%.
+*(Catatan: Verifikasi visual/browser interaktif belum dijalankan via DevTools panel pada sesi agent ini; D7 status panggilan dilewati, kartu cetak di D6 ditiadakan, pemindaian kamera di D3 ditiadakan sesuai garis potong.)*
 
 ### 10B — KomunikaCare (P15.1–P15.3, T7)
 - [ ] Papan bergambar, teks ke suara, teks langsung dari ucapan petugas dengan peringatan "bukan pengganti juru bahasa isyarat".
@@ -687,9 +692,40 @@
 - [ ] Keputusan privasi tercatat: layanan speech-to-text peramban dapat mengirim audio ke pihak ketiga.
 
 ### Umum
-- [ ] `lint`, `typecheck`, `test`, `build` lolos.
+- [x] `lint`, `typecheck`, `test`, `build` lolos.
 
 **Catatan hasil:**
+- Prompt 16 (Bagian 10A — Pendamping: akun, tautan, persetujuan, kelola dan konfirmasi atas nama pasien D1–D8, P21), selesai **13 Okt 2026 23:35 WIB**:
+  - Migrasi Basis Data 010 (`src/db/migrations/010_companion_links.sql`):
+    - Tabel `companion_link_codes`: kode 8 karakter Crockford Base32, masa berlaku 10 menit, sekali pakai, disimpan sebagai HMAC-SHA256 dengan `HASH_PEPPER`, dimiliki `aksespass_owner`.
+    - Kolom `companions.patient_subject_ref` diisi otomatis via trigger untuk mendukung pencatatan audit tindakan pendamping tanpa membaca tabel `users`.
+    - Fungsi `SECURITY DEFINER` sempit `redeem_companion_link_code` (hanya untuk `app.role = 'companion'`) dan `get_patient_companions` (hanya untuk `app.role = 'patient'`).
+    - Kebijakan RLS Postgres: pendamping berstatus `active` diizinkan membaca/mengubah profil dan kebutuhan pasien tertaut, membuat consent atas namanya, membaca kunjungannya, dan membuat konfirmasi; status `pending` atau `revoked` menghasilkan tepat 0 baris.
+  - Modul Domain `src/lib/companions`:
+    - `createLinkCode(session)`: generate 8 char Crockford Base32, simpan HMAC, return sekali pakai tanpa logging kode mentah.
+    - `redeemLinkCode(session, code, opts)`: rate limit 5x per 10 menit per IP/companion di PostgreSQL, pesan galat generik ("Kode tidak dapat dipakai. Minta kode baru ke pasien.") tanpa membocorkan status kode.
+    - `approveCompanionLink(session, linkId)`: update status `active`, audit `companion_linked`.
+    - `rejectCompanionLink` & `revokeCompanionLink`: update status `revoked`, audit `companion_unlinked`.
+    - `listOwnCompanions(session)` & `listLinkedPatients(session)`: ringkasan status dan konfirmasi menunggu.
+  - Integrasi Lintas Modul:
+    - `src/lib/passport`: `saveOwnPassport` mencatat `last_updated_by_companion_id/at` dan audit `profile_changed_by_companion`; `getOwnPassportStatus` mengembalikan nama pendamping terakhir yang mengubah.
+    - `src/lib/consent`: `createConsent` mencatat `created_by_user_id = companion`, audit `qr_created` dengan actor role companion.
+    - `src/lib/careproof`: `confirmVisit` mencatat `confirmed_by = 'companion'`; menolak 409 bila pasien sudah menjawab; jawaban pasien menggantikan jawaban pendamping.
+    - `src/lib/audit`: pemetaan tampilan riwayat P19 untuk event pendamping.
+  - Layar Pasien & Pendamping:
+    - P21 `/pasien/pendamping`: daftar pendamping aktif & menunggu persetujuan, tombol [Tambah Pendamping] modal kode 4-4 berlaku 10 menit, tombol [Setujui]/[Tolak], tombol [Cabut Tautan] dengan `ConfirmDialog`.
+    - D4 `/pendamping`: beranda kartu pasien tertaut aktif + status paspor + konfirmasi menunggu, banner "Satu tautan telah berakhir." bila ada tautan dicabut.
+    - D3 `/pendamping/tautkan`: form input kode 8 karakter Crockford Base32.
+    - D5 `/pendamping/tautan/[linkId]/paspor`: editor paspor berlabel "Atas nama <nama panggilan pasien>".
+    - D6 `/pendamping/tautan/[linkId]/qr`: pembuatan ConsentQR atas nama pasien tanpa kartu cetak.
+    - D8 `/pendamping/tautan/[linkId]/konfirmasi`: konfirmasi CareProof atas nama pasien dengan penanda "Dijawab oleh pendamping", mode baca-saja jika pasien sudah menjawab.
+  - Pemotongan Cakupan (Scope Cuts):
+    - D7 (status antrean/panggilan P-13) tidak dibuat.
+    - Kartu cetak di D6 ditiadakan (hanya ConsentQR).
+    - Pemindaian kamera di D3 ditiadakan (input teks 8 karakter).
+  - Bukti Verifikasi:
+    - Vitest: 217 tes di 25 test file lolos 100% (termasuk 8 tes integrasi ketat di `src/lib/companions/companions.test.ts` dan 15 tes arsitektur di `src/__tests__/architecture.test.ts`).
+    - `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` lolos 100%. Status Bagian 10A: SELESAI.
 
 ---
 

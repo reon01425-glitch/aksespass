@@ -7,12 +7,17 @@ export const POST = wrapRouteHandler(
     request: Request,
     context: { params: Promise<{ qrId: string }> }
   ) => {
-    const sessionRes = await requireSession(request, { roles: ["patient"] });
+    const sessionRes = await requireSession(request, {
+      roles: ["patient", "companion"],
+    });
 
     if (!sessionRes.ok) {
       if (sessionRes.reason === "FORBIDDEN_ROLE") {
         return jsonResponse(
-          { ok: false, error: "Akses ditolak: hanya pasien yang dapat mencabut QR." },
+          {
+            ok: false,
+            error: "Akses ditolak: hanya pasien atau pendamping aktif yang dapat mencabut QR.",
+          },
           { status: 403 }
         );
       }

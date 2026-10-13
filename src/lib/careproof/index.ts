@@ -400,3 +400,178 @@ export async function getOwnConfirmableVisit(
   }
   return found;
 }
+
+export interface CompanionConfirmableVisitItem {
+  visitId: string;
+  recordedAt: string;
+  facilityName: string;
+  assistance: RecordedAssistanceItem[];
+  sharedCategories: NeedCategory[];
+  currentAnswer: {
+    status: CareProofStatus;
+    confirmedBy: CareProofConfirmedBy;
+    unmetNeedCodes: string[];
+  } | null;
+  isPatientConfirmed: boolean;
+}
+
+export interface CareProofSessionActor {
+  userId: string;
+  role: string;
+  facilityId?: string | null;
+}
+
+/**
+ * Menghitung jumlah konfirmasi kunjungan yang masih menunggu respon pasien/pendamping.
+ */
+export async function countPendingConfirmationsForPatient(
+  session: CareProofSessionActor,
+  patientUserId: string
+): Promise<number> {
+  return await withContext(
+    {
+      userId: session.userId,
+      role: session.role as AppDbRole,
+      facilityId: session.facilityId,
+    },
+    async (tx) => {
+      const res = await tx.query<{ count: number }>(
+        `SELECT count(*)::int AS count
+         FROM visits v
+         LEFT JOIN visit_confirmations vc ON vc.visit_id = v.id
+         WHERE v.patient_user_id = $1
+           AND v.recorded_at IS NOT NULL
+           AND v.recorded_at >= now() - interval '30 days'
+           AND (vc.status IS NULL OR vc.confirmed_by <> 'patient');`,
+        [patientUserId]
+      );
+      return res.rows[0]?.count ?? 0;
+    }
+  );
+}
+
+/**
+ * Membaca daftar kunjungan pasien tertaut untuk konfirmasi oleh pendamping aktif (D8).
+ */
+export async function listConfirmableVisitsForPatient(
+  session: CareProofSessionActor,
+  patientUserId: string
+): Promise<CompanionConfirmableVisitItem[]> {
+  return await withContext(
+    {
+      userId: session.userId,
+      role: session.role as AppDbRole,
+      facilityId: session.facilityId,
+    },
+    async (tx) => {
+      const res = await tx.query<{
+        id: string;
+        recorded_at: string;
+        facility_name: string;
+        recorded_rule_ids: string[] | null;
+        consent_shared_fields: string[] | null;
+        status: CareProofStatus | null;
+        confirmed_by: CareProofConfirmedBy | null;
+        unmet_need_codes: string[] | null;
+      }>(
+        `SELECT
+           v.id,
+           v.recorded_at,
+           f.name AS facility_name,
+           v.recorded_rule_ids,
+           c.shared_fields AS consent_shared_fields,
+           vc.status,
+           vc.confirmed_by,
+           vc.unmet_need_codes
+         FROM visits v
+         JOIN facilities f ON f.id = v.facility_id
+         LEFT JOIN consents c ON c.id = v.consent_id
+         LEFT JOIN visit_confirmations vc ON vc.visit_id = v.id
+         WHERE v.patient_user_id = $1
+           AND v.recorded_at IS NOT NULL
+           AND v.recorded_at >= now() - interval '30 days'
+         ORDER BY v.recorded_at DESC;`,
+        [patientUserId]
+      );
+
+      if (res.rows.length === 0) {
+        return [];
+      }
+
+      const allRuleIds = Array.from(
+        new Set(res.rows.flatMap((r) => r.recorded_rule_ids || []))
+      );
+
+      const ruleMap = new Map<
+        string,
+        { actionText: string; iconName: string; category: string }
+      >();
+      if (allRuleIds.length > 0) {
+        const rulesRes = await tx.query<{
+          id: string;
+          action_text: string;
+          icon_name: string;
+          category: string;
+        }>(
+          `SELECT ar.id, ar.action_text, ar.icon_name, nc.category
+           FROM accommodation_rules ar
+           JOIN needs_catalog nc ON nc.code = ar.trigger_need_code
+           WHERE ar.id = ANY($1);`,
+          [allRuleIds]
+        );
+        for (const row of rulesRes.rows) {
+          ruleMap.set(row.id, {
+            actionText: row.action_text,
+            iconName: row.icon_name,
+            category: row.category,
+          });
+        }
+      }
+
+      return res.rows.map((row) => {
+        const ruleIds = row.recorded_rule_ids || [];
+        const assistance: RecordedAssistanceItem[] = ruleIds
+          .map((ruleId) => {
+            const rule = ruleMap.get(ruleId);
+            if (!rule) return null;
+            return {
+              ruleId,
+              actionText: rule.actionText,
+              iconName: rule.iconName,
+            };
+          })
+          .filter((r): r is RecordedAssistanceItem => r !== null);
+
+        const categoriesFromRules = ruleIds
+          .map((id) => ruleMap.get(id)?.category)
+          .filter((c): c is string => Boolean(c));
+        const categoriesFromConsent = (
+          row.consent_shared_fields || []
+        ).filter((f): f is NeedCategory =>
+          (NEED_CATEGORIES as readonly string[]).includes(f)
+        );
+        const sharedCategories = Array.from(
+          new Set([...categoriesFromRules, ...categoriesFromConsent])
+        ) as NeedCategory[];
+
+        const isPatientConfirmed = row.confirmed_by === "patient";
+
+        return {
+          visitId: row.id,
+          recordedAt: new Date(row.recorded_at).toISOString(),
+          facilityName: row.facility_name,
+          assistance,
+          sharedCategories,
+          currentAnswer: row.status
+            ? {
+                status: row.status,
+                confirmedBy: row.confirmed_by as CareProofConfirmedBy,
+                unmetNeedCodes: row.unmet_need_codes || [],
+              }
+            : null,
+          isPatientConfirmed,
+        };
+      });
+    }
+  );
+}

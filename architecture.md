@@ -102,13 +102,14 @@ src/
 │  ├─ (petugas)/           # pindai, hasil, catat kunjungan, brief masuk
 │  ├─ (admin)/             # petugas, agregat
 │  ├─ (kurator)/           # katalog (K3 baca-saja di prototipe)
-│  ├─ pendamping/[token]/  # tautan pendamping (D3)
-│  └─ api/                 # route handlers: qr, scan, brief, sync, recovery
+│  ├─ pendamping/          # beranda pendamping (D4), tautkan (D3), kelola per pasien (D5, D6, D8)
+│  └─ api/                 # route handlers: qr, scan, brief, sync, recovery, pendamping
 ├─ components/             # komponen UI sesuai design.md (Button, StatusBanner, ...)
 ├─ lib/
 │  ├─ auth/                # sesi, peran, guard
 │  ├─ consent/             # buat/validasi/cabut token, aturan field yang boleh dibaca
 │  │  └─ constants.ts      # [Usulan] konstanta nama field bersama (6 kategori, catatan, nama panggilan)
+│  ├─ companions/          # [Usulan] kelola tautan pendamping, kode Crockford Base32, otorisasi pendamping
 │  ├─ audit/               # tulis kejadian P19 (satu-satunya pintu tulis)
 │  ├─ http/                # [Usulan] respons no-store, pembungkus route handler aman, origin guard
 │  ├─ offline/             # antrean IndexedDB, sinkronisasi
@@ -121,6 +122,12 @@ Aturan: **semua pembacaan data pasien oleh pihak lain lewat satu fungsi** di `li
 
 **Penyesuaian Prefiks Rute [Usulan, 13 Okt 2026]:**
 Route groups dengan tanda kurung `(pasien)` di App Router tidak menghasilkan segmen URL nyata, sehingga Next.js middleware/proxy tidak dapat membedakan dan menjaga rute per grup. Rute aplikasi menggunakan segmen URL nyata berprefiks peran: `/pasien/*`, `/pendamping/*`, `/petugas/*`, `/admin/*`, dan `/kurator/*`. Rute publik meliputi `/`, `/masuk` (dan turunannya), `/s/*` (halaman tujuan QR), `/api/auth/*`, serta aset statis.
+Rute pendamping menggunakan pola akun berotonomi (K-7):
+- `/pendamping` (D4: Beranda pendamping menampilkan kartu pasien tertaut aktif + ringkasan status paspor + konfirmasi CareProof menunggu, serta banner jika ada tautan yang berakhir).
+- `/pendamping/tautkan` (D3: Input kode tautan 8 karakter Crockford Base32 dari pasien).
+- `/pendamping/tautan/[linkId]/paspor` (D5: Editor paspor atas nama pasien).
+- `/pendamping/tautan/[linkId]/qr` (D6: Pembuatan ConsentQR atas nama pasien tanpa kartu cetak).
+- `/pendamping/tautan/[linkId]/konfirmasi` dan `.../[visitId]` (D8: Konfirmasi CareProof atas nama pasien; disabled/baca-saja bila pasien sudah menjawab).
 
 ---
 
@@ -128,14 +135,15 @@ Route groups dengan tanda kurung `(pasien)` di App Router tidak menghasilkan seg
 
 | Tabel | Isi penting | Catatan |
 | :--- | :--- | :--- |
-| `users` | id, peran, kontak terdaftar (HP untuk OTP), status, persetujuan statistik anonim (opsional, terpisah; P3), `audit_subject_id` **[Usulan]** | Satu tabel, peran dibatasi enum. `audit_subject_id` (UUID unik) dipakai sebagai pengenal pseudonim subjek di `audit_events` (§11) **[Usulan]** |
+| `users` | id, peran, kontak terdaftar (HP untuk OTP), status, persetujuan statistik anonim (opsional, terpisah; P3), `audit_subject_id` **[Usulan]** | Satu tabel, peran dibatasi enum (`patient`, `companion`, `staff`, `facility_admin`, `curator`). `audit_subject_id` (UUID unik) dipakai sebagai pengenal pseudonim subjek di `audit_events` (§11) **[Usulan]** |
 | `patient_profiles` | nama panggilan, kebutuhan terpilih, catatan bebas pasien (P5), penanda perubahan terakhir oleh pendamping (D5) | **Tanpa kolom diagnosis**. Draft editor (P5) hanya di perangkat, tidak di tabel ini |
 | `patient_profile_needs` | `profile_id`, `need_code` | Tabel penghubung `patient_profiles` ↔ `needs_catalog` untuk integritas referensi. **[Usulan]** |
 | `needs_catalog` | kebutuhan/bantuan baku | Dikelola kurator |
 | `accommodation_rules` | profil kebutuhan pemicu, saran tindakan (teks pendek + ikon), sumber/alasan, versi, status (Draft/Dalam Tinjauan/Terbit), tanggal, pengesah | Dasar Smart Accommodation Engine (T6, T-03). Prototipe: aturan bawaan, baca-saja (K3). **[Usulan]** |
-| `consents` | pasien, fasilitas tujuan, **daftar field yang dicentang** (`shared_fields`), tanggal berlaku, `subject_ref` | Dasar aturan "hanya data yang dicentang". Nilai `shared_fields` yang diizinkan: `komunikasi`, `penglihatan`, `pendengaran`, `mobilitas`, `sensorik_lingkungan`, `pendampingan`, `catatan_pasien` (nama panggilan selalu ikut). Kolom `subject_ref` (UUID audit pasien) diisi saat consent dibuat agar audit pindai petugas tidak perlu membaca tabel `users` pasien. **[Usulan, 13 Okt 2026]** |
+| `consents` | pasien, fasilitas tujuan, **daftar field yang dicentang** (`shared_fields`), tanggal berlaku, `subject_ref`, `created_by_user_id` | Dasar aturan "hanya data yang dicentang". Nilai `shared_fields` yang diizinkan: `komunikasi`, `penglihatan`, `pendengaran`, `mobilitas`, `sensorik_lingkungan`, `pendampingan`, `catatan_pasien` (nama panggilan selalu ikut). Kolom `subject_ref` (UUID audit pasien) diisi saat consent dibuat agar audit pindai petugas tidak perlu membaca tabel `users` pasien. `created_by_user_id` mencatat pembuat (pasien atau pendamping). **[Usulan, 13 Okt 2026]** |
 | `consent_qr` | `token_hash`, consent_id, `expires_at`, `revoked_at` | Token asli tidak disimpan, hanya hash SHA-256 |
-| `companions` | pasien, pendamping, izin, status tautan (Menunggu Persetujuan/Aktif/Dicabut) | Aktif hanya setelah pasien menyetujui (D3 → P21) |
+| `companions` | `patient_user_id`, `companion_user_id`, `status` (`pending`/`active`/`revoked`), `patient_subject_ref`, `requested_at`, `approved_at`, `revoked_at` | Aktif hanya setelah pasien menyetujui (D3 → P21). Memiliki `patient_subject_ref` (pseudonim pasien) agar audit tindakan pendamping menyebut pasien tanpa membaca tabel `users`. UNIQUE(`patient_user_id`, `companion_user_id`). **[Usulan, 13 Okt 2026]** |
+| `companion_link_codes` | `patient_user_id`, `code_hash`, `expires_at`, `used_at` | Kode 8 karakter Crockford Base32, berlaku 10 menit, sekali pakai, disimpan sebagai HMAC-SHA256 dengan `HASH_PEPPER`, ber-rate limit di PostgreSQL (maks 5 per 10 menit). **[Usulan, 13 Okt 2026]** |
 | `emergency_delegations` | pasien, pendamping, petugas pengesah, fasilitas, tanggal berlaku | Delegasi darurat di tempat (bagian 10); cakupan satu fasilitas dan satu tanggal. **[Usulan]** nama dan kolom |
 | `facilities` | nama, status | Didaftarkan manual oleh admin sistem |
 | `staff_memberships` | petugas, fasilitas, unit, status (Menunggu Aktivasi/Aktif/Nonaktif) | Petugas hanya aktif di fasilitas terdaftar; nonaktif langsung menolak pindai (A4) |

@@ -1,16 +1,22 @@
 import { withContext } from "../../db";
+import { recordAuditEvent } from "../audit";
 import {
   NEED_CATEGORIES,
   type NeedCategory,
 } from "../consent/constants";
-import type { SessionClaims } from "../auth/session";
 
 export type PassportStatus = "complete" | "empty";
+
+export interface CompanionUpdateInfo {
+  companionName: string;
+  updatedAt: string;
+}
 
 export interface OwnPassportStatusResult {
   status: PassportStatus;
   preferredName: string | null;
   needCount: number;
+  lastUpdatedByCompanion?: CompanionUpdateInfo | null;
 }
 
 export interface NeedsCatalogItem {
@@ -36,6 +42,7 @@ export interface OwnPassportData {
   catatan: string | null;
   updatedAt: string;
   waktuUbah: string;
+  lastUpdatedByCompanion?: CompanionUpdateInfo | null;
 }
 
 export interface SavePassportInput {
@@ -65,17 +72,31 @@ export const NEED_CATEGORY_LABELS: Record<NeedCategory, string> = {
 export const PATIENT_PREFERRED_NAME_MAX_LENGTH = 80;
 export const PATIENT_NOTE_MAX_LENGTH = 300;
 
+export interface PassportSessionActor {
+  userId: string;
+  role: string;
+  facilityId?: string | null;
+  sessionId?: string;
+}
+
 /**
  * Membaca ringkasan status paspor milik pasien sendiri (P4).
  */
 export async function getOwnPassportStatus(
-  session: SessionClaims
+  session: PassportSessionActor,
+  targetPatientUserId?: string
 ): Promise<OwnPassportStatusResult> {
-  if (session.role !== "patient") {
+  const targetUserId =
+    session.role === "patient"
+      ? session.userId
+      : targetPatientUserId || session.userId;
+
+  if (!targetUserId) {
     return {
       status: "empty",
       preferredName: null,
       needCount: 0,
+      lastUpdatedByCompanion: null,
     };
   }
 
@@ -89,13 +110,18 @@ export async function getOwnPassportStatus(
       const res = await tx.query<{
         preferred_name: string;
         need_count: string;
+        last_updated_by_companion_id: string | null;
+        last_updated_by_companion_at: string | null;
+        companion_name: string | null;
       }>(
-        `SELECT pp.preferred_name, count(ppn.need_code) as need_count
+        `SELECT pp.preferred_name, count(ppn.need_code) as need_count,
+                pp.last_updated_by_companion_id, pp.last_updated_by_companion_at,
+                get_patient_companion_name(pp.last_updated_by_companion_id) as companion_name
          FROM patient_profiles pp
          LEFT JOIN patient_profile_needs ppn ON ppn.profile_id = pp.id
          WHERE pp.user_id = $1
-         GROUP BY pp.id, pp.preferred_name;`,
-        [session.userId]
+         GROUP BY pp.id, pp.preferred_name, pp.last_updated_by_companion_id, pp.last_updated_by_companion_at;`,
+        [targetUserId]
       );
 
       if (res.rows.length === 0) {
@@ -103,14 +129,26 @@ export async function getOwnPassportStatus(
           status: "empty",
           preferredName: null,
           needCount: 0,
+          lastUpdatedByCompanion: null,
         };
       }
 
       const count = parseInt(res.rows[0].need_count, 10) || 0;
+      const row = res.rows[0];
+      const lastUpdatedByCompanion = row.last_updated_by_companion_id
+        ? {
+            companionName: row.companion_name || "Pendamping",
+            updatedAt: row.last_updated_by_companion_at
+              ? new Date(row.last_updated_by_companion_at).toISOString()
+              : new Date().toISOString(),
+          }
+        : null;
+
       return {
         status: count > 0 ? "complete" : "empty",
-        preferredName: res.rows[0].preferred_name,
+        preferredName: row.preferred_name,
         needCount: count,
+        lastUpdatedByCompanion,
       };
     }
   );
@@ -121,7 +159,7 @@ export async function getOwnPassportStatus(
  * Kategori tanpa item tidak dikembalikan.
  */
 export async function getNeedsCatalog(
-  session?: SessionClaims
+  session?: PassportSessionActor
 ): Promise<NeedsCategoryGroup[]> {
   const context = session
     ? {
@@ -183,7 +221,7 @@ export async function getNeedsCatalog(
  * Mengembalikan nama panggilan, kode kebutuhan, catatan, dan waktu ubah — atau null bila belum ada.
  */
 export async function getOwnPassport(
-  session: SessionClaims,
+  session: PassportSessionActor,
   targetPatientUserId?: string
 ): Promise<OwnPassportData | null> {
   const targetUserId =
@@ -208,8 +246,13 @@ export async function getOwnPassport(
         preferred_name: string;
         patient_note: string | null;
         updated_at: string;
+        last_updated_by_companion_id: string | null;
+        last_updated_by_companion_at: string | null;
+        companion_name: string | null;
       }>(
-        `SELECT id, user_id, preferred_name, patient_note, updated_at
+        `SELECT id, user_id, preferred_name, patient_note, updated_at,
+                last_updated_by_companion_id, last_updated_by_companion_at,
+                get_patient_companion_name(last_updated_by_companion_id) as companion_name
          FROM patient_profiles
          WHERE user_id = $1;`,
         [targetUserId]
@@ -233,6 +276,14 @@ export async function getOwnPassport(
 
       const needCodes = needsRes.rows.map((r) => r.need_code);
       const updatedAtIso = new Date(profile.updated_at).toISOString();
+      const lastUpdatedByCompanion = profile.last_updated_by_companion_id
+        ? {
+            companionName: profile.companion_name || "Pendamping",
+            updatedAt: profile.last_updated_by_companion_at
+              ? new Date(profile.last_updated_by_companion_at).toISOString()
+              : new Date().toISOString(),
+          }
+        : null;
 
       return {
         preferredName: profile.preferred_name,
@@ -243,6 +294,7 @@ export async function getOwnPassport(
         catatan: profile.patient_note,
         updatedAt: updatedAtIso,
         waktuUbah: updatedAtIso,
+        lastUpdatedByCompanion,
       };
     }
   );
@@ -254,7 +306,7 @@ export async function getOwnPassport(
  * Mengganti seluruh daftar kebutuhan dan menyetel penanda pembaruan terakhir.
  */
 export async function saveOwnPassport(
-  session: SessionClaims,
+  session: PassportSessionActor,
   rawInput: unknown,
   options?: string | SavePassportOptions
 ): Promise<OwnPassportData> {
@@ -422,6 +474,35 @@ export async function saveOwnPassport(
          SELECT $1, unnest($2::text[]);`,
         [profile.id, uniqueNeedCodes]
       );
+
+      // 5. Bila diubah oleh pendamping, catat audit event profile_changed_by_companion
+      if (actorRole === "companion") {
+        const compRes = await tx.query<{ patient_subject_ref: string }>(
+          `SELECT patient_subject_ref
+           FROM companions
+           WHERE patient_user_id = $1 AND companion_user_id = $2;`,
+          [targetUserId, actorUserId]
+        );
+
+        let subjectRef = compRes.rows[0]?.patient_subject_ref;
+        if (!subjectRef) {
+          const uRes = await tx.query<{ audit_subject_id: string }>(
+            "SELECT audit_subject_id FROM users WHERE id = $1;",
+            [targetUserId]
+          );
+          subjectRef = uRes.rows[0]?.audit_subject_id;
+        }
+
+        if (subjectRef) {
+          await recordAuditEvent(tx, {
+            eventType: "profile_changed_by_companion",
+            actorId: actorUserId,
+            actorRole: "companion",
+            subjectRef,
+            occurredAt: new Date(),
+          });
+        }
+      }
 
       const updatedAtIso = new Date(profile.updated_at).toISOString();
 

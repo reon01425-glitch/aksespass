@@ -254,15 +254,24 @@ export function mapAuditEventToDisplayEntry(
       break;
     }
     case "companion_linked": {
-      title = "Pendamping ditautkan";
+      title =
+        actor && actor !== "Sistem" && actor !== "Anda"
+          ? `Pendamping ${actor} ditautkan`
+          : "Pendamping ditautkan";
       break;
     }
     case "companion_unlinked": {
-      title = "Tautan pendamping dicabut";
+      title =
+        actor && actor !== "Sistem" && actor !== "Anda"
+          ? `Pendamping ${actor} dilepas`
+          : "Pendamping dilepas";
       break;
     }
     case "profile_changed_by_companion": {
-      title = "Paspor diubah oleh pendamping";
+      title =
+        actor && actor !== "Sistem" && actor !== "Anda"
+          ? `Paspor diubah oleh ${actor}`
+          : "Paspor diubah oleh pendamping";
       break;
     }
     case "delegation_signed_off": {
