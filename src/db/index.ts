@@ -16,7 +16,7 @@ export {
 };
 
 export const STAFF_NOTE_MAX_LENGTH = 280;
-export const PATIENT_NOTE_MAX_LENGTH = 300;
+export const PATIENT_NOTE_MAX_LENGTH = 250;
 export const DASHBOARD_MIN_GROUP_SIZE = 5;
 
 export const APP_DB_ROLES = [
