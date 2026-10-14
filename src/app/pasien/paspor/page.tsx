@@ -7,7 +7,8 @@ import {
 } from "@/lib/auth/constants";
 import { verifySessionCookie } from "@/lib/auth/session";
 import { getNeedsCatalog, getOwnPassport } from "@/lib/passport";
-import { PassportEditorClient } from "./paspor-editor-client";
+import { listOwnActiveQrs } from "@/lib/consent";
+import { PassportFormClient } from "./paspor-form-client";
 
 export const instant = false;
 
@@ -31,15 +32,17 @@ export default async function PasienPasporPage() {
     redirect("/masuk");
   }
 
-  const [initialPassport, catalog] = await Promise.all([
+  const [initialPassport, catalog, activeQrs] = await Promise.all([
     getOwnPassport(session),
     getNeedsCatalog(session),
+    listOwnActiveQrs(session),
   ]);
 
   return (
-    <PassportEditorClient
+    <PassportFormClient
       catalog={catalog}
       initialPassport={initialPassport}
+      activeQrs={activeQrs}
     />
   );
 }

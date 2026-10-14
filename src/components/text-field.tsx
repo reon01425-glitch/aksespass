@@ -6,6 +6,7 @@ export interface TextFieldProps
   label: string;
   id: string;
   helperText?: string;
+  helperTextAsPlaceholder?: boolean;
   error?: string;
   variant?: "text" | "tel" | "otp" | "textarea";
   rows?: number;
@@ -18,6 +19,7 @@ export function TextField({
   label,
   id,
   helperText,
+  helperTextAsPlaceholder = false,
   error,
   variant = "text",
   className = "",
@@ -79,9 +81,10 @@ export function TextField({
           id={id}
           rows={rows}
           maxLength={resolvedMaxLength}
+          placeholder={helperTextAsPlaceholder ? helperText : undefined}
           aria-invalid={error ? "true" : undefined}
           aria-describedby={describedBy}
-          className={`min-h-24 w-full rounded-lg border border-input bg-white px-3 py-3 text-base font-normal text-main focus:outline-none focus:ring-4 focus:ring-cyan-900 ${className}`.trim()}
+          className={`min-h-24 w-full rounded-lg border border-input bg-white px-3 py-3 text-base font-normal text-main placeholder:text-slate-600 focus:outline-none focus:ring-4 focus:ring-cyan-900 ${className}`.trim()}
           value={props.value as string | number | readonly string[] | undefined}
           onChange={props.onChange as unknown as React.ChangeEventHandler<HTMLTextAreaElement>}
           disabled={props.disabled}
@@ -96,9 +99,10 @@ export function TextField({
           autoComplete={resolvedAutoComplete}
           inputMode={resolvedInputMode}
           maxLength={resolvedMaxLength}
+          placeholder={helperTextAsPlaceholder ? helperText : undefined}
           aria-invalid={error ? "true" : undefined}
           aria-describedby={describedBy}
-          className={`h-12 min-h-12 w-full rounded-lg border border-input bg-white px-3 py-3 text-base font-normal text-main focus:outline-none focus:ring-4 focus:ring-cyan-900 ${
+          className={`h-12 min-h-12 w-full rounded-lg border border-input bg-white px-3 py-3 text-base font-normal text-main placeholder:text-slate-600 focus:outline-none focus:ring-4 focus:ring-cyan-900 ${
             variant === "otp" ? "text-center tracking-widest font-bold" : ""
           } ${className}`.trim()}
           {...props}
@@ -106,7 +110,14 @@ export function TextField({
       )}
 
       {helperText && (
-        <span id={helperId} className="text-sm font-normal text-secondary">
+        <span
+          id={helperId}
+          className={
+            helperTextAsPlaceholder
+              ? "sr-only"
+              : "text-sm font-normal text-secondary"
+          }
+        >
           {helperText}
         </span>
       )}
