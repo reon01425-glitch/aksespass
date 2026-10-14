@@ -266,9 +266,6 @@ export function PassportFormClient({
           {!isEditing && (
             <>
               <section className="flex flex-col gap-3">
-                <h2 className="text-2xl font-bold text-main">
-                  Pratinjau Paspor
-                </h2>
                 <p className="flex items-center gap-2 text-sm font-bold text-emerald-700">
                   <CheckCircle2
                     aria-hidden="true"

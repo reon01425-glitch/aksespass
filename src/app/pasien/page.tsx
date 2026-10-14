@@ -12,6 +12,7 @@ import { formatDateTimeWib } from "@/lib/consent/time";
 import { LogoutButton, StatusBanner } from "@/components";
 import {
   ArrowRight,
+  Bell,
   ChevronRight,
   ClipboardCheck,
   FileText,
@@ -21,6 +22,7 @@ import {
   QrCode,
   Shield,
   ShieldPlus,
+  UserRound,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -72,12 +74,6 @@ export default async function PasienPage() {
   const pendingCount = pendingConfirmations.length;
 
   const displayName = passport.preferredName || "Pasien AKSESPASS";
-  const initials = displayName
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((word) => word[0]!.toUpperCase())
-    .join("");
 
   const menuItems: {
     href: string;
@@ -124,15 +120,15 @@ export default async function PasienPage() {
     <div className="min-h-dvh w-full bg-page text-main">
       <div className="relative mx-auto flex min-h-dvh w-full max-w-md flex-col">
         {/* Header tetap di atas */}
-        <header className="fixed left-1/2 top-0 z-50 w-full max-w-md -translate-x-1/2 bg-page/85 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
+        <header className="fixed left-1/2 top-0 z-50 w-full max-w-md -translate-x-1/2 bg-page/90 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
           <div className="flex h-16 items-center gap-3 px-4">
             <div
               aria-hidden="true"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-cyan-200 text-cyan-900"
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-cyan-200 text-cyan-900"
             >
-              <ShieldPlus className="h-5 w-5" />
+              <ShieldPlus className="h-6 w-6" />
             </div>
-            <div className="flex min-w-0 flex-col">
+            <div className="flex min-w-0 flex-1 flex-col">
               <span className="text-xs font-bold uppercase tracking-wider text-secondary">
                 AKSESPASS Pasien
               </span>
@@ -140,6 +136,20 @@ export default async function PasienPage() {
                 Beranda
               </h1>
             </div>
+            <Link
+              href="/pasien/akses/riwayat"
+              aria-label="Riwayat akses"
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-main focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900"
+            >
+              <Bell aria-hidden="true" className="h-6 w-6" />
+            </Link>
+            <Link
+              href="/pasien"
+              aria-label="Beranda pasien"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-cyan-800 text-white focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900 focus-visible:ring-offset-2"
+            >
+              <UserRound aria-hidden="true" className="h-6 w-6" />
+            </Link>
           </div>
         </header>
 
@@ -149,17 +159,14 @@ export default async function PasienPage() {
           className="flex flex-1 flex-col gap-4 px-4 pb-28 pt-20 focus:outline-none"
         >
           {/* Sapaan Pengguna */}
-          <div className="flex items-center justify-between pt-2">
-            <div className="flex min-w-0 flex-col pr-2">
-              <span className="text-sm text-secondary">Selamat datang,</span>
-              <p className="truncate text-xl font-bold text-main">{displayName}</p>
-            </div>
-            <div
-              aria-hidden="true"
-              className="flex h-12 w-12 shrink-0 select-none items-center justify-center rounded-full bg-btn-primary text-lg font-bold text-white shadow-sm"
+          <div className="flex min-w-0 flex-col pt-2">
+            <span className="text-base text-secondary">Selamat datang,</span>
+            <p
+              className="break-words text-2xl font-bold leading-tight text-main"
+              style={{ color: "var(--text-main)" }}
             >
-              {initials}
-            </div>
+              {displayName}
+            </p>
           </div>
 
           {/* Status Paspor */}
@@ -262,7 +269,7 @@ export default async function PasienPage() {
           <section aria-labelledby="menu-title" className="w-full">
             <h2
               id="menu-title"
-              className="mb-2 px-1 text-sm font-bold uppercase tracking-wider text-secondary"
+              className="mb-2 px-1 text-sm font-bold tracking-wider text-secondary"
             >
               Menu Layanan
             </h2>
