@@ -79,7 +79,40 @@ describe("Komponen UI Bersama (renderToStaticMarkup, tanpa DOM)", () => {
 
       expect(html).toContain('for="nama-input"');
       expect(html).toContain('id="nama-input"');
-      expect(html).not.toContain("placeholder");
+      expect(html).not.toMatch(/\splaceholder=/);
+    });
+
+    it("helper text sebagai placeholder abu-abu, tetap tersedia untuk teknologi bantu", () => {
+      const html = renderToStaticMarkup(
+        <TextField
+          id="nama-panggilan"
+          label="Nama panggilan"
+          helperText="Boleh nama panggilan, tidak perlu nama lengkap."
+          helperTextAsPlaceholder
+        />
+      );
+
+      expect(html).toContain(
+        'placeholder="Boleh nama panggilan, tidak perlu nama lengkap."'
+      );
+      expect(html).toContain("placeholder:text-slate-600");
+      expect(html).toContain('aria-describedby="nama-panggilan-helper"');
+      expect(html).toContain('id="nama-panggilan-helper" class="sr-only"');
+    });
+
+    it("helper text textarea dapat ditampilkan sebagai placeholder", () => {
+      const html = renderToStaticMarkup(
+        <TextField
+          id="catatan"
+          label="Catatan"
+          variant="textarea"
+          helperText="Tuliskan preferensi layanan."
+          helperTextAsPlaceholder
+        />
+      );
+
+      expect(html).toContain('placeholder="Tuliskan preferensi layanan."');
+      expect(html).toContain("placeholder:text-slate-600");
     });
 
     it("saat galat: aria-invalid='true' dan aria-describedby menunjuk id pesan", () => {
@@ -96,7 +129,7 @@ describe("Komponen UI Bersama (renderToStaticMarkup, tanpa DOM)", () => {
       expect(html).toContain('aria-describedby="otp-input-error otp-input-helper"');
       expect(html).toContain('id="otp-input-error"');
       expect(html).toContain("Kode OTP harus 6 angka");
-      expect(html).not.toContain("placeholder");
+      expect(html).not.toMatch(/\splaceholder=/);
     });
 
     it("varian telepon memiliki type='tel' dan autocomplete='tel'", () => {

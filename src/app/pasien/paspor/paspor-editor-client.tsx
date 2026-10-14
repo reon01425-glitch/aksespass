@@ -397,12 +397,12 @@ export function PassportEditorClient({
                 id={noteInputId}
                 value={patientNote}
                 onChange={(e) => setPatientNote(e.target.value)}
-                maxLength={300}
+                maxLength={250}
                 rows={4}
                 className="w-full p-3 rounded-lg border border-cyan-800 bg-white text-main text-base focus:outline-none focus:ring-4 focus:ring-cyan-900"
               />
               <span className="text-sm font-normal text-secondary text-right">
-                {patientNote.length}/300 karakter
+                {patientNote.length}/250 karakter
               </span>
             </div>
 
