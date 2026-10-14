@@ -36,6 +36,19 @@ describe("Domain Data Paspor (src/lib/passport)", () => {
     const catalog = await getNeedsCatalog();
     expect(catalog.length).toBeGreaterThan(0);
 
+    const needCodes = catalog.flatMap((group) =>
+      group.items.map((item) => item.code)
+    );
+    expect(needCodes).toEqual(
+      expect.arrayContaining([
+        "pengguna_kursi_roda",
+        "komunikasi_tertulis_jbi",
+        "sensitivitas_suara_cahaya",
+        "panduan_fisik_tunanetra",
+        "pemandu_asisten_pribadi",
+      ])
+    );
+
     for (const group of catalog) {
       expect(group.category).toBeTruthy();
       expect(group.categoryLabel).toBeTruthy();
@@ -102,16 +115,16 @@ describe("Domain Data Paspor (src/lib/passport)", () => {
     ).rejects.toThrow(/tidak valid/i);
   });
 
-  it("saveOwnPassport menolak catatan terlalu panjang (> 300 karakter)", async () => {
+  it("saveOwnPassport menolak catatan terlalu panjang (> 250 karakter)", async () => {
     const session = makePatientSession(IDS.users.p1);
-    const longNote = "a".repeat(301);
+    const longNote = "a".repeat(251);
     await expect(
       saveOwnPassport(session, {
         preferredName: "Budi",
         needCodes: ["komunikasi_bisindo"],
         patientNote: longNote,
       })
-    ).rejects.toThrow(/maksimal 300 karakter/i);
+    ).rejects.toThrow(/maksimal 250 karakter/i);
   });
 
   it("saveOwnPassport menolak kunci tak dikenal dan apa pun bernama diagnosis/diagnosa", async () => {

@@ -1,9 +1,18 @@
 import { withContext } from "../../db";
 import { recordAuditEvent } from "../audit";
 import {
+  PATIENT_NOTE_MAX_LENGTH,
+  PATIENT_PREFERRED_NAME_MAX_LENGTH,
+} from "./constants";
+import {
   NEED_CATEGORIES,
   type NeedCategory,
 } from "../consent/constants";
+
+export {
+  PATIENT_NOTE_MAX_LENGTH,
+  PATIENT_PREFERRED_NAME_MAX_LENGTH,
+} from "./constants";
 
 export type PassportStatus = "complete" | "empty";
 
@@ -68,9 +77,6 @@ export const NEED_CATEGORY_LABELS: Record<NeedCategory, string> = {
   sensorik_lingkungan: "Sensorik dan Lingkungan",
   pendampingan: "Pendampingan",
 };
-
-export const PATIENT_PREFERRED_NAME_MAX_LENGTH = 80;
-export const PATIENT_NOTE_MAX_LENGTH = 300;
 
 export interface PassportSessionActor {
   userId: string;
