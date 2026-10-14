@@ -188,6 +188,7 @@ Pasien tetap memegang kendali atas data dan siapa yang bisa bertindak atas naman
 - **Aksi Alternatif:** daftar kosong → "Belum ada akses".
 - **Navigasi:** [Cabut Semua QR] membuka konfirmasi langsung di P19.
 - **US:** P-06.
+- **Riwayat Kunjungan:** pada layar yang sama tersedia daftar kunjungan milik pasien yang bantuannya sudah dicatat, dengan tautan ke ringkasan baca-saja. Ringkasan menampilkan fasilitas, waktu kunjungan dan pencatatan, bantuan yang dicatat, serta status CareProof bila tersedia. Status pencatatan kunjungan tidak menyiratkan bahwa ConsentQR otomatis dicabut. Data dokter, rating, durasi konsultasi, dan status pencabutan QR tidak ditampilkan bila tidak tersedia dari sumber yang berwenang.
 
 ### [P20] QR Aktif dan Cabut
 - **Tampilan:** daftar QR yang belum kedaluwarsa dengan sisa waktu, fasilitas, dan data yang dibagikan.

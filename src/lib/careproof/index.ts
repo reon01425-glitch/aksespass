@@ -254,6 +254,122 @@ export interface OwnConfirmationItem {
   currentAnswer: OwnConfirmationCurrentAnswer | null;
 }
 
+export interface OwnVisitHistoryItem {
+  visitId: string;
+  shortRef: string;
+  createdAt: string;
+  recordedAt: string;
+  facilityName: string;
+  channel: "qr" | "kartu";
+  assistance: RecordedAssistanceItem[];
+  currentAnswer: OwnConfirmationCurrentAnswer | null;
+}
+
+async function getOwnRecordedVisits(
+  session: { userId: string; role: string } | SessionClaims,
+  visitId?: string
+): Promise<OwnVisitHistoryItem[]> {
+  if (session.role !== "patient") {
+    return [];
+  }
+
+  return withContext({ userId: session.userId, role: "patient" }, async (tx) => {
+    const result = await tx.query<{
+      id: string;
+      created_at: string;
+      recorded_at: string;
+      facility_name: string;
+      channel: "qr" | "kartu";
+      recorded_rule_ids: string[] | null;
+      status: CareProofStatus | null;
+      confirmed_by: CareProofConfirmedBy | null;
+      unmet_need_codes: string[] | null;
+    }>(
+      `SELECT
+         v.id,
+         v.created_at,
+         v.recorded_at,
+         f.name AS facility_name,
+         v.channel,
+         v.recorded_rule_ids,
+         vc.status,
+         vc.confirmed_by,
+         vc.unmet_need_codes
+       FROM visits v
+       JOIN facilities f ON f.id = v.facility_id
+       LEFT JOIN visit_confirmations vc ON vc.visit_id = v.id
+       WHERE v.patient_user_id = $1
+         AND v.recorded_at IS NOT NULL
+         AND ($2::text IS NULL OR v.id::text = $2::text)
+       ORDER BY v.recorded_at DESC;`,
+      [session.userId, visitId ?? null]
+    );
+
+    if (result.rows.length === 0) {
+      return [];
+    }
+
+    const ruleIds = Array.from(
+      new Set(result.rows.flatMap((row) => row.recorded_rule_ids || []))
+    );
+    const ruleMap = new Map<string, RecordedAssistanceItem>();
+
+    if (ruleIds.length > 0) {
+      const rulesResult = await tx.query<{
+        id: string;
+        action_text: string;
+        icon_name: string;
+      }>(
+        `SELECT id, action_text, icon_name
+         FROM accommodation_rules
+         WHERE id = ANY($1);`,
+        [ruleIds]
+      );
+
+      for (const rule of rulesResult.rows) {
+        ruleMap.set(rule.id, {
+          ruleId: rule.id,
+          actionText: rule.action_text,
+          iconName: rule.icon_name,
+        });
+      }
+    }
+
+    return result.rows.map((row) => ({
+      visitId: row.id,
+      shortRef: row.id.replace(/-/g, "").slice(-8).toUpperCase(),
+      createdAt: new Date(row.created_at).toISOString(),
+      recordedAt: new Date(row.recorded_at).toISOString(),
+      facilityName: row.facility_name,
+      channel: row.channel,
+      assistance: (row.recorded_rule_ids || [])
+        .map((id) => ruleMap.get(id))
+        .filter((item): item is RecordedAssistanceItem => item !== undefined),
+      currentAnswer: row.status && row.confirmed_by
+        ? {
+            status: row.status,
+            confirmedBy: row.confirmed_by,
+            unmetNeedCodes: row.unmet_need_codes || [],
+          }
+        : null,
+    }));
+  });
+}
+
+export async function listOwnVisitHistory(
+  session: { userId: string; role: string } | SessionClaims
+): Promise<OwnVisitHistoryItem[]> {
+  return getOwnRecordedVisits(session);
+}
+
+export async function getOwnVisitHistoryItem(
+  session: { userId: string; role: string } | SessionClaims,
+  visitId: string
+): Promise<OwnVisitHistoryItem | null> {
+  const [item] = await getOwnRecordedVisits(session, visitId);
+  return item ?? null;
+}
+
 /**
  * P16: daftar kunjungan tercatat ${OWN_CONFIRMATIONS_WINDOW_DAYS} hari terakhir milik pasien
  * sendiri yang (a) belum dikonfirmasi, atau (b) dijawab pendamping/di tempat dan masih bisa

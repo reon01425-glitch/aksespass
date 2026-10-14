@@ -1,17 +1,17 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { PageShell } from "@/components";
 import { getOwnAccessHistory } from "@/lib/audit";
 import { COOKIE_NAME, SECURE_COOKIE_NAME } from "@/lib/auth/constants";
 import { verifySessionCookie } from "@/lib/auth/session";
 import { countActiveConsents } from "@/lib/consent";
 import { getActiveFacilities } from "@/lib/facility";
+import { listOwnVisitHistory } from "@/lib/careproof";
 import { RiwayatAksesClient } from "./riwayat-akses-client";
 
 export const metadata: Metadata = {
-  title: "Riwayat Akses — AKSESPASS",
-  description: "Riwayat pembukaan data profil kebutuhan oleh petugas fasilitas.",
+  title: "Riwayat Kunjungan — AKSESPASS",
+  description: "Lihat riwayat pembukaan data dan detail kunjungan Anda.",
 };
 
 export default async function PasienRiwayatAksesPage() {
@@ -29,10 +29,11 @@ export default async function PasienRiwayatAksesPage() {
     redirect("/masuk");
   }
 
-  const [history, activeCount, facilities] = await Promise.all([
+  const [history, activeCount, facilities, visits] = await Promise.all([
     getOwnAccessHistory(session),
     countActiveConsents(session),
     getActiveFacilities(session).catch(() => []),
+    listOwnVisitHistory(session),
   ]);
 
   // Kumpulkan fasilitas unik yang tersedia untuk opsi filter
@@ -40,22 +41,17 @@ export default async function PasienRiwayatAksesPage() {
   for (const f of facilities) {
     if (f.name) facilityNamesSet.add(f.name);
   }
-  for (const h of history) {
-    if (h.facilityName) facilityNamesSet.add(h.facilityName);
+  for (const item of [...history, ...visits]) {
+    if (item.facilityName) facilityNamesSet.add(item.facilityName);
   }
   const availableFacilities = Array.from(facilityNamesSet).sort();
 
   return (
-    <PageShell
-      title="Riwayat Akses"
-      backHref="/pasien/akses"
-      backLabel="Kembali ke Kontrol Akses"
-    >
-      <RiwayatAksesClient
-        initialHistory={history}
-        initialActiveCount={activeCount}
-        availableFacilities={availableFacilities}
-      />
-    </PageShell>
+    <RiwayatAksesClient
+      initialHistory={history}
+      initialActiveCount={activeCount}
+      availableFacilities={availableFacilities}
+      initialVisits={visits}
+    />
   );
 }

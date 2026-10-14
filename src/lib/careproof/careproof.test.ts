@@ -2,7 +2,14 @@ import crypto from "node:crypto";
 import pg from "pg";
 import { describe, expect, it } from "vitest";
 import { withContext } from "../../db";
-import { confirmVisit, listOwnConfirmations, getOwnConfirmableVisit, CareProofError } from "./index";
+import {
+  confirmVisit,
+  getOwnConfirmableVisit,
+  getOwnVisitHistoryItem,
+  listOwnConfirmations,
+  listOwnVisitHistory,
+  CareProofError,
+} from "./index";
 
 const FACILITY_A = "11111111-1111-4111-8111-111111111101"; // Puskesmas Contoh A
 const STAFF_A = "22222222-2222-4222-8222-222222222301"; // Petugas Faskes A
@@ -254,6 +261,69 @@ describe("src/lib/careproof: listOwnConfirmations & getOwnConfirmableVisit (P16)
       ]);
       await adminClient.end();
     }
+  });
+
+  describe("src/lib/careproof: riwayat dan detail kunjungan pasien", () => {
+    it("hanya mengembalikan kunjungan tercatat milik pasien dan detail lintas pasien tidak ditemukan", async () => {
+      const adminClient = new pg.Client({ connectionString: getAdminTestDbUrl() });
+      await adminClient.connect();
+
+      const visitOwn = crypto.randomUUID();
+      const visitOther = crypto.randomUUID();
+      const visitOpen = crypto.randomUUID();
+      const now = new Date();
+
+      try {
+        for (const [id, patientId, recordedAt] of [
+          [visitOwn, PATIENT_1, now.toISOString()],
+          [visitOther, PATIENT_2, now.toISOString()],
+          [visitOpen, PATIENT_1, null],
+        ] as const) {
+          await adminClient.query(
+            `INSERT INTO visits (
+               id, patient_user_id, facility_id, staff_user_id, channel,
+               client_id, created_at, recorded_at
+             ) VALUES ($1, $2, $3, $4, 'qr', $5, $6, $7);`,
+            [
+              id,
+              patientId,
+              FACILITY_A,
+              STAFF_A,
+              `test-visit-history-${id}`,
+              now.toISOString(),
+              recordedAt,
+            ]
+          );
+        }
+
+        const items = await listOwnVisitHistory({
+          userId: PATIENT_1,
+          role: "patient",
+        });
+        const ids = items.map((item) => item.visitId);
+        expect(ids).toContain(visitOwn);
+        expect(ids).not.toContain(visitOther);
+        expect(ids).not.toContain(visitOpen);
+
+        const detail = await getOwnVisitHistoryItem(
+          { userId: PATIENT_1, role: "patient" },
+          visitOwn
+        );
+        expect(detail?.visitId).toBe(visitOwn);
+        expect(detail?.facilityName).toBe("Puskesmas Contoh A");
+        expect(
+          await getOwnVisitHistoryItem(
+            { userId: PATIENT_1, role: "patient" },
+            visitOther
+          )
+        ).toBeNull();
+      } finally {
+        await adminClient.query("DELETE FROM visits WHERE id = ANY($1::uuid[]);", [
+          [visitOwn, visitOther, visitOpen],
+        ]);
+        await adminClient.end();
+      }
+    });
   });
 
   it("pasien mengganti jawaban on_site yang sudah ada -> tersimpan confirmed_by = patient", async () => {
