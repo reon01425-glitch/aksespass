@@ -10,6 +10,7 @@ import {
   DEFAULT_PREFERENCES,
   type AppPreferences,
   type ContrastMode,
+  type ReadingMode,
   type TextSize,
 } from "@/lib/preferences";
 import { Check, ShieldCheck } from "lucide-react";
@@ -19,6 +20,7 @@ export function MulaiClient() {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [textSize, setTextSize] = useState<TextSize>("100");
   const [contrast, setContrast] = useState<ContrastMode>("standard");
+  const [readingMode, setReadingMode] = useState<ReadingMode>("standard");
   const [isSaving, setIsSaving] = useState(false);
 
   const saveAndNavigate = async (pref: AppPreferences) => {
@@ -41,7 +43,7 @@ export function MulaiClient() {
     if (step < 3) {
       setStep((prev) => (prev + 1) as 2 | 3);
     } else {
-      void saveAndNavigate({ textSize, contrast });
+      void saveAndNavigate({ textSize, contrast, readingMode });
     }
   };
 
@@ -217,21 +219,66 @@ export function MulaiClient() {
           </section>
         )}
 
-        {/* LANGKAH 3: Pembaca Layar */}
+        {/* LANGKAH 3: Mode Pembaca Layar */}
         {step === 3 && (
           <section aria-labelledby="heading-step-3" className="flex flex-col gap-4">
             <h2 id="heading-step-3" className="text-xl font-bold text-main">
-              Dukungan Pembaca Layar
+              Mode Pembaca Layar
             </h2>
             <p className="text-base text-main">
-              AKSESPASS dioptimalkan untuk pembaca layar bawaan ponsel Anda, seperti TalkBack (Android) dan VoiceOver (iPhone/iPad).
+              Pilih apakah Anda memakai pembaca layar bawaan ponsel, seperti
+              TalkBack (Android) atau VoiceOver (iPhone/iPad).
             </p>
+
+            <fieldset className="flex flex-col gap-2">
+              <legend className="text-sm font-bold text-main mb-1">
+                Mode Pembaca Layar
+              </legend>
+              <div className="grid grid-cols-1 gap-2">
+                {(
+                  [
+                    {
+                      val: "standard",
+                      label: "Tampilan biasa",
+                      desc: "Saya tidak memakai pembaca layar.",
+                    },
+                    {
+                      val: "screen-reader",
+                      label: "Saya memakai pembaca layar",
+                      desc: "Pilihan ini disimpan di perangkat ini.",
+                    },
+                  ] as const
+                ).map((m) => {
+                  const isSelected = readingMode === m.val;
+                  return (
+                    <button
+                      key={m.val}
+                      type="button"
+                      onClick={() => setReadingMode(m.val)}
+                      aria-pressed={isSelected}
+                      className={`min-h-[48px] px-4 py-3 rounded-lg border text-left transition-colors ${
+                        isSelected
+                          ? "bg-cyan-700 text-white border-cyan-700 ring-2 ring-cyan-900"
+                          : "bg-surface text-main border-cyan-800"
+                      }`}
+                    >
+                      <span className="block font-bold">{m.label}</span>
+                      <span className="block text-sm">{m.desc}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </fieldset>
+
             <div className="p-4 rounded-xl border border-cyan-800 bg-surface flex flex-col gap-2">
               <span className="text-base font-bold text-main">
-                Aksesibilitas Siap Pakai
+                Catatan Jujur
               </span>
               <p className="text-sm text-secondary">
-                Semua tombol memiliki label suara yang jelas dan urutan pembacaan yang teratur. Pengaturan teks-ke-suara interaktif tambahan akan tersedia saat kunjungan melalui fitur KomunikaCare.
+                Pilihan ini baru disimpan sebagai preferensi dan belum mengubah
+                tampilan. Aplikasi belum diuji dengan TalkBack atau VoiceOver.
+                Teks-ke-suara untuk berbicara dengan petugas akan tersedia
+                lewat KomunikaCare pada tahap berikutnya.
               </p>
             </div>
           </section>

@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Button } from "./button";
+import { clearAllPassportDrafts } from "@/lib/passport/draft";
+import { clearOfflineSummary } from "@/lib/passport/offline-summary";
 
 export interface LogoutButtonProps {
   className?: string;
@@ -22,6 +24,10 @@ export function LogoutButton({
   const handleLogout = async () => {
     try {
       setIsProcessing(true);
+      // Draft paspor hanya untuk perangkat yang sedang dipakai pemiliknya.
+      clearAllPassportDrafts();
+      // Ringkasan offline juga milik pengguna yang sedang masuk.
+      clearOfflineSummary();
       await fetch("/api/auth/logout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

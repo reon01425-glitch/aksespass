@@ -6,6 +6,8 @@ export * from "./choice-group";
 export * from "./toggle";
 export * from "./status-banner";
 export * from "./confirm-dialog";
+export * from "./action-dialog";
+export * from "./service-worker-register";
 export * from "./care-proof-scale";
 export * from "./page-shell";
 export * from "./logout-button";

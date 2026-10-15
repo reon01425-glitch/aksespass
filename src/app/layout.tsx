@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Atkinson_Hyperlegible_Next } from "next/font/google";
 import { cookies } from "next/headers";
 import dynamic from "next/dynamic";
+import { ServiceWorkerRegister } from "@/components/service-worker-register";
 import {
   DEFAULT_PREFERENCES,
   PREFERENCE_COOKIE_NAME,
@@ -48,6 +49,7 @@ export default async function RootLayout({
       lang="id"
       data-text-size={preferences.textSize}
       data-contrast={preferences.contrast}
+      data-reading-mode={preferences.readingMode}
       className={`${atkinson.variable} ${atkinson.className} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-page text-main font-normal">
@@ -57,6 +59,7 @@ export default async function RootLayout({
         >
           Lewati ke konten utama
         </a>
+        <ServiceWorkerRegister />
         {children}
         {process.env.NODE_ENV === "development" && <DevAuditPanel />}
       </body>

@@ -2,9 +2,11 @@ import {
   PREFERENCE_COOKIE_MAX_AGE_SECONDS,
   PREFERENCE_COOKIE_NAME,
   VALID_CONTRASTS,
+  VALID_READING_MODES,
   VALID_TEXT_SIZES,
   type AppPreferences,
   type ContrastMode,
+  type ReadingMode,
   type TextSize,
 } from "./constants";
 
@@ -23,17 +25,29 @@ export function isValidContrast(val: unknown): val is ContrastMode {
 }
 
 /**
+ * Memvalidasi apakah nilai mode pembaca layar termasuk dalam allowlist.
+ */
+export function isValidReadingMode(val: unknown): val is ReadingMode {
+  return typeof val === "string" && (VALID_READING_MODES as readonly string[]).includes(val);
+}
+
+/**
  * Melakukan serialisasi preferensi ke format string cookie.
  * Melempar error bila ada nilai yang di luar allowlist tetap.
  */
 export function serializePreferenceCookie(pref: AppPreferences): string {
-  if (!isValidTextSize(pref.textSize) || !isValidContrast(pref.contrast)) {
+  if (
+    !isValidTextSize(pref.textSize) ||
+    !isValidContrast(pref.contrast) ||
+    !isValidReadingMode(pref.readingMode)
+  ) {
     throw new Error("Nilai preferensi tidak valid.");
   }
 
   return JSON.stringify({
     textSize: pref.textSize,
     contrast: pref.contrast,
+    readingMode: pref.readingMode,
   });
 }
 
@@ -58,8 +72,10 @@ export function parsePreferenceCookie(
     }
 
     const keys = Object.keys(parsed);
-    // Hanya mengizinkan tepat dua nilai itu (textSize dan contrast)
-    if (keys.length !== 2) {
+    // Kunci yang diizinkan: textSize, contrast, dan readingMode (opsional agar
+    // cookie lama dengan dua kunci tetap terbaca). Kunci asing ditolak.
+    const allowedKeys = ["textSize", "contrast", "readingMode"];
+    if (keys.some((key) => !allowedKeys.includes(key))) {
       return null;
     }
 
@@ -71,9 +87,18 @@ export function parsePreferenceCookie(
       return null;
     }
 
+    let readingMode: ReadingMode = "standard";
+    if ("readingMode" in parsed) {
+      if (!isValidReadingMode(parsed.readingMode)) {
+        return null;
+      }
+      readingMode = parsed.readingMode;
+    }
+
     return {
       textSize: parsed.textSize,
       contrast: parsed.contrast,
+      readingMode,
     };
   } catch {
     return null;
