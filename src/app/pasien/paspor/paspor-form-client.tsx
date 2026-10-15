@@ -4,30 +4,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft,
-  Bell,
-  Check,
-  CheckCircle2,
-  Clock3,
-  EyeOff,
-  FileText,
-  History,
-  House,
-  Info,
-  MapPin,
-  Pencil,
-  QrCode,
-  Save,
-  ShieldCheck,
-  ShieldPlus,
-  UserRound,
-  Users,
-  X,
-  type LucideIcon,
-} from "lucide-react";
-import {
   ActionDialog,
+  AppHeader,
   Button,
+  CompanionBottomNav,
+  PatientBottomNav,
   StatusBanner,
   TextField,
   getNeedSummaryIcon,
@@ -62,19 +43,6 @@ interface PassportFormClientProps {
     qrHref: string;
   };
 }
-
-const PATIENT_NAV_ITEMS: {
-  href: string;
-  label: string;
-  Icon: LucideIcon;
-  emphasis?: boolean;
-}[] = [
-  { href: "/pasien", label: "Beranda", Icon: House },
-  { href: "/pasien/paspor", label: "Paspor", Icon: FileText },
-  { href: "/pasien/akses/qr", label: "QR Akses", Icon: QrCode, emphasis: true },
-  { href: "/pasien/pendamping", label: "Pendamping", Icon: Users },
-  { href: "/pasien/akses/riwayat", label: "Riwayat", Icon: History },
-];
 
 const NOTE_TOO_LONG = `Catatan maksimal ${PATIENT_NOTE_MAX_LENGTH} karakter. Ringkas catatan sebelum menyimpan.`;
 
@@ -459,77 +427,41 @@ export function PassportFormClient({
 
   return (
     <div className="min-h-dvh w-full bg-page text-main">
-      <div className="relative mx-auto flex min-h-dvh w-full max-w-md flex-col">
-        <header className="fixed left-1/2 top-0 z-50 w-full max-w-md -translate-x-1/2 bg-page/90 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
-          <div className="flex h-16 items-center gap-3 px-4">
-            <div
-              aria-hidden="true"
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-cyan-200 text-cyan-900"
-            >
-              <ShieldPlus className="h-6 w-6" />
-            </div>
-            <div className="flex min-w-0 flex-1 flex-col">
-              <span className="text-xs font-bold uppercase tracking-wider text-secondary">
-                {companion ? "AKSESPASS Pendamping" : "AKSESPASS Pasien"}
-              </span>
-              <h1 className="truncate text-xl font-bold leading-7 text-main">
-                Paspor Kesehatan
-              </h1>
-            </div>
-            {!companion && (
-              <Link
-                href="/pasien/akses/riwayat"
-                aria-label="Riwayat akses"
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-main focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900"
-              >
-                <Bell aria-hidden="true" className="h-6 w-6" />
-              </Link>
-            )}
-            <Link
-              href={companion?.backHref ?? "/pasien"}
-              aria-label={companion ? "Beranda pendamping" : "Beranda pasien"}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-cyan-800 text-white focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900 focus-visible:ring-offset-2"
-            >
-              <UserRound aria-hidden="true" className="h-6 w-6" />
-            </Link>
-          </div>
-        </header>
+      <div
+        className={`relative mx-auto flex min-h-dvh w-full flex-col ${
+          "max-w-2xl"
+        }`}
+      >
+        <AppHeader
+          title="Paspor Kesehatan"
+          backHref={companion ? companion.backHref : "/pasien"}
+          backLabel={companion ? "Kembali ke Beranda Pendamping" : "Kembali ke beranda"}
+        />
 
         <main
           id="main-content"
           tabIndex={-1}
-          className={`flex w-full flex-1 flex-col px-4 pb-32 pt-20 focus:outline-none ${
+          className={`flex w-full flex-1 flex-col px-4 focus:outline-none ${
+            "pb-28 pt-5"
+          } ${
             isEditing ? "gap-6" : "gap-4"
           }`}
         >
           {companion && (
-            <p className="rounded-xl border border-cyan-700 bg-cyan-100 px-4 py-3 text-sm font-bold text-cyan-900">
+            <p className="max-w-none rounded-2xl border-2 border-cyan-800 bg-white px-4 py-3 text-sm font-bold text-cyan-900">
               Atas nama {companion.patientName}
             </p>
           )}
 
           {!isEditing && (
             <>
-              <section className="flex flex-col gap-3">
-                <p className="flex items-center gap-2 text-sm font-bold text-emerald-700">
-                  <CheckCircle2
-                    aria-hidden="true"
-                    className="h-5 w-5 shrink-0"
-                  />
-                  Tersimpan
-                </p>
+              <section className="flex flex-col gap-1">
                 {savedAt && (
-                  <p className="flex items-center gap-2 text-sm text-secondary">
-                    <Clock3
-                      aria-hidden="true"
-                      className="h-5 w-5 shrink-0"
-                    />
-                    <span>
-                      Diperbarui:{" "}
-                      <strong className="font-bold text-main">
-                        {formatDateTimeWib(new Date(savedAt))}
-                      </strong>
-                    </span>
+                  <p className="text-sm text-secondary">
+                    Terakhir diperbarui{" "}
+                    <strong className="font-bold text-main">
+                      {formatDateTimeWib(new Date(savedAt))}
+                    </strong>
                   </p>
                 )}
                 {initialPassport?.lastUpdatedByCompanion && (
@@ -559,46 +491,47 @@ export function PassportFormClient({
                   </span>
                 </div>
 
-                {needs
-                  .filter((item) => selectedCodes.has(item.code))
-                  .map((item) => {
-                    const categoryLabel =
-                      catalog.find((group) => group.category === item.category)
-                        ?.categoryLabel ?? item.category;
-                    return (
-                      <article
-                        key={item.code}
-                        className="flex gap-3 rounded-2xl bg-white p-4 shadow-sm"
-                      >
-                        <span
-                          aria-hidden="true"
-                          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-cyan-100"
+                <p className="text-sm leading-6 text-secondary">
+                  Kebutuhan ini akan disampaikan kepada petugas sesuai
+                  persetujuan ConsentQR Anda.
+                </p>
+
+                <ul className="m-0 grid list-none grid-cols-2 gap-3 p-0 [&>*:last-child:nth-child(odd)]:col-span-2">
+                  {needs
+                    .filter((item) => selectedCodes.has(item.code))
+                    .map((item) => {
+                      const categoryLabel =
+                        catalog.find((group) => group.category === item.category)
+                          ?.categoryLabel ?? item.category;
+                      return (
+                        <li
+                          key={item.code}
+                          className="flex min-w-0 flex-col items-start gap-2 rounded-2xl border border-cyan-800 bg-white p-3 shadow-sm"
                         >
-                          {getNeedSummaryIcon(item.iconName)}
-                        </span>
-                        <div className="flex min-w-0 flex-1 flex-col gap-2">
-                          <div className="flex min-w-0 items-start justify-between gap-2">
-                            <h4 className="min-w-0 break-words font-bold text-main">
-                              {item.label}
-                            </h4>
-                            <span className="max-w-24 shrink-0 rounded-full bg-cyan-100 px-2 py-1 text-[0.625rem] font-bold uppercase text-cyan-800">
+                          <span
+                            aria-hidden="true"
+                            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-cyan-100"
+                          >
+                            {getNeedSummaryIcon(item.iconName)}
+                          </span>
+                          <div className="flex min-w-0 flex-col items-start gap-1">
+                            <span className="rounded-full bg-cyan-100 px-2 py-0.5 text-[0.625rem] font-bold uppercase text-cyan-800">
                               {categoryLabel}
                             </span>
+                            <span className="min-w-0 break-words font-bold leading-snug text-main">
+                              {item.label}
+                            </span>
                           </div>
-                          <p className="text-sm leading-6 text-secondary">
-                            Kebutuhan ini akan disampaikan kepada petugas
-                            sesuai persetujuan ConsentQR Anda.
-                          </p>
-                        </div>
-                      </article>
-                    );
-                  })}
+                        </li>
+                      );
+                    })}
+                </ul>
               </section>
 
               {patientNote.trim() && (
                 <section
                   aria-labelledby="personal-note-heading"
-                  className="flex flex-col gap-3 rounded-2xl bg-white p-4 shadow-sm"
+                  className="flex flex-col gap-3 rounded-2xl border border-cyan-800 bg-white p-4 shadow-sm"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <h3
@@ -607,19 +540,11 @@ export function PassportFormClient({
                     >
                       Catatan Pribadi untuk Petugas
                     </h3>
-                    <Info
-                      aria-hidden="true"
-                      className="h-5 w-5 shrink-0 text-secondary"
-                    />
                   </div>
-                  <blockquote className="rounded-xl bg-cyan-50 p-4 text-base italic leading-7 text-secondary">
+                  <blockquote className="rounded-2xl bg-cyan-50 p-4 text-base italic leading-7 text-secondary">
                     “{patientNote.trim()}”
                   </blockquote>
-                  <p className="flex items-center gap-2 text-xs text-secondary">
-                    <EyeOff
-                      aria-hidden="true"
-                      className="h-5 w-5 shrink-0"
-                    />
+                  <p className="text-xs leading-5 text-secondary">
                     Hanya dibagikan kepada petugas saat Anda menyetujui
                     pembagian catatan melalui ConsentQR.
                   </p>
@@ -630,54 +555,32 @@ export function PassportFormClient({
                 {companion ? (
                   <Link
                     href={companion.qrHref}
-                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-cyan-700 px-4 py-3 text-center font-bold text-white focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900 focus-visible:ring-offset-2"
+                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-cyan-700 px-4 py-3 text-center font-bold text-white focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900 focus-visible:ring-offset-2"
                   >
-                    <QrCode aria-hidden="true" className="h-5 w-5" />
                     Buat ConsentQR atas nama {companion.patientName}
                   </Link>
                 ) : (
                   <>
-                <div className="flex items-center gap-3 rounded-2xl bg-cyan-900 p-4 text-white">
-                  <span
-                    aria-hidden="true"
-                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white text-cyan-900"
-                  >
-                    <QrCode className="h-7 w-7" />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="font-bold">ConsentQR</h3>
-                    <p className="text-sm">
-                      {activeQrs.length > 0
-                        ? `${activeQrs.length} QR aktif untuk fasilitas kesehatan.`
-                        : "Belum ada QR akses aktif."}
-                    </p>
-                    {activeQrs[0] && (
-                      <p className="mt-1 flex items-start gap-1 text-xs text-cyan-100">
-                        <MapPin
-                          aria-hidden="true"
-                          className="mt-0.5 h-4 w-4 shrink-0"
-                        />
-                        <span className="min-w-0">
-                          {activeQrs[0].facilityName} ·{" "}
-                          {activeQrs[0].expiryText}
-                        </span>
-                      </p>
-                    )}
-                  </div>
+                <div className="flex flex-col gap-1 rounded-2xl bg-cyan-700 p-4 text-white shadow-md">
+                  <h3 className="font-bold text-white">ConsentQR</h3>
+                  <p className="text-sm text-white">
+                    {activeQrs.length > 0
+                      ? `${activeQrs.length} QR aktif.`
+                      : "Belum ada QR akses aktif."}
+                  </p>
                 </div>
                 {activeQrs.length > 0 && (
                   <Link
                     href="/pasien/akses/qr"
-                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-cyan-700 bg-cyan-100 px-4 py-3 text-center font-bold text-cyan-900 focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900"
+                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border-2 border-cyan-800 bg-white px-4 py-3 text-center font-bold text-cyan-900 focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900"
                   >
                     Lihat ConsentQR Aktif
                   </Link>
                 )}
                 <Link
                   href="/pasien/kunjungan"
-                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-cyan-700 px-4 py-3 text-center font-bold text-white focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900 focus-visible:ring-offset-2"
+                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-cyan-700 px-4 py-3 text-center font-bold text-white focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900 focus-visible:ring-offset-2"
                 >
-                  <QrCode aria-hidden="true" className="h-5 w-5" />
                   Buat ConsentQR Sekarang
                 </Link>
                   </>
@@ -685,9 +588,8 @@ export function PassportFormClient({
                 <button
                   type="button"
                   onClick={startEditing}
-                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-cyan-100 px-4 py-3 font-bold text-cyan-900 focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900"
+                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border-2 border-cyan-800 bg-white px-4 py-3 font-bold text-cyan-900 focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900"
                 >
-                  <Pencil aria-hidden="true" className="h-5 w-5" />
                   Ubah Kebutuhan Paspor
                 </button>
               </section>
@@ -697,7 +599,7 @@ export function PassportFormClient({
 
           {isEditing && !isPreview && (
             <>
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-3 rounded-2xl border border-cyan-800 bg-white p-4 shadow-sm">
                 <div className="flex items-center justify-between gap-3">
                   <p
                     className="text-sm font-bold text-main"
@@ -710,9 +612,9 @@ export function PassportFormClient({
                     type="button"
                     onClick={handleExitClick}
                     aria-label="Keluar dari pengisian paspor"
-                    className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-input bg-white text-main focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900"
+                    className="inline-flex min-h-12 items-center justify-center rounded-2xl border-2 border-cyan-800 bg-white px-4 text-sm font-bold text-cyan-900 focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900"
                   >
-                    <X aria-hidden="true" className="h-6 w-6" />
+                    Keluar
                   </button>
                 </div>
                 <div
@@ -737,14 +639,8 @@ export function PassportFormClient({
               {step === 0 && (
                 <section
                   aria-labelledby="privacy-title"
-                  className="flex gap-3 rounded-2xl bg-cyan-100 p-4 shadow-sm"
+                  className="flex gap-3 rounded-2xl border-2 border-cyan-800 bg-white p-4"
                 >
-                  <div
-                    aria-hidden="true"
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-cyan-700 text-white"
-                  >
-                    <ShieldCheck className="h-6 w-6" />
-                  </div>
                   <div className="min-w-0">
                     <h2 id="privacy-title" className="font-bold text-main">
                       Prinsip Privasi Pasien
@@ -752,7 +648,7 @@ export function PassportFormClient({
                     <p className="mt-1 text-base leading-7 text-main">
                       Paspor ini hanya memuat kebutuhan fasilitas dan bantuan
                       akomodasi di lokasi,{" "}
-                      <span className="font-bold text-red-700">BUKAN</span>{" "}
+                      <span className="font-bold text-main underline">BUKAN</span>{" "}
                       diagnosis atau rekam medis pribadi Anda.
                     </p>
                   </div>
@@ -760,7 +656,7 @@ export function PassportFormClient({
               )}
 
               {showNeedsError && (
-                <StatusBanner
+                <StatusBanner floating
                   variant="warning"
                   title="Pilih minimal satu kebutuhan"
                   message="Paspor membutuhkan minimal satu kebutuhan layanan agar dapat disimpan."
@@ -768,8 +664,9 @@ export function PassportFormClient({
               )}
 
               {currentGroup && (
-                <fieldset className="flex min-w-0 flex-col gap-3 border-0 p-0">
-                  <legend className="w-full">
+                <div className="flex min-w-0 flex-col rounded-2xl border border-cyan-800 bg-white p-4 shadow-sm">
+                <fieldset className="m-0 flex min-w-0 flex-col gap-3 border-0 p-0">
+                  <legend className="mb-3 w-full">
                     <h2
                       ref={stepHeadingRef}
                       tabIndex={-1}
@@ -783,7 +680,7 @@ export function PassportFormClient({
                       </span>
                     </h2>
                   </legend>
-                  <div className="flex flex-col gap-3">
+                  <div className="grid grid-cols-2 gap-3 [&>*:last-child:nth-child(odd)]:col-span-2">
                     {currentGroup.items.map((item) => {
                       const checked = selectedCodes.has(item.code);
                       const inputId = `need-${item.code}`;
@@ -791,10 +688,10 @@ export function PassportFormClient({
                         <label
                           key={item.code}
                           htmlFor={inputId}
-                          className={`flex min-h-14 w-full cursor-pointer select-none items-center justify-between gap-3 rounded-xl border px-4 py-3 shadow-sm focus-within:ring-4 focus-within:ring-cyan-900 active:scale-[0.99] ${
+                          className={`flex min-h-14 w-full min-w-0 cursor-pointer select-none flex-col items-start gap-2 rounded-2xl border-2 bg-white px-4 py-3 focus-within:ring-4 focus-within:ring-cyan-900 active:scale-[0.99] ${
                             checked
-                              ? "border-cyan-700 bg-cyan-100 text-main"
-                              : "border-cyan-400 bg-white text-secondary"
+                              ? "border-cyan-800 text-main"
+                              : "border-cyan-200 text-secondary"
                           }`}
                         >
                           <input
@@ -806,48 +703,33 @@ export function PassportFormClient({
                             onChange={() => handleToggleNeed(item.code)}
                             className="peer sr-only"
                           />
-                          <span className="flex min-w-0 items-center gap-3 pr-2">
-                            <span
-                              aria-hidden="true"
-                              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
-                                checked
-                                  ? "bg-cyan-700/10"
-                                  : "bg-cyan-100 text-secondary [&_svg]:opacity-70"
-                              }`}
-                            >
-                              {getNeedSummaryIcon(item.iconName)}
-                            </span>
-                            <span
-                              className={`min-w-0 text-base leading-snug ${
-                                checked
-                                  ? "font-bold text-main"
-                                  : "font-normal text-secondary"
-                              }`}
-                            >
-                              {item.label}
-                            </span>
-                          </span>
                           <span
                             aria-hidden="true"
-                            className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md shadow-inner peer-focus-visible:ring-2 peer-focus-visible:ring-cyan-900 peer-focus-visible:ring-offset-2 ${
+                            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-cyan-100 text-cyan-900"
+                          >
+                            {getNeedSummaryIcon(item.iconName)}
+                          </span>
+                          <span
+                            className={`min-w-0 text-base leading-snug ${
                               checked
-                                ? "bg-cyan-700 text-white"
-                                : "bg-cyan-100 text-transparent"
+                                ? "font-bold text-main"
+                                : "font-normal text-secondary"
                             }`}
                           >
-                            {checked && <Check className="h-6 w-6" />}
+                            {item.label}
                           </span>
                         </label>
                       );
                     })}
                   </div>
                 </fieldset>
+                </div>
               )}
 
               {isNotesStep && (
                 <section
                   aria-labelledby="notes-step-heading"
-                  className="flex flex-col gap-6"
+                  className="flex flex-col gap-3"
                 >
                   <h2
                     id="notes-step-heading"
@@ -857,6 +739,7 @@ export function PassportFormClient({
                   >
                     Nama dan Catatan
                   </h2>
+                  <div className="flex flex-col gap-3 rounded-2xl border border-cyan-800 bg-white p-4 shadow-sm">
                   <TextField
                     ref={preferredNameInputRef}
                     id="field-preferred-name"
@@ -873,6 +756,8 @@ export function PassportFormClient({
                     maxLength={PATIENT_PREFERRED_NAME_MAX_LENGTH}
                     aria-required="true"
                   />
+                  </div>
+                  <div className="flex flex-col gap-3 rounded-2xl border border-cyan-800 bg-white p-4 shadow-sm">
                   <TextField
                     id={noteInputId}
                     label="Catatan Bantuan Khusus (Opsional)"
@@ -895,6 +780,7 @@ export function PassportFormClient({
                       clearSubmissionStatus();
                     }}
                   />
+                  </div>
                 </section>
               )}
 
@@ -912,8 +798,7 @@ export function PassportFormClient({
                   {isNotesStep ? "Lihat Pratinjau" : "Lanjut"}
                 </Button>
               </div>
-              <p className="flex items-center justify-center gap-2 text-sm text-secondary">
-                <ShieldCheck aria-hidden="true" className="h-4 w-4 shrink-0" />
+              <p className="max-w-none text-center text-sm text-secondary">
                 Pilihan Anda tersimpan otomatis sebagai draft di perangkat ini.
               </p>
             </>
@@ -923,15 +808,15 @@ export function PassportFormClient({
             <>
               <section
                 aria-labelledby="preview-heading"
-                className="flex flex-col gap-2"
+                className="flex flex-col gap-2 rounded-2xl border-2 border-cyan-800 bg-white p-4 shadow-sm"
               >
                 <h2
                   id="preview-heading"
-                  className="text-xl font-bold text-main"
+                  className="text-lg font-bold text-main"
                 >
                   Pratinjau Paspor
                 </h2>
-                <p className="text-base text-main">
+                <p className="max-w-none text-base text-main">
                   Seperti inilah paspor Anda akan terlihat oleh petugas, hanya
                   berisi kebutuhan layanan. Aplikasi ini tidak meminta
                   diagnosis.
@@ -958,14 +843,15 @@ export function PassportFormClient({
                     <h3 className="text-sm font-bold uppercase tracking-wider text-secondary">
                       {group.categoryLabel}
                     </h3>
+                    <div className="grid grid-cols-2 gap-3 [&>*:last-child:nth-child(odd)]:col-span-2">
                     {chosen.map((item) => (
                       <div
                         key={item.code}
-                        className="flex items-center gap-3 rounded-xl bg-white p-3 shadow-sm"
+                        className="flex min-w-0 flex-col items-start gap-2 rounded-2xl border border-cyan-800 bg-white p-3 shadow-sm"
                       >
                         <span
                           aria-hidden="true"
-                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-cyan-100"
+                          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-cyan-100"
                         >
                           {getNeedSummaryIcon(item.iconName)}
                         </span>
@@ -974,25 +860,26 @@ export function PassportFormClient({
                         </span>
                       </div>
                     ))}
+                    </div>
                   </section>
                 ))}
 
               {patientNote.trim() && (
                 <section
                   aria-labelledby="preview-note-heading"
-                  className="flex flex-col gap-2 rounded-2xl bg-white p-4 shadow-sm"
+                  className="flex flex-col gap-2 rounded-2xl border border-cyan-800 bg-white p-4 shadow-sm"
                 >
                   <h3 id="preview-note-heading" className="font-bold text-main">
                     Catatan Pribadi untuk Petugas
                   </h3>
-                  <blockquote className="rounded-xl bg-cyan-50 p-4 text-base italic leading-7 text-secondary">
+                  <blockquote className="rounded-2xl bg-cyan-50 p-4 text-base italic leading-7 text-secondary">
                     “{patientNote.trim()}”
                   </blockquote>
                 </section>
               )}
 
               {saveError && (
-                <StatusBanner
+                <StatusBanner floating
                   variant="error"
                   title="Gagal menyimpan paspor"
                   message={saveError}
@@ -1004,9 +891,8 @@ export function PassportFormClient({
                   onClick={handleSavePassport}
                   disabled={isSaving}
                   isLoading={isSaving}
-                  className="w-full gap-2 rounded-2xl py-4 text-lg"
+                  className="w-full rounded-2xl py-4 text-lg"
                 >
-                  <Save aria-hidden="true" className="h-6 w-6" />
                   Simpan Paspor
                 </Button>
                 <Button
@@ -1018,11 +904,9 @@ export function PassportFormClient({
                   disabled={isSaving}
                   className="w-full"
                 >
-                  <ArrowLeft aria-hidden="true" className="h-5 w-5" />
                   Kembali Edit
                 </Button>
-                <p className="flex items-center justify-center gap-2 text-sm text-secondary">
-                  <ShieldCheck aria-hidden="true" className="h-4 w-4 shrink-0" />
+                <p className="max-w-none text-center text-sm text-secondary">
                   Hanya kebutuhan yang Anda pilih yang dibagikan kepada petugas.
                 </p>
               </div>
@@ -1030,43 +914,8 @@ export function PassportFormClient({
           )}
         </main>
 
-        {!companion && (
-        <nav
-          aria-label="Navigasi utama pasien"
-          className="fixed bottom-0 left-1/2 z-50 w-full max-w-md -translate-x-1/2 border-t border-cyan-200 bg-page/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl"
-        >
-          <ul className="flex h-16 items-center justify-between px-1">
-            {PATIENT_NAV_ITEMS.map(({ href, label, Icon, emphasis }) => {
-              const isActive = href === "/pasien/paspor";
-              return (
-                <li key={href} className="flex-1">
-                  <Link
-                    href={href}
-                    aria-current={isActive ? "page" : undefined}
-                    className={`flex min-h-12 min-w-12 flex-col items-center justify-center rounded-lg focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900 ${
-                      isActive
-                        ? "font-bold text-cyan-700"
-                        : "text-secondary hover:text-main"
-                    }`}
-                  >
-                    {emphasis ? (
-                      <span
-                        aria-hidden="true"
-                        className="flex h-10 w-10 items-center justify-center rounded-full bg-cyan-700 text-white shadow-sm"
-                      >
-                        <Icon className="h-6 w-6" />
-                      </span>
-                    ) : (
-                      <Icon aria-hidden="true" className="h-[22px] w-[22px]" />
-                    )}
-                    <span className="text-[11px] leading-tight">{label}</span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
-        )}
+        {!companion && <PatientBottomNav />}
+        {companion && <CompanionBottomNav />}
       </div>
 
       <ActionDialog

@@ -70,7 +70,7 @@ export default async function CompanionQrPage({
         backHref="/pendamping"
         backLabel="Kembali ke Beranda Pendamping"
       >
-        <div className="flex flex-col gap-6 max-w-full w-full">
+        <div className="flex flex-col gap-5 max-w-full w-full">
           <StatusBanner
             variant="warning"
             title="Paspor belum diisi"
@@ -102,13 +102,14 @@ export default async function CompanionQrPage({
         title={`Pilih Fasilitas — ${patient.preferredName}`}
         backHref="/pendamping"
         backLabel="Kembali ke Beranda Pendamping"
+        companionNav
       >
-        <div className="flex flex-col gap-4 max-w-full w-full">
+        <div className="flex flex-col gap-5 max-w-full w-full">
           <CompanionActiveQrList
             initialQrs={activeQrs}
             patientName={patient.preferredName}
           />
-          <p className="text-sm text-secondary">
+          <p className="max-w-none rounded-2xl border-2 border-cyan-800 bg-white p-4 text-sm leading-6 text-secondary">
             Pilih fasilitas tempat Anda mendampingi {patient.preferredName} untuk membuat ConsentQR.
           </p>
           <KunjunganClient

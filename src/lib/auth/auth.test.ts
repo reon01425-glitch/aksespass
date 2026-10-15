@@ -375,6 +375,26 @@ describe("Autentikasi, Sesi Bertanda Tangan, Guard, OTP Tiruan, dan RLS (Bagian 
       ).rejects.toThrow("Tidak dapat masuk. Hubungi admin fasilitas.");
     });
 
+    it("halaman masuk pasien/pendamping menolak akun petugas, admin, dan kurator", async () => {
+      const cases: Array<[string, string]> = [
+        ["081299993781", "staff"],
+        ["081299993782", "facility_admin"],
+        ["081299993783", "curator"],
+      ];
+      for (const [phone, role] of cases) {
+        await adminClient.query(
+          "INSERT INTO users (role, phone, display_name, status) VALUES ($1, $2, $3, 'active');",
+          [role, normalizePhoneNumber(phone), `Uji ${role}`]
+        );
+        for (const intendedRole of ["patient", "companion"]) {
+          const r = await requestOtp(phone);
+          await expect(
+            verifyOtp(phone, r.devOtp!, { intendedRole })
+          ).rejects.toThrow(/tidak dapat dipakai di halaman pasien atau pendamping/);
+        }
+      }
+    });
+
     it("nomor baru dengan intendedRole patient membuat akun pasien", async () => {
       const newPhone = "081299993001";
       const req = await requestOtp(newPhone);

@@ -28,13 +28,14 @@ export default async function PasienTindakLanjutPage() {
       title="Tindak Lanjut"
       backHref="/pasien"
       backLabel="Kembali ke Beranda"
+      patientNav
     >
-      <div className="flex flex-col gap-6 max-w-full w-full">
+      <div className="flex flex-col gap-5 max-w-full w-full">
         <p className="text-base text-secondary">
           Kebutuhan yang Anda laporkan belum terpenuhi, beserta tanggapan fasilitas.
         </p>
         {items.length === 0 ? (
-          <p role="status" className="text-base text-main">
+          <p role="status" className="rounded-2xl border border-cyan-800 bg-white p-4 text-base text-main shadow-sm">
             Belum ada tindak lanjut. Laporan muncul di sini bila Anda menjawab
             &quot;sebagian&quot; atau &quot;belum&quot; pada konfirmasi kunjungan.
           </p>

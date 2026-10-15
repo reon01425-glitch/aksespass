@@ -43,7 +43,7 @@ export function NewActionButton({ category, categoryLabel }: { category: string;
         isLoading={busy}
         onClick={() => void create()}
         aria-label={`Buat Tindak Lanjut untuk ${categoryLabel}`}
-        className="w-full"
+        className="w-full px-2 text-sm"
       >
         Buat Tindak Lanjut
       </Button>

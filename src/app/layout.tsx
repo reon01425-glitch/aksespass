@@ -61,6 +61,10 @@ export default async function RootLayout({
         </a>
         <ServiceWorkerRegister />
         {children}
+        <div
+          id="toast-root"
+          className="pointer-events-none fixed inset-x-4 top-3 z-50 mx-auto flex max-w-md flex-col gap-2"
+        />
         {process.env.NODE_ENV === "development" && <DevAuditPanel />}
       </body>
     </html>

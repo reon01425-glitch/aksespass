@@ -31,7 +31,7 @@ export default async function TindakLanjutAdminPage({
   const items = await listFacilityActions(session);
   const { baru } = await searchParams;
   return (
-    <PageShell title="Tindak Lanjut" backHref="/admin/belum-terpenuhi" backLabel="Kembali ke Belum Terpenuhi">
+    <PageShell title="Tindak Lanjut" backHref="/admin/belum-terpenuhi" backLabel="Kembali ke Belum Terpenuhi" adminNav>
       <ActionListClient initialItems={items} highlightId={baru ?? null} />
     </PageShell>
   );

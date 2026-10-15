@@ -294,12 +294,13 @@ Mekanisme **[Usulan]**:
    - Pendamping yang sudah terdaftar di `companions` mengajukan akses sementara di hadapan petugas faskes.
    - Petugas faskes memverifikasi fisik pasien dan mengesahkan (*sign-off*) izin baca profil kebutuhan untuk kunjungan hari itu saja.
    - Tanpa jeda 24 jam; langsung aktif dengan cakupan terbatas pada faskes dan tanggal tersebut. Dicatat di `audit_events` dengan peran pengesah petugas.
-2. **Pemulihan Akun Penuh (*Full Account Recovery*):**
-   - Pendamping memulai permintaan pemulihan kepemilikan akun permanen.
-   - Server mengirim **kode verifikasi ke kontak pasien yang terdaftar** (bukan ke pendamping) dan notifikasi peringatan ke pasien.
-   - Pendamping memasukkan kode verifikasi.
-   - Berlaku jeda tunggu keselamatan **24 jam** (*cooling-off period*) sebelum hak pengalihan akun diberikan, memberi kesempatan pasien membatalkan jika terjadi penyalahgunaan.
-   - Semua langkah dicatat di `audit_events`.
+2. **Pemulihan Akun Penuh (*Full Account Recovery*):** **[Diputuskan, 16 Okt 2026; menggantikan rancangan awal]**
+   - Pendamping aktif memulai permintaan pemindahan akun ke **nomor baru** pasien (layar D9).
+   - Server mengirim **kode verifikasi ke nomor baru** (rancangan awal mengirimnya ke kontak lama, yang tidak berguna bila nomor itu hilang). Pendamping memasukkan kode.
+   - Berlaku jeda keselamatan (*cooling-off*) **24 jam** (`RECOVERY_COOLDOWN_MINUTES`). Selama jeda, pasien (bila masih bisa masuk) dan pendamping aktif mana pun dapat membatalkan; pemberitahuan tampil di dalam aplikasi (tanpa SMS pada prototipe).
+   - Setelah jeda, saat seseorang berhasil masuk dengan nomor baru, `users.phone` akun yang sama diganti (migrasi 023, fungsi `complete_account_recovery_pre_session`), sesi lama dicabut. Riwayat dan tautan tidak berubah.
+   - Satu permintaan tertunda per pasien dan per nomor. Tabel `account_recovery_requests` tidak dapat diakses langsung oleh aplikasi (hanya fungsi SECURITY DEFINER).
+   - Dicatat di `audit_events`: `recovery_requested`, `recovery_cancelled`, `recovery_completed` (tanpa nomor telepon).
 
 ---
 
@@ -319,6 +320,7 @@ Mekanisme **[Usulan]**:
 | `access_reported` | Pasien melaporkan akses yang tidak dikenali (P19) |
 | `recovery_*` | Setiap langkah pemulihan |
 | `account_deleted` | Pasien menghapus akun (P23) |
+| `recovery_requested`, `recovery_cancelled`, `recovery_completed` | Pendamping mengajukan, pasien atau pendamping membatalkan, dan nomor akun dipindahkan (D9) |
 
 Nama kejadian baru di atas **[Usulan]**; maknanya mengikuti `docs/user-flows.md`.
 
@@ -385,7 +387,7 @@ Nama kejadian baru di atas **[Usulan]**; maknanya mengikuti `docs/user-flows.md`
 
 - Font Atkinson Hyperlegible Next dimuat lokal (self-hosted, `font-display: swap`), bukan dari CDN pihak ketiga.
 - Semua ukuran berbasis `rem`; uji pada text scaling 200% dan lebar 320 px.
-- Komponen status (`StatusBanner`) satu-satunya cara menampilkan status, agar ikon + teks + warna selalu konsisten.
+- Komponen status (`StatusBanner`) satu-satunya cara menampilkan status, agar tampilan selalu konsisten (sejak 16 Okt 2026: palet Cyan, tanpa ikon, makna lewat judul teks; lihat `design.md` §2B).
 - Fokus keyboard terlihat; hormati `prefers-reduced-motion`.
 - Input 16 px untuk mencegah auto-zoom iOS Safari.
 - Pesan galat memberi langkah lanjut (contoh: "Minta pasien memperbarui ConsentQR di aplikasinya.").

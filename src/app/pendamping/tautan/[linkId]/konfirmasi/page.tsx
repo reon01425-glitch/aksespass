@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ChevronRight, ClipboardCheck } from "lucide-react";
 import { PageShell } from "@/components";
 import { COOKIE_NAME, SECURE_COOKIE_NAME } from "@/lib/auth/constants";
 import { verifySessionCookie } from "@/lib/auth/session";
@@ -78,8 +77,8 @@ export default async function CompanionKonfirmasiPage({
         backHref="/pendamping"
         backLabel="Kembali ke Beranda Pendamping"
       >
-        <div className="flex flex-col gap-6 max-w-full w-full">
-          <div className="p-5 rounded-2xl bg-surface border border-cyan-200 text-center">
+        <div className="flex flex-col gap-5 max-w-full w-full">
+          <div className="p-5 rounded-2xl bg-white border border-cyan-800 text-center shadow-sm">
             <p className="text-base text-secondary">
               Tidak ada kunjungan yang perlu dikonfirmasi saat ini untuk{" "}
               <strong className="text-main">{patient.preferredName}</strong>.
@@ -113,15 +112,15 @@ export default async function CompanionKonfirmasiPage({
         backHref="/pendamping"
         backLabel="Kembali ke Beranda Pendamping"
       >
-        <div className="flex flex-col gap-6 max-w-full w-full">
-          <p className="text-base text-secondary">
+        <div className="flex flex-col gap-5 max-w-full w-full">
+          <p className="max-w-none rounded-2xl border-2 border-cyan-800 bg-white p-4 text-sm leading-6 text-secondary">
             Pilih kunjungan {patient.preferredName} yang ingin Anda konfirmasi
             sebagai pendamping.
           </p>
 
           <nav
             aria-label="Daftar Kunjungan untuk Dikonfirmasi"
-            className="flex flex-col gap-4"
+            className="flex flex-col gap-3"
           >
             {visits.map((item) => {
               const byLabel = item.currentAnswer
@@ -131,12 +130,9 @@ export default async function CompanionKonfirmasiPage({
                 <Link
                   key={item.visitId}
                   href={`/pendamping/tautan/${linkId}/konfirmasi?visitId=${item.visitId}`}
-                  className="flex items-start justify-between p-5 rounded-2xl bg-white border border-cyan-200 hover:border-cyan-400 hover:bg-cyan-50 focus:outline-none focus:ring-4 focus:ring-cyan-900 transition-colors shadow-sm min-h-12"
+                  className="flex items-start justify-between p-4 rounded-2xl bg-white border border-cyan-800 hover:bg-cyan-50 focus:outline-none focus:ring-4 focus:ring-cyan-900 transition-colors shadow-sm min-h-12"
                 >
-                  <div className="flex items-start gap-4 min-w-0">
-                    <div className="p-3 rounded-xl bg-cyan-100 text-cyan-900 shrink-0">
-                      <ClipboardCheck className="w-6 h-6" aria-hidden="true" />
-                    </div>
+                  <div className="flex items-start min-w-0">
                     <div className="flex flex-col min-w-0">
                       <span className="text-lg font-bold text-main break-words">
                         {item.facilityName}
@@ -147,10 +143,6 @@ export default async function CompanionKonfirmasiPage({
                       </span>
                     </div>
                   </div>
-                  <ChevronRight
-                    className="w-5 h-5 text-secondary shrink-0 mt-3 ml-2"
-                    aria-hidden="true"
-                  />
                 </Link>
               );
             })}

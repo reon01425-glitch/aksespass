@@ -5,6 +5,24 @@ import { Button } from "./button";
 import { clearAllPassportDrafts } from "@/lib/passport/draft";
 import { clearOfflineSummary } from "@/lib/passport/offline-summary";
 
+/** Mencabut sesi di server, membersihkan data lokal pengguna, lalu menuju halaman masuk. */
+export async function performLogout(redirectTo = "/masuk") {
+  try {
+    // Draft paspor hanya untuk perangkat yang sedang dipakai pemiliknya.
+    clearAllPassportDrafts();
+    // Ringkasan offline juga milik pengguna yang sedang masuk.
+    clearOfflineSummary();
+    await fetch("/api/auth/logout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch {
+    // Abaikan galat jaringan, tetap arahkan ke halaman masuk
+  } finally {
+    window.location.href = redirectTo;
+  }
+}
+
 export interface LogoutButtonProps {
   className?: string;
   redirectTo?: string;
@@ -22,21 +40,8 @@ export function LogoutButton({
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handleLogout = async () => {
-    try {
-      setIsProcessing(true);
-      // Draft paspor hanya untuk perangkat yang sedang dipakai pemiliknya.
-      clearAllPassportDrafts();
-      // Ringkasan offline juga milik pengguna yang sedang masuk.
-      clearOfflineSummary();
-      await fetch("/api/auth/logout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-    } catch {
-      // Abaikan galat jaringan, tetap arahkan ke halaman masuk
-    } finally {
-      window.location.href = redirectTo;
-    }
+    setIsProcessing(true);
+    await performLogout(redirectTo);
   };
 
   return (

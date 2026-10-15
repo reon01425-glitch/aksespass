@@ -1,6 +1,9 @@
 import React from "react";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { AppHeader } from "./app-header";
+import { PetugasBottomNav } from "./petugas-bottom-nav";
+import { CompanionBottomNav } from "./companion-bottom-nav";
+import { AdminBottomNav } from "./admin-bottom-nav";
+import { PatientBottomNav } from "./patient-bottom-nav";
 
 export interface PageShellProps {
   title: string;
@@ -10,6 +13,14 @@ export interface PageShellProps {
   className?: string;
   titleRef?: React.Ref<HTMLHeadingElement>;
   titleTabIndex?: number;
+  /** Tampilkan navigasi bawah petugas (Beranda, Pindai, Kartu). */
+  petugasNav?: boolean;
+  /** Tampilkan navigasi bawah pendamping (Beranda, Tautkan, Keluar). */
+  companionNav?: boolean;
+  /** Tampilkan navigasi bawah admin fasilitas. */
+  adminNav?: boolean;
+  /** Tampilkan navigasi bawah pasien. */
+  patientNav?: boolean;
 }
 
 export function PageShell({
@@ -20,36 +31,31 @@ export function PageShell({
   className = "",
   titleRef,
   titleTabIndex,
+  petugasNav = false,
+  companionNav = false,
+  adminNav = false,
+  patientNav = false,
 }: PageShellProps) {
   return (
     <div className="min-h-full flex flex-col w-full bg-page text-main">
-      <header className="w-full border-b border-cyan-100 bg-white px-4 py-3">
-        <div className="max-w-2xl mx-auto flex items-center gap-3 w-full min-w-0">
-          {backHref && (
-            <Link
-              href={backHref}
-              aria-label={backLabel}
-              className="inline-flex items-center justify-center min-w-12 min-h-12 shrink-0 rounded-lg text-main hover:bg-cyan-100 focus:outline-none focus:ring-4 focus:ring-cyan-900"
-            >
-              <ArrowLeft className="w-6 h-6" aria-hidden="true" />
-            </Link>
-          )}
-          <h1
-            ref={titleRef}
-            tabIndex={titleTabIndex}
-            className="font-bold text-main break-words min-w-0 flex-1 focus:outline-none"
-          >
-            {title}
-          </h1>
-        </div>
-      </header>
+      <AppHeader
+        title={title}
+        backHref={backHref}
+        backLabel={backLabel}
+        titleRef={titleRef}
+        titleTabIndex={titleTabIndex}
+      />
       <main
         id="main-content"
         tabIndex={-1}
-        className={`flex-1 max-w-2xl w-full mx-auto px-4 py-6 focus:outline-none min-w-0 ${className}`.trim()}
+        className={`flex-1 max-w-2xl w-full mx-auto px-4 py-6 focus:outline-none min-w-0 ${petugasNav || companionNav || adminNav || patientNav ? "pb-28" : ""} ${className}`.trim()}
       >
         {children}
       </main>
+      {petugasNav && <PetugasBottomNav />}
+      {companionNav && <CompanionBottomNav />}
+      {adminNav && <AdminBottomNav />}
+      {patientNav && <PatientBottomNav />}
     </div>
   );
 }

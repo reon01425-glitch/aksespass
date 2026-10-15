@@ -13,7 +13,11 @@ import {
   type ReadingMode,
   type TextSize,
 } from "@/lib/preferences";
-import { Check, ShieldCheck } from "lucide-react";
+
+const CARD = "rounded-2xl border border-cyan-800 bg-white p-4 shadow-sm";
+const OPT = "min-h-12 rounded-2xl border-2 bg-white px-3 py-2 text-center shadow-sm transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900";
+const ON = "border-cyan-800 font-bold text-main";
+const OFF = "border-cyan-200 text-secondary";
 
 export function MulaiClient() {
   const router = useRouter();
@@ -59,9 +63,9 @@ export function MulaiClient() {
 
   return (
     <PageShell title="Pengaturan Awal Aksesibilitas">
-      <div className="flex flex-col gap-6">
+      <div className="flex w-full max-w-full flex-col gap-5">
         {/* Indikator Langkah */}
-        <div className="flex items-center justify-between border-b border-cyan-100 pb-2">
+        <div className={`flex items-center justify-between ${CARD}`}>
           <span
             className="text-sm font-bold text-main"
             aria-current="step"
@@ -76,33 +80,27 @@ export function MulaiClient() {
         </div>
 
         {/* Pernyataan Privasi Wajib */}
-        <div className="flex items-center gap-2 p-3 rounded-lg bg-surface border border-cyan-400">
-          <ShieldCheck aria-hidden="true" className="w-5 h-5 text-cyan-600 shrink-0" />
-          <p className="text-sm text-main">
-            Aplikasi ini tidak meminta diagnosis medis Anda.
-          </p>
-        </div>
+        <p className="rounded-2xl border-2 border-cyan-800 bg-white p-4 text-sm leading-6 text-main shadow-sm">
+          Aplikasi ini tidak meminta diagnosis medis Anda.
+        </p>
 
         {/* LANGKAH 1: Bahasa */}
         {step === 1 && (
-          <section aria-labelledby="heading-step-1" className="flex flex-col gap-4">
+          <section aria-labelledby="heading-step-1" className="flex flex-col gap-5">
             <h2 id="heading-step-1" className="text-xl font-bold text-main">
               Pilih Bahasa Layanan
             </h2>
-            <p className="text-base text-main">
+            <p className="text-base leading-7 text-main">
               AKSESPASS menggunakan kalimat ringkas dan jelas untuk mempermudah komunikasi dengan petugas.
             </p>
 
-            <div className="flex items-center justify-between p-4 rounded-xl border-2 border-cyan-800 bg-surface">
-              <div className="flex flex-col">
-                <span className="text-base font-bold text-main">
-                  Bahasa Indonesia (Sederhana)
-                </span>
-                <span className="text-sm text-secondary">
-                  Satu-satunya pilihan bahasa saat ini
-                </span>
-              </div>
-              <Check aria-hidden="true" className="w-6 h-6 text-cyan-800 shrink-0" />
+            <div className="flex flex-col rounded-2xl border-2 border-cyan-800 bg-white p-4 shadow-sm">
+              <span className="text-base font-bold text-main">
+                Bahasa Indonesia (Sederhana)
+              </span>
+              <span className="text-sm text-secondary">
+                Satu-satunya pilihan bahasa saat ini. Terpilih.
+              </span>
             </div>
           </section>
         )}
@@ -113,16 +111,17 @@ export function MulaiClient() {
             <h2 id="heading-step-2" className="text-xl font-bold text-main">
               Ukuran Teks dan Kontras
             </h2>
-            <p className="text-base text-main">
+            <p className="text-base leading-7 text-main">
               Pilih kenyamanan membaca yang sesuai untuk Anda. Tampilan di bawah akan berubah langsung.
             </p>
 
             {/* Pilihan Ukuran Teks */}
-            <fieldset className="flex flex-col gap-2">
-              <legend className="text-sm font-bold text-main mb-1">
+            <div className={CARD}>
+            <fieldset className="m-0 flex min-w-0 flex-col gap-3 border-0 p-0">
+              <legend className="mb-3 w-full text-sm font-bold text-main">
                 Ukuran Teks
               </legend>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 gap-3">
                 {(["100", "150", "200"] as const).map((size) => {
                   const isSelected = textSize === size;
                   return (
@@ -131,11 +130,7 @@ export function MulaiClient() {
                       type="button"
                       onClick={() => setTextSize(size)}
                       aria-pressed={isSelected}
-                      className={`min-h-[48px] px-3 py-2 rounded-lg font-bold border text-center transition-colors ${
-                        isSelected
-                          ? "bg-cyan-700 text-white border-cyan-700 ring-2 ring-cyan-900"
-                          : "bg-surface text-main border-cyan-800"
-                      }`}
+                      className={`${OPT} ${isSelected ? ON : OFF}`}
                     >
                       {size}%
                     </button>
@@ -143,13 +138,15 @@ export function MulaiClient() {
                 })}
               </div>
             </fieldset>
+            </div>
 
             {/* Pilihan Kontras */}
-            <fieldset className="flex flex-col gap-2">
-              <legend className="text-sm font-bold text-main mb-1">
+            <div className={CARD}>
+            <fieldset className="m-0 flex min-w-0 flex-col gap-3 border-0 p-0">
+              <legend className="mb-3 w-full text-sm font-bold text-main">
                 Pilihan Kontras
               </legend>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-3">
                 {(
                   [
                     { val: "standard", label: "Standar" },
@@ -163,11 +160,7 @@ export function MulaiClient() {
                       type="button"
                       onClick={() => setContrast(c.val)}
                       aria-pressed={isSelected}
-                      className={`min-h-[48px] px-4 py-2 rounded-lg font-bold border text-center transition-colors ${
-                        isSelected
-                          ? "bg-cyan-700 text-white border-cyan-700 ring-2 ring-cyan-900"
-                          : "bg-surface text-main border-cyan-800"
-                      }`}
+                      className={`${OPT} ${isSelected ? ON : OFF}`}
                     >
                       {c.label}
                     </button>
@@ -175,14 +168,11 @@ export function MulaiClient() {
                 })}
               </div>
             </fieldset>
+            </div>
 
             {/* Kotak Pratinjau Langsung */}
             <div
-              className={`p-4 rounded-xl border-2 transition-all ${
-                contrast === "high"
-                  ? "bg-white border-cyan-800"
-                  : "bg-surface border-cyan-400"
-              }`}
+              className={`rounded-2xl border-2 border-cyan-800 bg-white p-4 shadow-sm ${contrast === "high" ? "" : ""}`.trim()}
               aria-live="polite"
               aria-atomic="true"
             >
@@ -221,20 +211,21 @@ export function MulaiClient() {
 
         {/* LANGKAH 3: Mode Pembaca Layar */}
         {step === 3 && (
-          <section aria-labelledby="heading-step-3" className="flex flex-col gap-4">
+          <section aria-labelledby="heading-step-3" className="flex flex-col gap-5">
             <h2 id="heading-step-3" className="text-xl font-bold text-main">
               Mode Pembaca Layar
             </h2>
-            <p className="text-base text-main">
+            <p className="text-base leading-7 text-main">
               Pilih apakah Anda memakai pembaca layar bawaan ponsel, seperti
               TalkBack (Android) atau VoiceOver (iPhone/iPad).
             </p>
 
-            <fieldset className="flex flex-col gap-2">
-              <legend className="text-sm font-bold text-main mb-1">
+            <div className={CARD}>
+            <fieldset className="m-0 flex min-w-0 flex-col gap-3 border-0 p-0">
+              <legend className="mb-3 w-full text-sm font-bold text-main">
                 Mode Pembaca Layar
               </legend>
-              <div className="grid grid-cols-1 gap-2">
+              <div className="grid grid-cols-1 gap-3">
                 {(
                   [
                     {
@@ -256,43 +247,40 @@ export function MulaiClient() {
                       type="button"
                       onClick={() => setReadingMode(m.val)}
                       aria-pressed={isSelected}
-                      className={`min-h-[48px] px-4 py-3 rounded-lg border text-left transition-colors ${
-                        isSelected
-                          ? "bg-cyan-700 text-white border-cyan-700 ring-2 ring-cyan-900"
-                          : "bg-surface text-main border-cyan-800"
-                      }`}
+                      className={`${OPT} text-left ${isSelected ? ON : OFF}`}
                     >
                       <span className="block font-bold">{m.label}</span>
-                      <span className="block text-sm">{m.desc}</span>
+                      <span className="block text-sm font-normal text-secondary">{m.desc}</span>
                     </button>
                   );
                 })}
               </div>
             </fieldset>
+            </div>
 
-            <div className="p-4 rounded-xl border border-cyan-800 bg-surface flex flex-col gap-2">
+            <div className={`flex flex-col gap-2 ${CARD}`}>
               <span className="text-base font-bold text-main">
                 Catatan Jujur
               </span>
               <p className="text-sm text-secondary">
                 Pilihan ini baru disimpan sebagai preferensi dan belum mengubah
                 tampilan. Aplikasi belum diuji dengan TalkBack atau VoiceOver.
-                Teks-ke-suara untuk berbicara dengan petugas akan tersedia
-                lewat KomunikaCare pada tahap berikutnya.
+                Teks-ke-suara untuk berbicara dengan petugas sudah tersedia
+                di menu KomunikaCare (bergantung pada dukungan peramban).
               </p>
             </div>
           </section>
         )}
 
         {/* Tombol Aksi Bawah */}
-        <div className="flex flex-col gap-3 pt-4 border-t border-cyan-100">
+        <div className="flex flex-col gap-3">
           <div className="flex items-center gap-3">
             {step > 1 && (
               <Button
                 variant="secondary"
                 onClick={handleBack}
                 disabled={isSaving}
-                className="flex-1"
+                className="flex-1 rounded-2xl!"
               >
                 Kembali
               </Button>
@@ -301,7 +289,7 @@ export function MulaiClient() {
               variant="primary"
               onClick={handleNext}
               isLoading={isSaving}
-              className="flex-1"
+              className="flex-1 rounded-2xl!"
             >
               {step === 3 ? "Lanjut ke Masuk" : "Lanjut"}
             </Button>
@@ -311,7 +299,7 @@ export function MulaiClient() {
             type="button"
             onClick={handleSkip}
             disabled={isSaving}
-            className="min-h-[48px] py-2 text-center text-sm font-bold text-link underline focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900 rounded-lg"
+            className="flex min-h-12 w-full items-center justify-center rounded-2xl border border-cyan-800 bg-white px-4 py-2 text-center text-sm font-bold text-cyan-900 shadow-sm focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900 disabled:opacity-60"
           >
             Lewati (Gunakan Pengaturan Bawaan)
           </button>

@@ -28,7 +28,7 @@ export default async function UbahPetugasPage({
   const item = (await listStaff(session)).find((s) => s.userId === userId);
   if (!item) notFound();
   return (
-    <PageShell title="Ubah Petugas" backHref="/admin/petugas" backLabel="Kembali ke Akun Petugas">
+    <PageShell title="Ubah Petugas" backHref="/admin/petugas" backLabel="Kembali ke Akun Petugas" adminNav>
       <StaffFormClient
         mode="ubah"
         userId={item.userId}

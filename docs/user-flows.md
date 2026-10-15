@@ -45,16 +45,16 @@ Pasien memulai dari splash screen, menyesuaikan aksesibilitas, mendaftar, lalu m
 - **Aksi Alternatif:** [Lewati] memakai pengaturan bawaan; dapat diubah kapan saja di [P22].
 - **Navigasi:** → [P3].
 - **US:** P-01 (aksesibilitas formulir), nonfungsional.
-- **Catatan implementasi (Prompt 9):** Bahasa hari ini hanya Indonesia sederhana. Pengaturan teks-ke-suara ditunda (bagian KomunikaCare); langkah 3 hanya memuat informasi dukungan pembaca layar sistem (TalkBack/VoiceOver).
+- **Catatan implementasi (Prompt 9):** Bahasa hari ini hanya Indonesia sederhana. Pilihan mode pembaca layar hanya tersimpan sebagai preferensi dan belum mengubah tampilan (diputuskan 16 Okt 2026, "Catatan Jujur" memuatnya); teks-ke-suara sudah ada di KomunikaCare [P15].
 
 ### [P3] Daftar atau Masuk
 - **Tampilan:** satu kolom nomor HP, [Kirim kode], lalu kolom kode verifikasi (OTP). Tautan [Masuk dengan bantuan pendamping]. Kotak persetujuan opsional terpisah: izinkan kunjungan saya dihitung dalam statistik anonim fasilitas.
 - **Aksi Utama:** pasien memasukkan kontak, menerima kode, memasukkan kode. Akun baru dibuat otomatis bila belum ada.
-- **Aksi Alternatif atau Error:** kode salah atau kedaluwarsa → pesan sederhana dan opsi kirim ulang. Lupa akses → pemulihan lewat kontak yang sama atau lewat pendamping yang tertaut.
+- **Aksi Alternatif atau Error:** kode salah atau kedaluwarsa → pesan sederhana dan opsi kirim ulang. Lupa akses → pemulihan lewat kontak yang sama atau lewat pendamping yang tertaut ([D9]).
 - **Navigasi:** akun baru → [P4] (dengan ajakan "Isi Paspor"); akun lama → [P4].
 - **US:** P-01.
 - **Catatan implementasi (Prompt 9):**
-  - Alur lupa akses/pemulihan dan aktivasi akun lewat undangan ditunda.
+  - Pemulihan lewat pendamping dibangun di [D9] (16 Okt 2026); aktivasi akun lewat undangan tetap ditunda.
   - Penyesuaian alur: akun baru mendarat di [P4] dengan ajakan utama "Isi Paspor" (bukan langsung melompat ke [P5]), agar tombol [Keluar] tetap terjangkau dan pengguna memiliki orientasi beranda yang jelas.
 
 ### [P4] Beranda Pasien
@@ -93,7 +93,7 @@ Satu kelompok kebutuhan per layar, dengan indikator langkah (misalnya 2 dari 5).
 - **US:** P-14, T-05.
 
 ### [P8] Mode Offline (PWA)
-- **Tampilan:** ringkasan kebutuhan besar untuk ditunjukkan ke petugas, tanda "Mode offline", status sinkron terakhir.
+- **Tampilan:** ringkasan kebutuhan besar untuk ditunjukkan ke petugas, **Kode Kartu pasien (ABCD-EFGH) bila sudah ada** agar petugas dapat memakai jalur [T4b] walau tanpa sinyal (diperbarui 16 Okt 2026; ikut diperbarui saat Kode Kartu dibuat ulang di [P7]), tanda "Mode offline", status sinkron terakhir.
 - **Aksi Utama:** pasien menunjukkan layar ke petugas. Dapat dibuka tanpa sinyal dari ikon aplikasi.
 - **Aksi Alternatif:** perubahan atau konfirmasi saat offline masuk antrean lokal dan tersinkron otomatis saat online, dengan status "menunggu sinkron".
 - **Navigasi:** [Kembali] → [P4].
@@ -274,6 +274,15 @@ Pendamping bertindak atas nama pasien hanya setelah pasien menyetujui tautan, da
 - **Aksi Alternatif:** jawaban pendamping dicatat dengan `confirmed_by = 'companion'`. Bila pasien sudah mengonfirmasi duluan, pendamping ditolak (409 "Pasien sudah mengonfirmasi"). Jika pasien mengonfirmasi setelah pendamping, jawaban pasien menimpa jawaban pendamping.
 - **Navigasi:** → [D4].
 - **US:** D-03.
+
+### [D9] Pemulihan Nomor Akun Pasien **[Disetujui, 16 Okt 2026]**
+- **Tampilan:** dibuka dari kartu pasien di [D4] ("Pemulihan Akun"). Penjelasan singkat (riwayat, paspor, dan tautan tetap ada; kode dikirim ke nomor baru; ada jeda keselamatan; pasien dan pendamping lain dapat membatalkan), kolom nomor HP baru pasien, [Kirim Kode ke Nomor Baru], kolom kode, [Ajukan Pemulihan]. Setelah diajukan, halaman menampilkan status ("Pemulihan Nomor Akun Diajukan": nomor baru tersamar, waktu nomor mulai dapat diganti) dan [Batalkan Permintaan].
+- **Aksi Utama:** pendamping aktif mengajukan pemindahan akun pasien ke nomor baru. Kode verifikasi dikirim ke nomor BARU (bukan nomor lama yang mungkin hilang). Satu permintaan tertunda per pasien dan per nomor; nomor yang sudah dipakai akun lain ditolak dengan pesan generik.
+- **Jeda keselamatan:** bawaan 24 jam (`RECOVERY_COOLDOWN_MINUTES` mengubahnya, mis. untuk demo). Selama jeda: pasien (bila masih bisa masuk) melihat pemberitahuan di [P4] dengan [Batalkan Permintaan]; semua pendamping aktif lain melihatnya di [D4] dengan tombol batal yang sama. Mencoba masuk dengan nomor baru sebelum jeda berakhir ditolak dengan pesan berisi waktu ("Nomor ini sedang dalam jeda keselamatan pemulihan akun").
+- **Penyelesaian:** setelah jeda, masuk di [P3] dengan nomor baru dan kode verifikasi memindahkan nomor akun yang sama (riwayat, paspor, tautan utuh); sesi lama pasien dicabut; nomor lama tidak lagi terhubung ke akun itu. Bila nomor baru keburu dipakai akun lain, permintaan tidak dilanjutkan.
+- **Audit:** `recovery_requested`, `recovery_cancelled`, `recovery_completed` (tanpa nomor telepon), tampil di riwayat akses pasien ([P19]).
+- **Batasan prototipe:** tidak ada SMS atau notifikasi dorong; "pemberitahuan" hanya tampil di dalam aplikasi saat pasien atau pendamping lain membukanya.
+- **US:** D-04 (usulan).
 
 ---
 

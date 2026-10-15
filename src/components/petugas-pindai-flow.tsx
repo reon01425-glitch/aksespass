@@ -18,11 +18,7 @@ import { formatVisitTimeWIB } from "@/lib/visits/format";
 import { PetugasKomunikaPanel } from "@/components/petugas-komunikacare-panel";
 import type { Html5Qrcode } from "html5-qrcode";
 import {
-  Camera,
-  CameraOff,
   Sparkles,
-  ArrowLeft,
-  ArrowRight,
   Hand,
   FileText,
   MessageSquare,
@@ -35,8 +31,6 @@ import {
   VolumeX,
   ListChecks,
   Users,
-  CheckCircle2,
-  AlertTriangle,
 } from "lucide-react";
 
 export type PindaiStep = "pindai" | "kebutuhan" | "saran" | "catat" | "konfirmasi";
@@ -640,12 +634,14 @@ export function PetugasPindaiClient({
         title="Pindai ConsentQR"
         titleRef={stepHeadingRef}
         titleTabIndex={-1}
+        petugasNav
         backHref={returnHref}
         backLabel="Ke Beranda Petugas"
       >
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-5">
           {banner && (
             <StatusBanner
+              floating
               variant={banner.variant}
               icon={banner.icon}
               title={banner.title}
@@ -657,7 +653,7 @@ export function PetugasPindaiClient({
           {/* Area Kamera */}
           <section
             aria-labelledby="heading-camera"
-            className="flex flex-col gap-4 p-4 rounded-xl border border-cyan-800 bg-white shadow-sm"
+            className="flex flex-col gap-4 p-4 rounded-2xl border border-cyan-800 bg-white shadow-sm"
           >
             <div className="flex items-center justify-between">
               <h2 id="heading-camera" className="text-base font-bold text-main">
@@ -676,7 +672,7 @@ export function PetugasPindaiClient({
 
             <div
               id="qr-reader-container"
-              className={`w-full overflow-hidden rounded-lg bg-surface border border-cyan-200 ${
+              className={`w-full overflow-hidden rounded-2xl border border-dashed border-cyan-800 bg-white ${
                 isCameraActive ? "min-h-64" : "min-h-16 flex items-center justify-center"
               }`}
             >
@@ -693,19 +689,17 @@ export function PetugasPindaiClient({
                   variant="primary"
                   onClick={startCamera}
                   disabled={isSubmitting}
-                  className="w-full flex items-center justify-center gap-2"
+                  className="w-full"
                 >
-                  <Camera aria-hidden="true" className="w-5 h-5 shrink-0" />
-                  <span>Mulai kamera</span>
+                  Mulai kamera
                 </Button>
               ) : (
                 <Button
                   variant="secondary"
                   onClick={stopCamera}
-                  className="w-full flex items-center justify-center gap-2"
+                  className="w-full"
                 >
-                  <CameraOff aria-hidden="true" className="w-5 h-5 shrink-0" />
-                  <span>Hentikan kamera</span>
+                  Hentikan kamera
                 </Button>
               )}
             </div>
@@ -714,7 +708,7 @@ export function PetugasPindaiClient({
           {/* Input Kode Manual */}
           <section
             aria-labelledby="heading-manual"
-            className="flex flex-col gap-4 p-4 rounded-xl border border-cyan-800 bg-white shadow-sm"
+            className="flex flex-col gap-4 p-4 rounded-2xl border border-cyan-800 bg-white shadow-sm"
           >
             <h2 id="heading-manual" className="text-base font-bold text-main">
               Masukkan Kode Manual
@@ -767,7 +761,7 @@ export function PetugasPindaiClient({
           titleRef={stepHeadingRef}
           titleTabIndex={-1}
         >
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-5">
             <StatusBanner
               variant="warning"
               title="Data Pasien Disembunyikan"
@@ -799,7 +793,7 @@ export function PetugasPindaiClient({
         titleRef={stepHeadingRef}
         titleTabIndex={-1}
       >
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-5">
           {scanData.expiresSoon ? (
             <StatusBanner
               variant="warning"
@@ -821,7 +815,7 @@ export function PetugasPindaiClient({
             privacyNoteDescription="Hanya data yang diizinkan pasien. Diagnosis tidak diminta."
           />
 
-          <div className="flex flex-col gap-3 pt-4 border-t border-cyan-100">
+          <div className="flex flex-col gap-3">
             <Button
               variant="primary"
               onClick={() => {
@@ -830,10 +824,9 @@ export function PetugasPindaiClient({
                 }
                 setStep("saran");
               }}
-              className="w-full flex items-center justify-center gap-2 text-base"
+              className="w-full text-base"
             >
-              <Sparkles aria-hidden="true" className="w-5 h-5 shrink-0" />
-              <span>Lihat Saran</span>
+              Lihat Saran
             </Button>
 
             <Button
@@ -861,22 +854,19 @@ export function PetugasPindaiClient({
         titleRef={stepHeadingRef}
         titleTabIndex={-1}
       >
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-5">
           {/* Label Tetap Batasan Klinis */}
-          <div className="p-4 rounded-xl bg-cyan-50 border border-cyan-800 flex flex-col gap-2">
-            <div className="flex items-center gap-2 text-main">
-              <AlertTriangle className="w-5 h-5 shrink-0 text-cyan-900" aria-hidden="true" />
-              <span className="text-sm font-bold">
-                Saran, bukan instruksi klinis. Keputusan tetap di tangan tenaga kesehatan.
-              </span>
-            </div>
-            <p className="text-sm text-secondary">
+          <div className="flex flex-col gap-1 rounded-2xl border-2 border-cyan-800 bg-white p-4">
+            <span className="text-sm font-bold text-main">
+              Saran, bukan instruksi klinis. Keputusan tetap di tangan tenaga kesehatan.
+            </span>
+            <p className="text-sm leading-6 text-secondary">
               Panggil pasien secara langsung dan visual sesuai saran di atas.
             </p>
           </div>
 
           {/* Konteks Pasien */}
-          <div className="p-3 rounded-lg bg-surface border border-cyan-200 flex items-center justify-between">
+          <div className="flex items-center justify-between gap-3 rounded-2xl border border-cyan-800 bg-white p-4 shadow-sm">
             <span className="text-sm font-bold text-main">
               Pasien: {scanData.preferredName || scanData.namaPanggilan || "Pasien"}
             </span>
@@ -894,6 +884,7 @@ export function PetugasPindaiClient({
 
           {suggestionsError && (
             <StatusBanner
+              floating
               variant="error"
               title="Gagal Memuat Saran"
               message={suggestionsError}
@@ -911,25 +902,25 @@ export function PetugasPindaiClient({
           {/* Daftar Saran Tindakan */}
           {!isLoadingSuggestions && suggestions.length > 0 && (
             <section aria-label="Daftar Saran Tindakan" className="flex flex-col gap-3">
-              <h2 className="text-sm font-bold text-secondary uppercase tracking-wider">
+              <h2 className="text-lg font-bold text-main">
                 Panduan Pelayanan
               </h2>
-              <div className="flex flex-col gap-3">
+              <div className="grid grid-cols-2 gap-3 [&>*:last-child:nth-child(odd)]:col-span-2">
                 {suggestions.map((sug) => (
                   <div
                     key={sug.id}
-                    className="p-4 rounded-xl bg-white border border-cyan-800 shadow-sm flex flex-col gap-2"
+                    className="flex min-w-0 flex-col items-start gap-2 rounded-2xl border border-cyan-800 bg-white p-4 shadow-sm"
                   >
-                    <div className="flex items-start gap-3">
+                    <span
+                      aria-hidden="true"
+                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-cyan-100"
+                    >
                       {renderRuleIcon(sug.iconName)}
-                      <div className="flex flex-col gap-1 min-w-0 flex-1">
-                        <span className="text-base sm:text-lg font-bold text-main break-words">
-                          {sug.actionText}
-                        </span>
-                        <span className="text-xs text-secondary">
-                          Versi {sug.version} • {sug.source}
-                        </span>
-                      </div>
+                    </span>
+                    <div className="flex min-w-0 flex-1 flex-col justify-center">
+                      <span className="break-words text-base font-bold leading-snug text-main">
+                        {sug.actionText}
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -939,7 +930,7 @@ export function PetugasPindaiClient({
 
           {/* Kebutuhan Tanpa Aturan Terbitan */}
           {!isLoadingSuggestions && uncoveredNeeds.length > 0 && (
-            <div className="p-4 rounded-xl bg-white border border-cyan-200 flex flex-col gap-2">
+            <div className="flex flex-col gap-2 rounded-2xl border border-cyan-800 bg-white p-4 shadow-sm">
               <span className="text-sm font-bold text-main">
                 Belum ada saran untuk:
               </span>
@@ -956,7 +947,7 @@ export function PetugasPindaiClient({
           {/* Panggil Pasien */}
           <section
             aria-labelledby="heading-panggil"
-            className="flex flex-col gap-3 p-4 rounded-xl bg-white border border-cyan-800"
+            className="flex flex-col gap-3 rounded-2xl border border-cyan-800 bg-white p-4 shadow-sm"
           >
             <h2 id="heading-panggil" className="text-base font-bold text-main">
               Panggil Pasien
@@ -973,13 +964,13 @@ export function PetugasPindaiClient({
               variant="secondary"
               onClick={handleCallPatient}
               isLoading={isCalling}
-              className="w-full flex items-center justify-center gap-2"
+              className="w-full"
             >
-              <BellRing aria-hidden="true" className="w-5 h-5 shrink-0" />
-              <span>Panggil Pasien</span>
+              Panggil Pasien
             </Button>
             {callResult && (
               <StatusBanner
+                floating
                 variant={callResult.ok ? "success" : "error"}
                 title={callResult.ok ? "Panggilan terkirim" : "Gagal memanggil"}
                 message={callResult.message}
@@ -991,23 +982,21 @@ export function PetugasPindaiClient({
           <PetugasKomunikaPanel visitId={scanData.visitId} />
 
           {/* Tombol Aksi Layar T6 */}
-          <div className="flex flex-col gap-3 pt-4 border-t border-cyan-100">
+          <div className="flex flex-col gap-3">
             <Button
               variant="primary"
               onClick={() => setStep("catat")}
-              className="w-full flex items-center justify-center gap-2 text-base"
+              className="w-full text-base"
             >
-              <span>Lanjut: Catat Bantuan</span>
-              <ArrowRight aria-hidden="true" className="w-5 h-5 shrink-0" />
+              Lanjut: Catat Bantuan
             </Button>
 
             <Button
               variant="secondary"
               onClick={() => setStep("kebutuhan")}
-              className="w-full flex items-center justify-center gap-2"
+              className="w-full"
             >
-              <ArrowLeft aria-hidden="true" className="w-4 h-4" />
-              <span>Kembali ke Kebutuhan</span>
+              Kembali ke Kebutuhan
             </Button>
           </div>
         </div>
@@ -1027,9 +1016,9 @@ export function PetugasPindaiClient({
         titleRef={stepHeadingRef}
         titleTabIndex={-1}
       >
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-5">
           {/* Konteks Pasien */}
-          <div className="p-3 rounded-lg bg-surface border border-cyan-200 flex items-center justify-between">
+          <div className="flex items-center justify-between gap-3 rounded-2xl border-2 border-cyan-800 bg-white p-4 shadow-sm">
             <span className="text-sm font-bold text-main">
               Pasien: {scanData.preferredName || scanData.namaPanggilan || "Pasien"}
             </span>
@@ -1041,6 +1030,7 @@ export function PetugasPindaiClient({
           {/* Banner Galat Penyimpanan */}
           {saveAssistanceError && (
             <StatusBanner
+              floating
               variant={alreadyRecordedConflict ? "warning" : "error"}
               title={alreadyRecordedConflict ? "Kunjungan Sudah Dicatat" : "Gagal Menyimpan"}
               message={saveAssistanceError}
@@ -1055,6 +1045,7 @@ export function PetugasPindaiClient({
           )}
 
           {/* Pilihan Bantuan Diberikan (ChoiceGroup dengan seluruh saran tercentang) */}
+          <div className="flex flex-col gap-3 rounded-2xl border border-cyan-800 bg-white p-4 shadow-sm">
           <ChoiceGroup
             legend="Bantuan yang Diberikan"
             helperText="Hapus centang bantuan yang tidak diberikan."
@@ -1085,23 +1076,26 @@ export function PetugasPindaiClient({
               );
             })}
           </ChoiceGroup>
+          </div>
 
           {/* Catatan Bebas Petugas (Opsional) */}
-          <TextField
-            id="staff-note"
-            label="Catatan Petugas (Opsional)"
-            variant="textarea"
-            rows={3}
-            maxLength={280}
-            helperText="Jangan menulis diagnosis atau data sensitif."
-            value={staffNote}
-            onChange={(e) => setStaffNote(e.target.value)}
-          />
+          <div className="flex flex-col gap-3 rounded-2xl border border-cyan-800 bg-white p-4 shadow-sm">
+            <TextField
+              id="staff-note"
+              label="Catatan Petugas (Opsional)"
+              variant="textarea"
+              rows={3}
+              maxLength={280}
+              helperText="Jangan menulis diagnosis atau data sensitif."
+              value={staffNote}
+              onChange={(e) => setStaffNote(e.target.value)}
+            />
+          </div>
 
           <PetugasKomunikaPanel visitId={scanData.visitId} />
 
           {/* Tombol Aksi Simpan T8 */}
-          <div className="flex flex-col gap-3 pt-4 border-t border-cyan-100">
+          <div className="flex flex-col gap-3">
             <Button
               variant="primary"
               onClick={handleSaveAssistance}
@@ -1116,10 +1110,9 @@ export function PetugasPindaiClient({
               variant="secondary"
               onClick={() => setStep("saran")}
               disabled={isSavingAssistance}
-              className="w-full flex items-center justify-center gap-2"
+              className="w-full"
             >
-              <ArrowLeft aria-hidden="true" className="w-4 h-4" />
-              <span>Kembali ke Saran</span>
+              Kembali ke Saran
             </Button>
           </div>
         </div>
@@ -1143,51 +1136,55 @@ export function PetugasPindaiClient({
         titleRef={stepHeadingRef}
         titleTabIndex={-1}
       >
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-5">
           {/* Ringkasan Bantuan yang Dicatat */}
           <section
             aria-labelledby="heading-summary-assistance"
-            className="p-4 rounded-xl bg-white border border-cyan-800 shadow-sm flex flex-col gap-3"
+            className="flex flex-col gap-3"
           >
-            <div className="flex items-center justify-between border-b border-cyan-100 pb-2">
+            <div className="flex items-center justify-between gap-3">
               <h2
                 id="heading-summary-assistance"
-                className="text-base font-bold text-main"
+                className="text-lg font-bold text-main"
               >
                 Ringkasan Bantuan yang Dicatat
               </h2>
-              <span className="text-xs font-bold text-secondary">
+              <span className="shrink-0 text-xs font-bold text-secondary">
                 #{scanData.visitId.slice(-4).toUpperCase()}
               </span>
             </div>
 
             {recordedAssistanceList.length > 0 ? (
-              <ul className="flex flex-col gap-2">
+              <ul className="m-0 grid list-none grid-cols-2 gap-3 p-0 [&>*:last-child:nth-child(odd)]:col-span-2">
                 {recordedAssistanceList.map((sug) => (
                   <li
                     key={sug.id}
-                    className="flex items-start gap-2.5 text-sm text-main"
+                    className="flex min-w-0 flex-col items-start gap-2 rounded-2xl border border-cyan-800 bg-white p-3 shadow-sm"
                   >
-                    <CheckCircle2
-                      className="w-4 h-4 shrink-0 text-cyan-800 mt-0.5"
+                    <span
                       aria-hidden="true"
-                    />
-                    <span className="font-bold">{sug.actionText}</span>
+                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-cyan-100"
+                    >
+                      {renderRuleIcon(sug.iconName)}
+                    </span>
+                    <span className="min-w-0 break-words text-base font-bold leading-snug text-main">
+                      {sug.actionText}
+                    </span>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-secondary">
+              <p className="max-w-none rounded-2xl border border-cyan-800 bg-white p-4 text-sm text-secondary shadow-sm">
                 Tidak ada bantuan spesifik yang dicentang.
               </p>
             )}
 
             {staffNote.trim() && (
-              <div className="mt-2 pt-2 border-t border-cyan-100 flex flex-col gap-1">
-                <span className="text-xs font-bold text-secondary">
-                  Catatan Petugas:
+              <div className="flex flex-col gap-1 rounded-2xl border border-cyan-800 bg-white p-4 shadow-sm">
+                <span className="text-xs font-bold uppercase tracking-wider text-secondary">
+                  Catatan Petugas
                 </span>
-                <p className="text-sm text-main italic">&ldquo;{staffNote.trim()}&rdquo;</p>
+                <p className="text-sm italic text-main">&ldquo;{staffNote.trim()}&rdquo;</p>
               </div>
             )}
           </section>
@@ -1195,7 +1192,7 @@ export function PetugasPindaiClient({
           {/* OPSI 1: Kirim ke Pasien */}
           {!showOnSiteConfirmation && (
             <div className="flex flex-col gap-4">
-              <div className="p-4 rounded-xl bg-surface border border-cyan-800 flex flex-col gap-2">
+              <div className="flex flex-col gap-1 rounded-2xl border-2 border-cyan-800 bg-white p-4">
                 <span className="text-base font-bold text-main">
                   Kirim ke Pasien
                 </span>
@@ -1234,8 +1231,8 @@ export function PetugasPindaiClient({
 
           {/* OPSI 2: Konfirmasi di Tempat */}
           {showOnSiteConfirmation && (
-            <div className="flex flex-col gap-4 p-4 rounded-xl bg-white border border-cyan-800 shadow-sm">
-              <div className="flex items-center justify-between border-b border-cyan-100 pb-2">
+            <div className="flex flex-col gap-4 rounded-2xl border border-cyan-800 bg-white p-4 shadow-sm">
+              <div className="flex items-center justify-between gap-3">
                 <h2 className="text-base font-bold text-main">
                   Konfirmasi di Tempat
                 </h2>
@@ -1328,7 +1325,7 @@ export function PetugasPindaiClient({
                     </ChoiceGroup>
                   )}
 
-                  <div className="flex flex-col gap-3 pt-4 border-t border-cyan-100">
+                  <div className="flex flex-col gap-3">
                     <Button
                       variant="primary"
                       onClick={handleSubmitOnSiteConfirmation}

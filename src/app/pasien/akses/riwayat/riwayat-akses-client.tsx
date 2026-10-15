@@ -8,43 +8,14 @@ import {
   useState,
   type KeyboardEvent,
 } from "react";
-import { ConfirmDialog, StatusBanner } from "@/components";
+import { ConfirmDialog, PageShell, StatusBanner } from "@/components";
 import type { AccessHistoryEntry } from "@/lib/audit";
 import type { OwnVisitHistoryItem } from "@/lib/careproof";
 import { formatDateTimeWib } from "@/lib/consent/time";
-import {
-  AlertCircle,
-  ArrowLeft,
-  Bell,
-  CheckCircle2,
-  ChevronRight,
-  ChevronDown,
-  FileText,
-  History,
-  House,
-  Info,
-  QrCode,
-  ShieldPlus,
-  UserRound,
-  Users,
-  type LucideIcon,
-} from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
 const FOCUS_RING =
   "focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900";
-
-const PATIENT_NAV_ITEMS: {
-  href: string;
-  label: string;
-  Icon: LucideIcon;
-  emphasis?: boolean;
-}[] = [
-  { href: "/pasien", label: "Beranda", Icon: House },
-  { href: "/pasien/paspor", label: "Paspor", Icon: FileText },
-  { href: "/pasien/akses/qr", label: "QR Akses", Icon: QrCode, emphasis: true },
-  { href: "/pasien/pendamping", label: "Pendamping", Icon: Users },
-  { href: "/pasien/akses/riwayat", label: "Riwayat", Icon: History },
-];
 
 export interface RiwayatAksesClientProps {
   initialHistory: AccessHistoryEntry[];
@@ -127,7 +98,7 @@ function PaginationControls({
         type="button"
         onClick={() => onChange(page - 1)}
         disabled={page <= 1}
-        className={`min-h-12 rounded-xl bg-cyan-100 px-4 py-2 font-bold text-cyan-900 disabled:opacity-50 ${FOCUS_RING}`}
+        className={`min-h-12 rounded-2xl bg-cyan-100 px-4 py-2 font-bold text-cyan-900 disabled:opacity-50 ${FOCUS_RING}`}
       >
         Sebelumnya
       </button>
@@ -138,7 +109,7 @@ function PaginationControls({
         type="button"
         onClick={() => onChange(page + 1)}
         disabled={page >= totalPages}
-        className={`min-h-12 rounded-xl bg-cyan-100 px-4 py-2 font-bold text-cyan-900 disabled:opacity-50 ${FOCUS_RING}`}
+        className={`min-h-12 rounded-2xl bg-cyan-100 px-4 py-2 font-bold text-cyan-900 disabled:opacity-50 ${FOCUS_RING}`}
       >
         Berikutnya
       </button>
@@ -225,7 +196,7 @@ function FilterDropdown({
         aria-expanded={isOpen}
         aria-haspopup="listbox"
         aria-labelledby={labelId}
-        className={`flex min-h-12 w-full items-center justify-between gap-3 rounded-xl border border-cyan-800 bg-cyan-50 py-3 pl-4 pr-4 text-left text-base text-main shadow-sm transition-colors hover:bg-white ${FOCUS_RING}`}
+        className={`flex min-h-12 w-full items-center justify-between gap-3 rounded-2xl border border-cyan-800 bg-cyan-50 py-3 pl-4 pr-4 text-left text-base text-main shadow-sm transition-colors hover:bg-white ${FOCUS_RING}`}
         id={id}
         onClick={() => (isOpen ? setIsOpen(false) : openDropdown())}
         onKeyDown={(event) => {
@@ -251,7 +222,7 @@ function FilterDropdown({
       {isOpen && (
         <div
           aria-labelledby={labelId}
-          className="absolute left-0 right-0 top-full z-20 mt-2 max-h-60 overflow-y-auto rounded-xl border border-cyan-200 bg-white p-1.5 shadow-lg"
+          className="absolute left-0 right-0 top-full z-20 mt-2 max-h-60 overflow-y-auto rounded-2xl border border-cyan-200 bg-white p-1.5 shadow-lg"
           id={`${id}-options`}
           onKeyDown={handleListboxKeyDown}
           role="listbox"
@@ -276,12 +247,6 @@ function FilterDropdown({
                 tabIndex={activeIndex === index ? 0 : -1}
               >
                 <span>{option.label}</span>
-                {isSelected && (
-                  <CheckCircle2
-                    aria-hidden="true"
-                    className="h-5 w-5 shrink-0 text-cyan-800"
-                  />
-                )}
               </div>
             );
           })}
@@ -387,63 +352,10 @@ export function RiwayatAksesClient({
   };
 
   return (
-    <div className="min-h-dvh w-full bg-page text-main">
-      <div className="relative mx-auto flex min-h-dvh w-full max-w-md flex-col">
-        <header className="fixed left-1/2 top-0 z-50 w-full max-w-md -translate-x-1/2 bg-page/90 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
-          <div className="flex h-16 items-center gap-3 px-4">
-            <div
-              aria-hidden="true"
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-cyan-200 text-cyan-900"
-            >
-              <ShieldPlus className="h-6 w-6" />
-            </div>
-            <div className="flex min-w-0 flex-1 flex-col">
-              <span className="text-xs font-bold uppercase tracking-wider text-secondary">
-                AKSESPASS Pasien
-              </span>
-              <h1 className="truncate text-xl font-bold leading-7 text-main">
-                Riwayat Akses
-              </h1>
-            </div>
-            <Link
-              href="/pasien/akses/riwayat"
-              aria-label="Riwayat akses"
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-main focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900"
-            >
-              <Bell aria-hidden="true" className="h-6 w-6" />
-            </Link>
-            <Link
-              href="/pasien"
-              aria-label="Beranda pasien"
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-cyan-800 text-white focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900 focus-visible:ring-offset-2"
-            >
-              <UserRound aria-hidden="true" className="h-6 w-6" />
-            </Link>
-          </div>
-        </header>
-
-        <main
-          id="main-content"
-          tabIndex={-1}
-          className="flex w-full flex-1 flex-col gap-5 px-4 pb-28 pt-24 focus:outline-none"
-        >
-          <div className="flex items-center gap-3">
-            <Link
-              href="/pasien/akses"
-              aria-label="Kembali ke kontrol akses"
-              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white shadow-sm ${FOCUS_RING}`}
-            >
-              <ArrowLeft aria-hidden="true" className="h-6 w-6" />
-            </Link>
-            <div className="min-w-0">
-              <h2 className="flex flex-wrap items-center gap-2 text-xl font-bold leading-tight text-main">
-                Audit Log Akses
-              </h2>
-            </div>
-          </div>
-
+    <PageShell title="Riwayat Akses" backHref="/pasien/akses" backLabel="Kembali ke kontrol akses" patientNav>
+      <div className="flex w-full max-w-full flex-col gap-5">
           {statusBanner && (
-            <StatusBanner
+            <StatusBanner floating
               variant={statusBanner.variant}
               title={statusBanner.title}
               message={statusBanner.message}
@@ -454,22 +366,21 @@ export function RiwayatAksesClient({
             <div className="mb-3 flex items-center justify-between gap-3">
               <h3
                 id="heading-kronologi"
-                className="flex items-center gap-2 text-base font-bold text-main"
+                className="flex items-center gap-2 text-lg font-bold text-main"
               >
-                <History aria-hidden="true" className="h-5 w-5" />
                 Kronologi Aktivitas
               </h3>
-              <span className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-bold text-cyan-900 shadow-sm">
+              <span className="shrink-0 rounded-full border border-cyan-800 bg-white px-3 py-1 text-xs font-bold text-cyan-900">
                 {filteredHistory.length} Aktivitas
               </span>
             </div>
 
-            <details className="mb-4 rounded-xl border border-cyan-100 bg-white">
+            <details className="mb-4 rounded-2xl border border-cyan-800 bg-white shadow-sm">
               <summary
-                className={`flex min-h-12 cursor-pointer items-center justify-between gap-3 rounded-xl px-4 py-2 text-sm font-bold text-main ${FOCUS_RING}`}
+                className={`flex min-h-12 cursor-pointer items-center justify-between gap-3 rounded-2xl px-4 py-2 text-sm font-bold text-main ${FOCUS_RING}`}
               >
                 Filter riwayat
-                <ChevronRight aria-hidden="true" className="h-5 w-5 rotate-90" />
+                <ChevronDown aria-hidden="true" className="h-5 w-5" />
               </summary>
               <div className="grid gap-3 border-t border-cyan-100 p-4">
                 <div className="flex flex-col gap-1">
@@ -526,11 +437,7 @@ export function RiwayatAksesClient({
             </details>
 
             {filteredHistory.length === 0 ? (
-              <div className="rounded-2xl border border-cyan-100 bg-white p-6 text-center">
-                <Info
-                  aria-hidden="true"
-                  className="mx-auto mb-2 h-7 w-7 text-cyan-800"
-                />
+              <div className="rounded-2xl border border-cyan-800 bg-white p-6 text-center shadow-sm">
                 <p className="font-bold text-main">Belum ada akses</p>
                 <p className="mt-1 text-sm text-secondary">
                   {history.length === 0
@@ -543,64 +450,46 @@ export function RiwayatAksesClient({
                 aria-label="Daftar kronologis aktivitas akses"
                 className="flex flex-col gap-3"
               >
-                {pagedHistory.map((item, index) => {
+                {pagedHistory.map((item) => {
                   const wasRead = item.eventType === "profile_read";
-                  const badgeLabel = wasRead
-                    ? "Terbaca via ConsentQR"
-                    : item.title;
-                  const BadgeIcon = wasRead ? CheckCircle2 : AlertCircle;
+                  const heading = wasRead ? "Terbaca via ConsentQR" : item.title;
+                  const showFacility =
+                    !!item.facilityName && !heading.includes(item.facilityName);
 
                   return (
                     <li
                       key={item.id}
-                      className="flex min-w-0 items-start gap-3 rounded-2xl border border-cyan-100 bg-white p-4 shadow-sm"
+                      className="flex min-w-0 flex-col gap-1 rounded-2xl border border-cyan-800 bg-white p-4 shadow-sm"
                     >
-                      <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-cyan-700 text-xs font-bold text-white">
-                        {index + 1}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <time
-                            dateTime={item.occurredAt}
-                            className="text-sm font-bold text-main"
-                          >
-                            {item.timeTextWib}
-                          </time>
-                          <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-cyan-100 px-2.5 py-1 text-xs font-bold text-cyan-900">
-                            <BadgeIcon
-                              aria-hidden="true"
-                              className="h-4 w-4 shrink-0"
-                            />
-                            {badgeLabel}
-                          </span>
-                        </div>
-                        <p className="mt-2 text-xs font-bold uppercase tracking-wider text-secondary">
-                          {item.facilityName ? "Fasilitas Layanan" : "Aktivitas"}
+                      <time
+                        dateTime={item.occurredAt}
+                        className="text-xs font-bold uppercase tracking-wider text-secondary"
+                      >
+                        {item.timeTextWib}
+                      </time>
+                      <h4 className="break-words text-base font-bold leading-snug text-main">
+                        {heading}
+                      </h4>
+                      {showFacility && (
+                        <p className="break-words text-sm text-secondary">
+                          {item.facilityName}
                         </p>
-                        <h4 className="break-words text-base font-bold text-main">
-                          {item.facilityName || item.title}
-                        </h4>
-                        {item.actorLabel && item.actorLabel !== "Anda" && (
-                          <p className="mt-2 break-words text-sm text-secondary">
-                            {wasRead ? "Petugas" : "Pelaku"}: {item.actorLabel}
+                      )}
+                      {item.actorLabel && item.actorLabel !== "Anda" && (
+                        <p className="break-words text-sm text-secondary">
+                          {wasRead ? "Petugas" : "Pelaku"}: {item.actorLabel}
+                        </p>
+                      )}
+                      {item.fieldLabels.length > 0 && (
+                        <div className="mt-2 rounded-2xl bg-cyan-50 p-3">
+                          <p className="text-xs font-bold text-secondary">
+                            Data kebutuhan dibaca:
                           </p>
-                        )}
-                        {item.fieldLabels.length > 0 && (
-                          <div className="mt-3 rounded-xl bg-cyan-50 p-3">
-                            <p className="text-xs font-bold text-secondary">
-                              Data kebutuhan dibaca:
-                            </p>
-                            <p className="mt-1 break-words text-sm font-bold text-main">
-                              {item.fieldLabels.join(", ")}
-                            </p>
-                          </div>
-                        )}
-                        {!wasRead && item.facilityName && (
-                          <p className="mt-2 text-sm text-secondary">
-                            {item.title}
+                          <p className="mt-1 break-words text-sm font-bold text-main">
+                            {item.fieldLabels.join(", ")}
                           </p>
-                        )}
-                      </div>
+                        </div>
+                      )}
                     </li>
                   );
                 })}
@@ -618,18 +507,17 @@ export function RiwayatAksesClient({
             <div className="mb-3 flex items-center justify-between gap-3">
               <h3
                 id="heading-riwayat-kunjungan"
-                className="flex items-center gap-2 text-base font-bold text-main"
+                className="text-lg font-bold text-main"
               >
-                <CheckCircle2 aria-hidden="true" className="h-5 w-5" />
                 Kunjungan Tercatat
               </h3>
-              <span className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-bold text-cyan-900 shadow-sm">
+              <span className="shrink-0 rounded-full border border-cyan-800 bg-white px-3 py-1 text-xs font-bold text-cyan-900">
                 {filteredVisits.length}
               </span>
             </div>
 
             {filteredVisits.length === 0 ? (
-              <div className="rounded-2xl border border-cyan-100 bg-white p-4 text-sm text-secondary">
+              <div className="rounded-2xl border border-cyan-800 bg-white p-4 text-sm text-secondary shadow-sm">
                 {initialVisits.length === 0
                   ? "Belum ada kunjungan tercatat."
                   : "Tidak ada kunjungan yang cocok dengan filter yang dipilih."}
@@ -639,29 +527,15 @@ export function RiwayatAksesClient({
                 {pagedVisits.map((visit) => (
                   <li
                     key={visit.visitId}
-                    className="rounded-2xl border border-cyan-100 bg-white p-4 shadow-sm"
+                    className="rounded-2xl border border-cyan-800 bg-white p-4 shadow-sm"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="text-xs font-bold uppercase tracking-wider text-secondary">
-                          Fasilitas Layanan
-                        </p>
                         <h4 className="break-words text-base font-bold text-main">
                           {visit.facilityName}
                         </h4>
                       </div>
-                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-cyan-100 px-2.5 py-1 text-xs font-bold text-cyan-900">
-                        {visit.currentAnswer ? (
-                          <CheckCircle2
-                            aria-hidden="true"
-                            className="h-4 w-4"
-                          />
-                        ) : (
-                          <AlertCircle
-                            aria-hidden="true"
-                            className="h-4 w-4"
-                          />
-                        )}
+                      <span className="inline-flex shrink-0 items-center rounded-full bg-cyan-100 px-2.5 py-1 text-xs font-bold text-cyan-900">
                         {getVisitAnswerLabel(visit)}
                       </span>
                     </div>
@@ -687,7 +561,6 @@ export function RiwayatAksesClient({
                       className={`mt-3 inline-flex min-h-12 items-center gap-2 rounded-lg px-2 font-bold text-cyan-900 underline ${FOCUS_RING}`}
                     >
                       Lihat detail kunjungan
-                      <ChevronRight aria-hidden="true" className="h-5 w-5" />
                     </Link>
                   </li>
                 ))}
@@ -703,11 +576,8 @@ export function RiwayatAksesClient({
 
           <section
             aria-labelledby="heading-kendali-qr"
-            className="flex flex-col items-center gap-3 rounded-2xl border border-cyan-100 bg-white p-5 text-center shadow-sm"
+            className="flex flex-col items-center gap-3 rounded-2xl border-2 border-cyan-800 bg-white p-5 text-center shadow-sm"
           >
-            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-cyan-100 text-cyan-900">
-              <QrCode aria-hidden="true" className="h-6 w-6" />
-            </span>
             <div>
               <h3 id="heading-kendali-qr" className="font-bold text-main">
                 Pusat Kendali Otoritas Pasien
@@ -719,9 +589,8 @@ export function RiwayatAksesClient({
             </div>
             <Link
               href="/pasien/kunjungan"
-              className={`flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-cyan-100 px-4 py-3 text-center font-bold text-cyan-900 ${FOCUS_RING}`}
+              className={`flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-cyan-100 px-4 py-3 text-center font-bold text-cyan-900 ${FOCUS_RING}`}
             >
-              <QrCode aria-hidden="true" className="h-5 w-5 shrink-0" />
               Buat ConsentQR Baru
             </Link>
             {hasActiveQrs && (
@@ -729,46 +598,12 @@ export function RiwayatAksesClient({
                 type="button"
                 onClick={() => setIsConfirmDialogOpen(true)}
                 disabled={isRevokingAll}
-                className={`flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-cyan-700 px-4 py-3 font-bold text-cyan-900 disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
+                className={`flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border border-cyan-700 px-4 py-3 font-bold text-cyan-900 disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
               >
                 Cabut Semua QR Aktif
               </button>
             )}
           </section>
-        </main>
-
-        <nav
-          aria-label="Navigasi utama pasien"
-          className="fixed bottom-0 left-1/2 z-50 w-full max-w-md -translate-x-1/2 border-t border-cyan-200 bg-page/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl"
-        >
-          <ul className="flex h-16 items-center justify-between px-1">
-            {PATIENT_NAV_ITEMS.map(({ href, label, Icon, emphasis }) => {
-              const isActive = href === "/pasien/akses/riwayat";
-              return (
-                <li key={href} className="flex-1">
-                  <Link
-                    href={href}
-                    aria-current={isActive ? "page" : undefined}
-                    className={`flex min-h-12 min-w-12 flex-col items-center justify-center rounded-lg ${FOCUS_RING} ${
-                      isActive
-                        ? "font-bold text-cyan-700"
-                        : "text-secondary hover:text-main"
-                    }`}
-                  >
-                    {emphasis ? (
-                      <span className="flex h-10 w-10 items-center justify-center rounded-full bg-cyan-700 text-white shadow-sm">
-                        <Icon aria-hidden="true" className="h-6 w-6" />
-                      </span>
-                    ) : (
-                      <Icon aria-hidden="true" className="h-[22px] w-[22px]" />
-                    )}
-                    <span className="text-[11px] leading-tight">{label}</span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
       </div>
 
       <ConfirmDialog
@@ -780,6 +615,6 @@ export function RiwayatAksesClient({
         onClose={() => setIsConfirmDialogOpen(false)}
         onConfirm={handleRevokeAll}
       />
-    </div>
+    </PageShell>
   );
 }

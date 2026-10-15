@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
-import { Info } from "lucide-react";
 import { Button } from "./button";
 import { StatusBanner } from "./status-banner";
 import { TextField } from "./text-field";
+import { DemoOtpNote, OtpCodeInput } from "./otp-code-input";
 
 export interface OtpActionFormProps {
   /** Awalan id unik untuk kolom input. */
@@ -12,8 +12,12 @@ export interface OtpActionFormProps {
   /** Bila true, pasien mengetik nomor HP dulu (mis. nomor baru); kode dikirim ke nomor itu. */
   askPhone?: boolean;
   phoneLabel?: string;
-  /** Tujuan permintaan kode di /api/pasien/akun/kode. */
-  purpose: "hapus" | "kontak";
+  /** Tujuan permintaan kode di /api/pasien/akun/kode (diabaikan bila codeUrl diisi). */
+  purpose?: "hapus" | "kontak";
+  /** Endpoint pengirim kode khusus (mis. pemulihan akun oleh pendamping); hanya menerima { phone }. */
+  codeUrl?: string;
+  /** Isian tambahan yang ikut dikirim ke submitUrl (mis. { linkId }). */
+  extraBody?: Record<string, string>;
   /** Endpoint yang dipanggil setelah kode diisi. */
   submitUrl: string;
   sendLabel: string;
@@ -32,6 +36,8 @@ export function OtpActionForm({
   askPhone = false,
   phoneLabel = "Nomor HP",
   purpose,
+  codeUrl,
+  extraBody,
   submitUrl,
   sendLabel,
   submitLabel,
@@ -52,10 +58,10 @@ export function OtpActionForm({
     setIsSending(true);
     setError(null);
     try {
-      const res = await fetch("/api/pasien/akun/kode", {
+      const res = await fetch(codeUrl ?? "/api/pasien/akun/kode", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ purpose, ...(askPhone ? { phone } : {}) }),
+        body: JSON.stringify({ ...(codeUrl ? {} : { purpose }), ...(askPhone ? { phone } : {}) }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok || !data?.ok) {
@@ -79,7 +85,7 @@ export function OtpActionForm({
       const res = await fetch(submitUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code, ...(askPhone ? { phone } : {}) }),
+        body: JSON.stringify({ code, ...(extraBody ?? {}), ...(askPhone ? { phone } : {}) }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok || !data?.ok) {
@@ -121,24 +127,13 @@ export function OtpActionForm({
         </Button>
       ) : (
         <>
-          {devOtp && (
-            <div
-              role="note"
-              className="flex items-start gap-3 rounded-2xl border-2 border-input bg-surface p-4"
-            >
-              <Info aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-main" />
-              <div className="flex flex-col">
-                <span className="text-sm font-bold text-main">Mode demo: SMS belum aktif.</span>
-                <span className="text-base font-bold text-main">Kode Anda: {devOtp}</span>
-              </div>
-            </div>
-          )}
-          <TextField
+          {devOtp && <DemoOtpNote code={devOtp} />}
+          <OtpCodeInput
             id={`${idPrefix}-code`}
             label="Kode verifikasi"
-            variant="otp"
             value={code}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+            onChange={setCode}
+            disabled={isSubmitting}
             helperText="Masukkan 6 digit kode yang dikirim."
           />
           <Button

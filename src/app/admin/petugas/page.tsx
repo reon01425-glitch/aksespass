@@ -26,7 +26,7 @@ export default async function AdminPetugasPage() {
 
   const staff = await listStaff(session);
   return (
-    <PageShell title="Kelola Akun Petugas" backHref="/admin" backLabel="Kembali ke Beranda Admin">
+    <PageShell title="Kelola Akun Petugas" backHref="/admin" backLabel="Kembali ke Beranda Admin" adminNav>
       <StaffListClient initialStaff={staff} />
     </PageShell>
   );

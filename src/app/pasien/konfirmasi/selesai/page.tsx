@@ -62,8 +62,8 @@ export default async function PasienKonfirmasiSelesaiPage({
       : [];
 
   return (
-    <PageShell title="Jawaban Tersimpan">
-      <div className="flex flex-col gap-6 max-w-full w-full">
+    <PageShell title="Jawaban Tersimpan" patientNav>
+      <div className="flex flex-col gap-5 max-w-full w-full">
         {isPending ? (
           <StatusBanner
             variant="warning"
@@ -80,30 +80,34 @@ export default async function PasienKonfirmasiSelesaiPage({
         <PendingConfirmationSync userId={session.userId} />
 
         {statusLabel && (
-          <section aria-labelledby="heading-ringkasan" className="flex flex-col gap-3">
-            <h2
-              id="heading-ringkasan"
-              className="text-base font-bold text-main border-b border-cyan-100 pb-2"
-            >
+          <section
+            aria-labelledby="heading-ringkasan"
+            className="flex flex-col gap-1 rounded-2xl bg-cyan-700 p-5 text-white shadow-md"
+          >
+            <h2 id="heading-ringkasan" className="text-xs font-bold uppercase tracking-wider text-white">
               Ringkasan Jawaban
             </h2>
-            <p className="text-base text-main">
-              Status kebutuhan:{" "}
-              <span className="font-bold">{statusLabel}</span>
+            <p className="text-lg font-bold text-white">
+              Status kebutuhan: {statusLabel}
             </p>
+          </section>
+        )}
 
-            {unmetLabels.length > 0 && (
-              <div className="flex flex-col gap-2">
-                <p className="text-sm text-secondary">Kebutuhan yang belum terpenuhi:</p>
-                <ul className="flex flex-col gap-1 list-disc pl-5">
-                  {unmetLabels.map((label) => (
-                    <li key={label} className="text-base text-main break-words">
-                      {label}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+        {unmetLabels.length > 0 && (
+          <section aria-labelledby="heading-belum" className="flex flex-col gap-3">
+            <h2 id="heading-belum" className="text-lg font-bold text-main">
+              Kebutuhan yang Belum Terpenuhi
+            </h2>
+            <ul className="m-0 grid list-none grid-cols-2 gap-3 p-0 [&>*:last-child:nth-child(odd)]:col-span-2">
+              {unmetLabels.map((label) => (
+                <li
+                  key={label}
+                  className="min-w-0 break-words rounded-2xl border border-cyan-800 bg-white p-4 text-base font-bold text-main shadow-sm"
+                >
+                  {label}
+                </li>
+              ))}
+            </ul>
           </section>
         )}
 
@@ -111,14 +115,14 @@ export default async function PasienKonfirmasiSelesaiPage({
           <section aria-labelledby="heading-tindak-lanjut" className="flex flex-col gap-3">
             <h2
               id="heading-tindak-lanjut"
-              className="text-base font-bold text-main border-b border-cyan-100 pb-2"
+              className="text-lg font-bold text-main"
             >
               Status Tindak Lanjut
             </h2>
             <FollowUpList items={followUps} />
             <Link
               href="/pasien/tindak-lanjut"
-              className="text-base font-bold text-cyan-900 underline focus:ring-4 focus:ring-cyan-900 rounded"
+              className="flex min-h-12 items-center justify-center rounded-2xl border border-cyan-800 bg-white px-4 py-3 text-base font-bold text-cyan-900 shadow-sm transition-colors hover:bg-cyan-50 focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900"
             >
               Lihat semua tindak lanjut
             </Link>
@@ -127,7 +131,7 @@ export default async function PasienKonfirmasiSelesaiPage({
 
         <Link
           href="/pasien"
-          className="flex items-center justify-center min-h-[48px] w-full px-6 py-3 bg-cyan-700 text-white font-bold rounded-lg shadow-sm focus:ring-4 focus:ring-cyan-900 focus:ring-offset-2 text-center text-lg"
+          className="flex min-h-12 w-full items-center justify-center rounded-2xl bg-cyan-700 px-4 py-3 text-center text-base font-bold text-white shadow-md transition-colors hover:bg-cyan-800 focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900"
         >
           Kembali ke Beranda
         </Link>

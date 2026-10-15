@@ -52,6 +52,7 @@ describe("Ringkasan offline dan kartu cetak (src/lib/passport/offline-summary)",
     expect(json).not.toMatch(/token|qr|"code"/i);
     expect(Object.keys(buildOfflineSummary(base)).sort()).toEqual(
       [
+        "cardCode",
         "contrast",
         "includeNote",
         "needs",
@@ -64,6 +65,17 @@ describe("Ringkasan offline dan kartu cetak (src/lib/passport/offline-summary)",
         "version",
       ].sort()
     );
+  });
+
+  it("Kode Kartu ikut tersimpan, bernilai null bila tidak ada, dan data lama tanpa kunci tetap terbaca", () => {
+    expect(buildOfflineSummary(base).cardCode).toBeNull();
+    const withCode = buildOfflineSummary({ ...base, cardCode: "ABCD2345" });
+    expect(withCode.cardCode).toBe("ABCD2345");
+    expect(parseOfflineSummary(JSON.stringify(withCode))?.cardCode).toBe("ABCD2345");
+    const { cardCode: _drop, ...legacy } = withCode;
+    void _drop;
+    expect(parseOfflineSummary(JSON.stringify(legacy))?.cardCode).toBeNull();
+    expect(parseOfflineSummary(JSON.stringify({ ...withCode, cardCode: 5 }))).toBeNull();
   });
 
   it("serialisasi lalu parse mengembalikan isi yang sama", () => {

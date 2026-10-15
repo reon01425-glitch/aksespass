@@ -131,10 +131,10 @@ export function PatientNeedsSummary({
   }
 
   return (
-    <div className={`flex flex-col gap-6 max-w-full w-full ${className}`.trim()}>
+    <div className={`flex flex-col gap-5 max-w-full w-full ${className}`.trim()}>
       {/* Kartu Nama Panggilan */}
-      <div className="p-4 rounded-xl bg-white border border-cyan-800 shadow-sm">
-        <span className="text-sm font-normal text-secondary block">
+      <div className="rounded-2xl border-2 border-cyan-800 bg-white p-4">
+        <span className="block text-xs font-bold uppercase tracking-wider text-secondary">
           Nama Panggilan
         </span>
         <span className="text-2xl font-bold text-main block mt-1 break-words">
@@ -144,7 +144,7 @@ export function PatientNeedsSummary({
 
       {/* Daftar Kebutuhan Per Kategori */}
       <div className="flex flex-col gap-5">
-        <HeadingTag className="text-base font-bold text-main border-b border-cyan-100 pb-2">
+        <HeadingTag className="text-lg font-bold text-main">
           Kebutuhan Layanan Terpilih
         </HeadingTag>
 
@@ -160,20 +160,25 @@ export function PatientNeedsSummary({
 
             return (
               <div key={category} className="flex flex-col gap-2">
-                <span className="text-sm font-bold text-main">
+                <span className="text-xs font-bold uppercase tracking-wider text-secondary">
                   {categoryLabel}
                 </span>
-                <ul className="flex flex-col gap-2 m-0 p-0 list-none">
+                <ul className="m-0 grid list-none grid-cols-2 gap-3 p-0 [&>*:last-child:nth-child(odd)]:col-span-2">
                   {items.map((item, idx) => {
                     const key = item.code || item.kode || `${category}-${idx}`;
                     const iconName = item.iconName || item.ikon;
                     return (
                       <li
                         key={key}
-                        className="flex items-center gap-3 p-3 rounded-lg bg-surface border border-cyan-700 min-h-12"
+                        className="flex min-h-12 min-w-0 flex-col items-start gap-2 rounded-2xl border border-cyan-800 bg-white p-3 shadow-sm"
                       >
-                        {getNeedSummaryIcon(iconName)}
-                        <span className="text-base font-bold text-main break-words flex-1">
+                        <span
+                          aria-hidden="true"
+                          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-cyan-100"
+                        >
+                          {getNeedSummaryIcon(iconName)}
+                        </span>
+                        <span className="text-base font-bold text-main break-words">
                           {item.label}
                         </span>
                       </li>
@@ -188,8 +193,8 @@ export function PatientNeedsSummary({
 
       {/* Catatan untuk Petugas (bila ada) */}
       {note && (
-        <div className="p-4 rounded-xl bg-white border border-cyan-800 shadow-sm">
-          <span className="text-sm font-bold text-main block mb-1">
+        <div className="rounded-2xl border border-cyan-800 bg-white p-4 shadow-sm">
+          <span className="mb-1 block text-xs font-bold uppercase tracking-wider text-secondary">
             Catatan untuk Petugas
           </span>
           <p className="text-base font-normal text-main break-words whitespace-pre-wrap">
@@ -200,7 +205,7 @@ export function PatientNeedsSummary({
 
       {/* Keterangan Privasi */}
       {showPrivacyNotes && (
-        <div className="p-4 rounded-xl bg-cyan-100 border border-cyan-400 text-sm text-secondary flex flex-col gap-1">
+        <div className="flex flex-col gap-1 rounded-2xl border border-cyan-800 bg-white p-4 text-sm text-secondary">
           <p className="font-bold text-main">Diagnosis tidak diminta</p>
           <p className="font-normal text-secondary">
             {privacyNoteDescription ||

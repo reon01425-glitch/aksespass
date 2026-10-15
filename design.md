@@ -17,7 +17,7 @@
 2. **Standard Target Sentuh (Touch Target):**
    * Semua area interaktif (tombol, *chip*, ikon, tab, kontrol form) memiliki dimensi minimum **48 × 48 px**.
 3. **Penyampaian Status Multimodal:**
-   * Dilarang menyampaikan status hanya melalui warna. Semua indikator status wajib menggabungkan **Ikon + Teks + Warna**.
+   * Dilarang menyampaikan status hanya melalui warna. Indikator status menggabungkan **Ikon + Teks + Warna**; pengecualian (16 Okt 2026): `StatusBanner` memakai teks judul pada palet Cyan tanpa ikon (lihat §2B).
 4. **Optimasi Low-Vision & iOS Safari:**
    * Menggunakan tipografi khusus **Atkinson Hyperlegible Next** untuk memaksimalkan keterbacaan audiens *low-vision*.
    * Semua elemen *input* form wajib berukuran **16 px** untuk mencegah pemicu *auto-zoom* otomatis di iOS Safari.
@@ -45,7 +45,8 @@ Rasio kontras di tabel adalah hasil perhitungan, **[Verifikasi]** dengan alat uj
 | `disabled-text` | `text-slate-500` (`#64748B`) | Teks/Ikon elemen nonaktif. |
 | **Penting:** | *Placeholder abu-abu muda (`#94A3B8`) dilarang keras* karena gagal kontras 4.5:1. Gunakan teks penjelas di luar input jika diperlukan. |
 
-### B. Warna Status & Umpan Balik (Wajib: Ikon + Teks)
+### B. Warna Status & Umpan Balik
+> **[Diubah 16 Okt 2026, atas permintaan pemilik produk]** Notifikasi `StatusBanner` memakai palet Cyan (tabel A: `bg-cyan-100`, `border-cyan-800`, `text-cyan-900`), **tanpa ikon dan tanpa warna status**. **[Diubah 16 Okt 2026]** Notifikasi berlatar abu muda (`bg-slate-200`), melayang turun dari atas layar lalu hilang sendiri (sukses 6 dtk, peringatan 8 dtk, galat 10 dtk; berhenti menghitung saat disorot atau difokus; gerak mati bila `prefers-reduced-motion`). Notifikasi yang memuat tombol aksi tetap di tempat dan tidak hilang. Risiko diketahui: pesan yang hilang sendiri sulit dibaca pengguna yang lambat membaca (WCAG 2.2.1); **[Verifikasi]** durasinya dengan pengguna. Makna dibawa oleh judul teks ("Berhasil", "Gagal Menyimpan", "Hampir Kedaluwarsa"); galat memakai `role="alert"` dan tepi 2 px. Tabel di bawah tetap berlaku untuk `CareProofScale` (P16, D8, T9). Risiko diketahui: tanpa ikon dan warna, pembeda tingkat keparahan hanya teks dan tepi; **[Verifikasi]** dengan pengguna sebelum mengklaim kepatuhan WCAG 1.4.1.
 | Status | Latar Container | Teks & Ikon | Ikon Wajib | Contoh Label |
 | :--- | :--- | :--- | :--- | :--- |
 | **Sukses (Success)** | `bg-emerald-50` (`#ECFDF5`) | `text-emerald-700` (`#047857`) | `CheckCircle2` | "QR Valid", "Tersinkron" |
@@ -110,7 +111,7 @@ Preferensi disimpan pada cookie `aksespass_pref` (HttpOnly, SameSite=Lax) dan di
    * **Hindari ALL CAPS:** label dan tombol tidak memakai huruf kapital semua demi kenyamanan pembaca *low-vision*.
    * **Bobot Font:** hanya `400` (Body, Caption/Label) dan `700` (Heading, CTA/tombol, label status). Di Tailwind: `font-normal` dan `font-bold`; **jangan** memakai `font-medium` atau `font-semibold`.
 4. **Panjang Baris & Spasi Putih:**
-   * `max-width: 60ch` untuk paragraf isi (*body*).
+   * Paragraf isi (*body*) mengikuti lebar kolom halaman (`max-w-2xl`, di ponsel selebar layar) sehingga tepi teks sejajar dengan tepi kartu; tidak ada batas `60ch` tambahan.
    * Spasi paragraf bawah `16 px`. Jarak atas *heading* lebih besar (≈ 32 px) daripada jarak bawahnya (8–12 px).
 
 ### B. Skala Tipografi Resmi
@@ -156,7 +157,9 @@ Belum ada spesifikasi visual final. Aturan di bawah hanya menurunkan prinsip §1
 | Input teks / kode OTP | P3, D2, T2, A5 | Teks 16 px; `border-input`; tinggi ≥ 48 px; label terlihat di luar input (bukan placeholder); pesan galat di bawah input dengan ikon + teks |
 | Pilihan bergambar / chip | P5, P7 | Area ≥ 48 × 48 px; state terpilih memakai `bg-surface` **dan** ikon centang (bukan warna saja); dapat dioperasikan keyboard |
 | Tombol geser (toggle) | P11 | Area sentuh ≥ 48 × 48 px; label teks di sebelahnya; status Aktif/Nonaktif ditulis, bukan hanya posisi |
-| Skala ikon CareProof | P16, D8, T9 | Tiga tombol besar berlabel teks: Terpenuhi (pola Sukses, `CheckCircle2`), Sebagian (pola Peringatan, `AlertTriangle`), Belum (pola Galat, `XCircle`) |
+| Skala ikon CareProof | P16, D8, T9 | Tiga tombol besar berlabel teks, satu palet Cyan tanpa warna status **[Diubah 16 Okt 2026, atas permintaan pemilik produk]**: belum dipilih `bg-white border-cyan-800 text-cyan-900`, terpilih `bg-cyan-900 text-white`. Pembeda tetap ikon dan teks: Terpenuhi (`CircleCheck`), Sebagian (`TriangleAlert`), Belum (`CircleX`). **[Verifikasi]** keterbacaan tanpa warna dengan pengguna |
 | Pop-up konfirmasi tindakan merusak | P20, P21, P23, A4, K4 | Fokus pindah ke pop-up; tombol batal selalu ada; tombol aksi menyebut tindakannya ("Ya, Cabut"), bukan "OK" |
+| Navigasi bawah petugas | T3, T4, T4b | Bar melayang membulat, 3 tab (Beranda, Pindai, Kartu) dengan ikon + teks, tinggi ≥ 56 px, tab aktif `bg-cyan-700` teks putih dan `aria-current="page"`; hanya di layar awal alur petugas, tidak di langkah pencatatan |
+| Kartu dan notifikasi melayang (alur petugas) | T3–T4b | Kartu `rounded-2xl` dengan ikon dalam kotak `bg-cyan-100`, tanpa foto; notifikasi tetap `StatusBanner` (opsi `floating`: menempel di atas saat digulir, bayangan) dengan palet Cyan tanpa ikon (lihat §2B) |
 
 *Catatan implementasi:* Seluruh komponen turunan di atas telah diimplementasikan sebagai komponen bersama di `src/components/` pada Prompt 8 (status spesifikasi tetap **[Usulan]** hingga seluruh alur diverifikasi penuh).

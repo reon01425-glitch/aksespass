@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Check, Printer, WifiOff } from "lucide-react";
+import { Printer, WifiOff } from "lucide-react";
 import { Button, ConfirmDialog, PageShell, StatusBanner } from "@/components";
 import { formatCardCode } from "@/lib/card/format";
 import type { NeedsCategoryGroup, OwnPassportData } from "@/lib/passport";
@@ -52,6 +52,12 @@ export function KartuCetakClient({
       const data = await res.json().catch(() => null);
       if (res.ok && data?.ok) {
         setCardCode(data.code);
+        // Ringkasan offline yang sudah tersimpan ikut memakai Kode Kartu terbaru.
+        const existing = loadOfflineSummary();
+        if (existing) {
+          saveOfflineSummary({ ...existing, cardCode: data.code });
+          setStored(loadOfflineSummary());
+        }
       } else {
         setRenewError(data?.error || "Gagal membuat kode baru. Coba lagi.");
       }
@@ -88,7 +94,13 @@ export function KartuCetakClient({
   // localStorage hanya ada di klien: dibaca setelah hidrasi.
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    setStored(loadOfflineSummary());
+    let existing = loadOfflineSummary();
+    // Ringkasan lama (sebelum Kode Kartu ikut tersimpan) dilengkapi saat halaman ini dibuka online.
+    if (existing && cardCode && existing.cardCode !== cardCode) {
+      if (saveOfflineSummary({ ...existing, cardCode })) existing = loadOfflineSummary();
+    }
+    setStored(existing);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
@@ -103,6 +115,7 @@ export function KartuCetakClient({
         note,
         selection: allSelected ? "all" : Array.from(selected),
         includeNote,
+        cardCode,
         textSize,
         contrast,
         savedAt: new Date(0).toISOString(),
@@ -110,6 +123,7 @@ export function KartuCetakClient({
       }),
     [
       allSelected,
+      cardCode,
       contrast,
       includeNote,
       note,
@@ -153,8 +167,8 @@ export function KartuCetakClient({
 
   if (!passport || passportNeeds.length === 0) {
     return (
-      <PageShell title="Kartu Cetak" backHref="/pasien" backLabel="Kembali ke beranda">
-        <div className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 py-6">
+      <PageShell title="Kartu Cetak" backHref="/pasien" backLabel="Kembali ke beranda" patientNav>
+        <div className="flex w-full max-w-full flex-col gap-5">
           <StatusBanner
             variant="warning"
             title="Paspor belum diisi"
@@ -179,8 +193,8 @@ export function KartuCetakClient({
     .filter((group) => group.needs.length > 0);
 
   return (
-    <PageShell title="Kartu Cetak" backHref="/pasien" backLabel="Kembali ke beranda">
-      <div className="mx-auto flex w-full max-w-md flex-col gap-6 px-4 py-6">
+    <PageShell title="Kartu Cetak" backHref="/pasien" backLabel="Kembali ke beranda" patientNav>
+      <div className="flex w-full max-w-full flex-col gap-5">
         <section aria-labelledby="kartu-isi" className="flex flex-col gap-3">
           <h2 id="kartu-isi" className="text-xl font-bold text-main">
             Isi Kartu
@@ -189,18 +203,19 @@ export function KartuCetakClient({
             Pilih kebutuhan yang ingin dicetak. Kartu hanya memuat ringkasan
             kebutuhan, tanpa QR akses.
           </p>
-          <fieldset className="flex flex-col gap-2">
+          <fieldset className="m-0 min-w-0 border-0 p-0">
             <legend className="sr-only">Kebutuhan yang dicetak di kartu</legend>
+            <div className="grid grid-cols-2 gap-3 [&>*:last-child:nth-child(odd)]:col-span-2">
             {passportNeeds.map((need) => {
               const checked = selected.has(need.code);
               return (
                 <label
                   key={need.code}
                   htmlFor={`kartu-${need.code}`}
-                  className={`flex min-h-14 cursor-pointer items-center justify-between gap-3 rounded-xl border px-4 py-3 focus-within:ring-4 focus-within:ring-cyan-900 ${
+                  className={`flex min-h-20 min-w-0 cursor-pointer flex-col justify-center gap-1 rounded-2xl border-2 bg-white px-4 py-3 shadow-sm focus-within:ring-4 focus-within:ring-cyan-900 ${
                     checked
-                      ? "border-cyan-700 bg-cyan-100 text-main"
-                      : "border-cyan-400 bg-white text-secondary"
+                      ? "border-cyan-800 text-main"
+                      : "border-cyan-200 text-secondary"
                   }`}
                 >
                   <input
@@ -218,23 +233,16 @@ export function KartuCetakClient({
                       {need.label}
                     </span>
                   </span>
-                  <span
-                    aria-hidden="true"
-                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md ${
-                      checked ? "bg-cyan-700 text-white" : "bg-cyan-100 text-transparent"
-                    }`}
-                  >
-                    {checked && <Check className="h-5 w-5" />}
-                  </span>
                 </label>
               );
             })}
+            </div>
           </fieldset>
 
           {note && (
             <label
               htmlFor="kartu-sertakan-catatan"
-              className="flex min-h-14 cursor-pointer items-start gap-3 rounded-xl border border-cyan-800 bg-white px-4 py-3 focus-within:ring-4 focus-within:ring-cyan-900"
+              className="flex min-h-14 cursor-pointer items-start gap-3 rounded-2xl border border-cyan-800 bg-white px-4 py-3 shadow-sm focus-within:ring-4 focus-within:ring-cyan-900"
             >
               <input
                 id="kartu-sertakan-catatan"
@@ -265,7 +273,7 @@ export function KartuCetakClient({
           <div
             id="kartu-cetak"
             data-testid="kartu-cetak"
-            className="flex flex-col gap-3 rounded-2xl border-2 border-cyan-800 bg-white p-5"
+            className="flex flex-col gap-3 rounded-2xl border-2 border-cyan-800 bg-white p-5 shadow-sm"
           >
             <p className="text-sm font-bold uppercase tracking-wider text-secondary">
               AKSESPASS · Ringkasan Kebutuhan Layanan
@@ -367,7 +375,7 @@ export function KartuCetakClient({
           </p>
 
           {cardCode && (
-            <div className="flex flex-col gap-2 rounded-xl border border-dashed border-decorative bg-surface p-4">
+            <div className="flex flex-col gap-2 rounded-2xl border border-cyan-800 bg-white p-4 shadow-sm">
               <p className="text-sm text-main">
                 Kartu hilang atau terbaca orang lain? Buat Kode Kartu baru. Kode lama
                 langsung tidak berlaku, dan kartu lama perlu dicetak ulang.
@@ -397,7 +405,7 @@ export function KartuCetakClient({
           </Button>
 
           {stored && (
-            <div className="flex flex-col gap-2 rounded-xl border border-dashed border-decorative bg-surface p-4">
+            <div className="flex flex-col gap-2 rounded-2xl border border-cyan-800 bg-white p-4 shadow-sm">
               <p className="text-sm text-main">
                 Ada ringkasan offline di perangkat ini, terakhir disinkronkan{" "}
                 {formatDateTimeWib(new Date(stored.syncedAt))}.

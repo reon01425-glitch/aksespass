@@ -2,14 +2,13 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { Ban, CircleCheck, Clock, Pencil, UserPlus } from "lucide-react";
 import { Button, ConfirmDialog, StatusBanner } from "@/components";
 import type { StaffListItem, StaffStatus } from "@/lib/staff";
 
-const STATUS_VIEW: Record<StaffStatus, { label: string; Icon: typeof Clock }> = {
-  invited: { label: "Menunggu aktivasi", Icon: Clock },
-  active: { label: "Aktif", Icon: CircleCheck },
-  inactive: { label: "Nonaktif", Icon: Ban },
+/** Petugas aktif adalah keadaan biasa, jadi hanya status lain yang diberi label. */
+const STATUS_LABEL: Partial<Record<StaffStatus, string>> = {
+  invited: "Menunggu aktivasi",
+  inactive: "Nonaktif",
 };
 
 export function StaffListClient({ initialStaff }: { initialStaff: StaffListItem[] }) {
@@ -51,8 +50,8 @@ export function StaffListClient({ initialStaff }: { initialStaff: StaffListItem[
   };
 
   return (
-    <div className="flex flex-col gap-5">
-      <p className="text-base text-secondary">
+    <div className="flex w-full min-w-0 flex-col gap-3">
+      <p className="max-w-none w-full rounded-2xl border-2 border-cyan-800 bg-white p-4 text-sm leading-6 text-secondary">
         Petugas didaftarkan oleh admin. Petugas aktif setelah masuk pertama kali dengan nomor HP
         yang didaftarkan.
       </p>
@@ -67,46 +66,42 @@ export function StaffListClient({ initialStaff }: { initialStaff: StaffListItem[
 
       <Link
         href="/admin/petugas/tambah"
-        className="flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-cyan-800 px-4 py-3 text-base font-bold text-white focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900"
+        className="flex min-h-12 w-full items-center justify-center rounded-lg bg-cyan-800 px-4 py-3 text-base font-bold text-white focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900"
       >
-        <UserPlus aria-hidden="true" className="h-5 w-5 shrink-0" />
-        <span>Tambah Petugas</span>
+        Tambah Petugas
       </Link>
 
       {staff.length === 0 ? (
-        <p className="text-base text-secondary">Belum ada petugas terdaftar.</p>
+        <p className="max-w-none rounded-2xl border border-dashed border-cyan-800 bg-white p-6 text-center text-sm font-bold text-main">Belum ada petugas terdaftar.</p>
       ) : (
-        <ul aria-label="Daftar petugas" className="flex flex-col gap-3">
+        <ul aria-label="Daftar petugas" className="m-0 grid w-full list-none grid-cols-2 gap-3 p-0 [&>*:last-child:nth-child(odd)]:col-span-2">
           {staff.map((s) => {
-            const { label, Icon } = STATUS_VIEW[s.status];
+            const label = STATUS_LABEL[s.status];
             return (
               <li
                 key={s.userId}
                 data-testid="baris-petugas"
-                className="flex flex-col gap-3 rounded-xl border border-cyan-800 bg-white p-4"
+                className="flex flex-col gap-3 rounded-2xl border border-cyan-800 bg-white p-4 shadow-sm"
               >
                 <div className="flex flex-col gap-1">
-                  <span className="break-words text-lg font-bold text-main">{s.name}</span>
-                  <span className="text-sm text-secondary">Petugas · {s.unit}</span>
-                  <span className="text-sm text-secondary">{s.phoneMasked}</span>
-                  <span className="flex items-center gap-2 text-base font-bold text-main">
-                    <Icon aria-hidden="true" className="h-5 w-5 shrink-0" />
-                    <span>{label}</span>
-                  </span>
+                  <span className="break-words text-base font-bold text-main">{s.name}</span>
+                  <span className="break-words text-xs text-secondary">Petugas · {s.unit}</span>
+                  <span className="break-all text-xs text-secondary">{s.phoneMasked}</span>
+                  {label && <span className="text-sm font-bold text-main">{label}</span>}
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="mt-auto flex flex-col gap-2">
                   <Link
                     href={`/admin/petugas/${s.userId}`}
                     aria-label={`Ubah ${s.name}`}
-                    className="flex min-h-12 items-center justify-center gap-2 rounded-lg border-2 border-cyan-700 bg-white px-4 py-2 text-base font-bold text-cyan-900 focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900"
+                    className="flex min-h-12 w-full items-center justify-center rounded-lg border-2 border-cyan-700 bg-white px-4 py-2 text-base font-bold text-cyan-900 focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900"
                   >
-                    <Pencil aria-hidden="true" className="h-4 w-4 shrink-0" />
-                    <span>Ubah</span>
+                    Ubah
                   </Link>
                   {s.status === "inactive" ? (
                     <Button
                       variant="secondary"
                       disabled={busy}
+                      className="w-full"
                       onClick={() => void change(s, true)}
                       aria-label={`Aktifkan kembali ${s.name}`}
                     >
@@ -116,6 +111,7 @@ export function StaffListClient({ initialStaff }: { initialStaff: StaffListItem[
                     <Button
                       variant="secondary"
                       disabled={busy}
+                      className="w-full"
                       aria-label={`Nonaktifkan ${s.name}`}
                       onClick={(e) => {
                         triggerRef.current = e.currentTarget;

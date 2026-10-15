@@ -19,7 +19,7 @@ export function ChoiceGroup({
       {helperText && (
         <p className="text-sm font-normal text-secondary mb-3 max-w-full break-words">{helperText}</p>
       )}
-      <div className="flex flex-wrap gap-3 max-w-full">{children}</div>
+      <div className="grid max-w-full grid-cols-2 gap-3 [&>*:last-child:nth-child(odd)]:col-span-2">{children}</div>
     </fieldset>
   );
 }

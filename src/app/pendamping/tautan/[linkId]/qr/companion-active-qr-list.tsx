@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Clock3, QrCode } from "lucide-react";
-import { Button, ConfirmDialog, StatusBanner } from "@/components";
+import { ConfirmDialog, StatusBanner } from "@/components";
 import type { ActiveQrItem } from "@/lib/consent";
 import { TampilkanQr } from "@/app/pasien/akses/qr/tampilkan-qr";
 
@@ -66,7 +65,7 @@ export function CompanionActiveQrList({
         />
       )}
       {qrs.length === 0 && (
-        <p className="rounded-2xl border border-cyan-100 bg-white p-4 text-sm text-secondary">
+        <p className="max-w-none rounded-2xl border border-cyan-800 bg-white p-4 text-sm leading-6 text-secondary shadow-sm">
           Belum ada QR aktif atas nama {patientName}.
         </p>
       )}
@@ -74,31 +73,35 @@ export function CompanionActiveQrList({
         {qrs.map((item) => (
           <li
             key={item.id}
-            className="flex flex-col gap-3 rounded-2xl border border-cyan-100 bg-white p-4 shadow-sm"
+            className="flex flex-col gap-4 rounded-2xl border border-cyan-800 bg-white p-4 shadow-sm"
           >
-            <div className="flex items-center gap-3">
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-cyan-100 text-cyan-900">
-                <QrCode aria-hidden="true" className="h-6 w-6" />
+            <h3 className="break-words text-lg font-bold leading-snug text-main">
+              {item.facilityName}
+            </h3>
+
+            <div className="flex flex-col gap-1 border-t border-cyan-800 pt-3">
+              <span className="text-xs font-bold uppercase tracking-wide text-secondary">
+                Data yang dibagikan
               </span>
-              <div className="min-w-0">
-                <div className="text-xs font-bold uppercase tracking-wide text-secondary">
-                  Fasilitas layanan
-                </div>
-                <div className="break-words text-base font-bold text-main">
-                  {item.facilityName}
-                </div>
+              <p className="break-words text-sm text-main">
+                {item.sharedFieldLabels.length > 0
+                  ? item.sharedFieldLabels.join(", ")
+                  : "Nama panggilan saja"}
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-1 border-t border-cyan-800 pt-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-xs font-bold uppercase tracking-wide text-secondary">
+                  Kedaluwarsa otomatis
+                </span>
+                <span className="text-sm font-bold text-main">
+                  {item.remainingTimeText}
+                </span>
               </div>
+              <p className="text-sm text-secondary">{item.expiryText}</p>
             </div>
-            <div className="text-sm text-secondary">
-              <span className="font-bold text-main">Data yang dibagikan: </span>
-              {item.sharedFieldLabels.length > 0
-                ? item.sharedFieldLabels.join(", ")
-                : "Nama panggilan saja"}
-            </div>
-            <div className="flex items-center gap-2 text-sm text-secondary">
-              <Clock3 aria-hidden="true" className="h-5 w-5 shrink-0" />
-              {item.remainingTimeText}
-            </div>
+
             <TampilkanQr
               qrId={currentIds[item.id] ?? item.id}
               facilityName={item.facilityName}
@@ -106,13 +109,13 @@ export function CompanionActiveQrList({
                 setCurrentIds((prev) => ({ ...prev, [item.id]: newId }))
               }
             />
-            <Button
-              variant="secondary"
+            <button
+              type="button"
               onClick={() => setTarget(item)}
-              className="w-full"
+              className="flex min-h-12 w-full items-center justify-center rounded-2xl border-2 border-cyan-800 bg-white px-4 py-3 text-base font-bold text-cyan-900 transition-colors hover:bg-cyan-50 focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900"
             >
-              Cabut QR
-            </Button>
+              Cabut Akses QR Sekarang
+            </button>
           </li>
         ))}
       </ul>

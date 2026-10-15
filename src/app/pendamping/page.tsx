@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { COOKIE_NAME, SECURE_COOKIE_NAME } from "@/lib/auth/constants";
 import { verifySessionCookie } from "@/lib/auth/session";
 import { listLinkedPatients } from "@/lib/companions";
+import { listRecoveryRequests } from "@/lib/recovery";
 import { PendampingClient } from "./pendamping-client";
 
 export const instant = false;
@@ -28,7 +29,10 @@ export default async function PendampingPage() {
     redirect("/masuk");
   }
 
-  const data = await listLinkedPatients(session);
+  const [data, recoveryRequests] = await Promise.all([
+    listLinkedPatients(session),
+    listRecoveryRequests(session),
+  ]);
 
-  return <PendampingClient data={data} />;
+  return <PendampingClient data={data} recoveryRequests={recoveryRequests} />;
 }

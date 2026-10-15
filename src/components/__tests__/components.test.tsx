@@ -16,7 +16,7 @@ import {
 
 describe("Komponen UI Bersama (renderToStaticMarkup, tanpa DOM)", () => {
   describe("StatusBanner", () => {
-    it("galat → role='alert', ikon aria-hidden, judul dan pesan ada", () => {
+    it("galat → role='alert', tanpa ikon, judul dan pesan ada", () => {
       const html = renderToStaticMarkup(
         <StatusBanner
           variant="error"
@@ -27,7 +27,7 @@ describe("Komponen UI Bersama (renderToStaticMarkup, tanpa DOM)", () => {
 
       expect(html).toContain('role="alert"');
       expect(html).not.toContain('role="status"');
-      expect(html).toContain('aria-hidden="true"');
+      expect(html).not.toContain("<svg");
       expect(html).toContain("QR Tidak Dapat Dipakai");
       expect(html).toContain("Minta pasien membuat ConsentQR baru.");
     });
@@ -42,7 +42,7 @@ describe("Komponen UI Bersama (renderToStaticMarkup, tanpa DOM)", () => {
       );
       expect(successHtml).toContain('role="status"');
       expect(successHtml).not.toContain('role="alert"');
-      expect(successHtml).toContain('aria-hidden="true"');
+      expect(successHtml).not.toContain("<svg");
 
       const warningHtml = renderToStaticMarkup(
         <StatusBanner

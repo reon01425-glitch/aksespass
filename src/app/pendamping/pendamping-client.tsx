@@ -3,27 +3,21 @@
 import React, { useEffect } from "react";
 import Link from "next/link";
 import {
-  LogoutButton,
+  HeroCard,
   PageShell,
+  RecoveryNotice,
   StatusBanner,
 } from "@/components";
+import { Users } from "lucide-react";
 import type { ListLinkedPatientsResult } from "@/lib/companions";
-import {
-  Users,
-  UserPlus,
-  FileText,
-  QrCode,
-  ClipboardCheck,
-  AlertCircle,
-  ChevronRight,
-  ShieldCheck,
-} from "lucide-react";
+import type { RecoveryRequestItem } from "@/lib/recovery";
 
 export interface PendampingClientProps {
   data: ListLinkedPatientsResult;
+  recoveryRequests?: RecoveryRequestItem[];
 }
 
-export function PendampingClient({ data }: PendampingClientProps) {
+export function PendampingClient({ data, recoveryRequests = [] }: PendampingClientProps) {
   const { activePatients, revokedCount, pendingCount } = data;
 
   // Banner tautan berakhir hanya tampil sekali: tandai sudah dilihat setelah halaman tampil.
@@ -36,8 +30,21 @@ export function PendampingClient({ data }: PendampingClientProps) {
   }, [revokedCount]);
 
   return (
-    <PageShell title="Beranda Pendamping">
+    <PageShell title="Beranda Pendamping" companionNav>
       <div className="flex flex-col gap-6 max-w-full w-full">
+        {recoveryRequests.map((r) => (
+          <RecoveryNotice
+            key={r.id}
+            requestId={r.id}
+            initiatorName={r.initiatorName}
+            initiatedByMe={r.initiatedByMe}
+            maskedNewPhone={r.maskedNewPhone}
+            eligibleAt={r.eligibleAt}
+            audience="companion"
+            patientName={activePatients.find((p) => p.linkId === r.linkId)?.preferredName}
+          />
+        ))}
+
         {/* Banner Tautan Berakhir bila ada */}
         {revokedCount > 0 && (
           <StatusBanner
@@ -63,161 +70,105 @@ export function PendampingClient({ data }: PendampingClientProps) {
           />
         )}
 
-        {/* Header Profil Pendamping */}
-        <div className="p-4 rounded-xl border border-cyan-800 bg-surface flex items-center justify-between gap-3 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-lg bg-cyan-100 text-cyan-900 shrink-0">
-              <Users className="w-6 h-6" aria-hidden="true" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xs text-secondary font-bold">Akun Pendamping</span>
-              <span className="text-base font-bold text-main">
-                {activePatients.length} Pasien Tertaut Aktif
-              </span>
-            </div>
-          </div>
-          <Link
-            href="/pendamping/tautkan"
-            className="inline-flex items-center justify-center min-h-[48px] px-4 py-2 bg-cyan-700 text-white font-bold rounded-lg hover:bg-cyan-800 focus:outline-none focus:ring-4 focus:ring-cyan-900 transition-colors text-sm shrink-0"
-          >
-            <UserPlus className="w-4 h-4 mr-1.5 shrink-0" aria-hidden="true" />
-            Tautkan Pasien
-          </Link>
-        </div>
+        {/* Ringkasan Akun Pendamping */}
+        <HeroCard
+          Icon={Users}
+          title={`${activePatients.length} Pasien Tertaut Aktif`}
+          description="Akun pendamping"
+        />
 
         {/* Daftar Pasien Tertaut Aktif */}
         <section aria-labelledby="heading-pasien-tertaut">
           <h2
             id="heading-pasien-tertaut"
-            className="text-lg font-bold text-main border-b border-cyan-100 pb-2 mb-3"
+            className="mb-3 text-lg font-bold text-main"
           >
             Pasien yang Didampingi
           </h2>
 
           {activePatients.length === 0 ? (
-            <div className="p-6 rounded-2xl border border-dashed border-cyan-200 bg-surface flex flex-col items-center text-center gap-3">
-              <Users className="w-10 h-10 text-cyan-800" aria-hidden="true" />
+            <div className="flex flex-col gap-3 rounded-2xl border border-cyan-800 bg-white p-4 shadow-sm">
               <div className="flex flex-col gap-1">
                 <p className="text-base font-bold text-main">
                   Belum ada pasien yang tertaut
                 </p>
-                <p className="text-sm text-secondary max-w-sm">
-                  Minta kode tautan 8 karakter dari pasien di menu Pendamping mereka, lalu tautkan akun Anda.
+                <p className="text-sm leading-6 text-secondary">
+                  Minta kode tautan 8 karakter dari pasien di menu Pendamping
+                  mereka, lalu tautkan akun Anda.
                 </p>
               </div>
               <Link
                 href="/pendamping/tautkan"
-                className="inline-flex items-center justify-center min-h-[48px] px-6 py-2.5 bg-cyan-700 text-white font-bold rounded-lg hover:bg-cyan-800 focus:outline-none focus:ring-4 focus:ring-cyan-900 transition-colors text-base mt-2"
+                className="flex min-h-12 items-center justify-center rounded-2xl bg-cyan-700 px-4 py-3 text-base font-bold text-white transition-colors hover:bg-cyan-800 focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900"
               >
-                <UserPlus className="w-5 h-5 mr-2 shrink-0" aria-hidden="true" />
                 Tautkan Pasien Sekarang
               </Link>
             </div>
           ) : (
-            <div className="flex flex-col gap-4">
+            <div className="grid grid-cols-2 gap-3 [&>*:last-child:nth-child(odd)]:col-span-2">
               {activePatients.map((patient) => {
                 const isPassportComplete = patient.passportStatus === "complete";
+                const actions = [
+                  { href: `/pendamping/tautan/${patient.linkId}/paspor`, label: "Kelola Paspor", aria: undefined },
+                  { href: `/pendamping/tautan/${patient.linkId}/qr`, label: "Kelola QR", aria: undefined },
+                  {
+                    href: `/pendamping/tautan/${patient.linkId}/konfirmasi`,
+                    label: "CareProof",
+                    aria: `Konfirmasi CareProof atas nama ${patient.preferredName}`,
+                  },
+                  {
+                    href: `/pendamping/tautan/${patient.linkId}/pemulihan`,
+                    label: "Pemulihan Akun",
+                    aria: `Pemulihan nomor akun ${patient.preferredName}`,
+                  },
+                ];
                 return (
                   <div
                     key={patient.linkId}
-                    className="p-5 rounded-2xl border border-cyan-200 bg-surface flex flex-col gap-4 shadow-sm"
+                    className="flex min-w-0 flex-col gap-3 rounded-2xl border border-cyan-800 bg-white p-4 shadow-sm"
                   >
-                    {/* Header Pasien */}
-                    <div className="flex items-start justify-between gap-3 border-b border-cyan-100 pb-3">
-                      <div className="flex flex-col">
-                        <span className="text-xs text-secondary font-bold uppercase tracking-wider">
-                          Pasien
-                        </span>
-                        <h3 className="text-xl font-bold text-main break-words">
-                          {patient.preferredName}
-                        </h3>
-                      </div>
-                      <span className="text-xs font-bold px-2.5 py-1 rounded-full shrink-0 flex items-center gap-1 bg-cyan-100 text-cyan-900 border border-cyan-700">
-                        {isPassportComplete ? (
-                          <>
-                            <ShieldCheck className="w-3.5 h-3.5" aria-hidden="true" />
-                            Paspor Lengkap
-                          </>
-                        ) : (
-                          <>
-                            <AlertCircle className="w-3.5 h-3.5" aria-hidden="true" />
-                            Paspor Belum Diisi
-                          </>
-                        )}
+                    <div className="flex flex-col items-start gap-2">
+                      <h3 className="min-w-0 break-words text-base font-bold leading-snug text-main">
+                        {patient.preferredName}
+                      </h3>
+                      <span className="shrink-0 rounded-full bg-cyan-100 px-2.5 py-1 text-xs font-bold text-cyan-900">
+                        {isPassportComplete ? "Paspor Lengkap" : "Paspor Belum Diisi"}
                       </span>
                     </div>
 
-                    {/* Informasi Status Konfirmasi */}
                     {patient.pendingConfirmationsCount > 0 && (
-                      <div className="p-3 rounded-xl bg-cyan-50 border border-cyan-200 flex items-center justify-between text-sm">
-                        <div className="flex items-center gap-2">
-                          <ClipboardCheck className="w-5 h-5 text-cyan-800 shrink-0" aria-hidden="true" />
-                          <span className="font-bold text-main">
-                            {patient.pendingConfirmationsCount} konfirmasi kunjungan menunggu
-                          </span>
-                        </div>
+                      <div className="flex flex-col items-start gap-1 text-sm">
+                        <span className="font-bold text-main">
+                          {patient.pendingConfirmationsCount} konfirmasi kunjungan menunggu
+                        </span>
                         <Link
                           href={`/pendamping/tautan/${patient.linkId}/konfirmasi`}
-                          className="font-bold text-cyan-800 hover:text-cyan-900 underline shrink-0 ml-2 text-sm"
+                          className="shrink-0 rounded-lg py-1 font-bold text-cyan-900 underline focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900"
                         >
                           Lihat
                         </Link>
                       </div>
                     )}
 
-                    {/* Menu Aksi Atas Nama Pasien */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
-                      <Link
-                        href={`/pendamping/tautan/${patient.linkId}/paspor`}
-                        className="flex items-center justify-between p-3 rounded-lg border border-cyan-200 hover:bg-cyan-50 focus:outline-none focus:ring-4 focus:ring-cyan-900 transition-colors min-h-[48px]"
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <FileText className="w-4 h-4 text-cyan-800 shrink-0" aria-hidden="true" />
-                          <span className="text-sm font-bold text-main truncate">
-                            Kelola Paspor
-                          </span>
-                        </div>
-                        <ChevronRight className="w-4 h-4 text-secondary shrink-0" aria-hidden="true" />
-                      </Link>
-
-                      <Link
-                        href={`/pendamping/tautan/${patient.linkId}/qr`}
-                        className="flex items-center justify-between p-3 rounded-lg border border-cyan-200 hover:bg-cyan-50 focus:outline-none focus:ring-4 focus:ring-cyan-900 transition-colors min-h-[48px]"
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <QrCode className="w-4 h-4 text-cyan-800 shrink-0" aria-hidden="true" />
-                          <span className="text-sm font-bold text-main truncate">
-                            Kelola QR
-                          </span>
-                        </div>
-                        <ChevronRight className="w-4 h-4 text-secondary shrink-0" aria-hidden="true" />
-                      </Link>
-
-                      <Link
-                        href={`/pendamping/tautan/${patient.linkId}/konfirmasi`}
-                        aria-label={`Konfirmasi CareProof atas nama ${patient.preferredName}`}
-                        className="flex items-center justify-between p-3 rounded-lg border border-cyan-200 hover:bg-cyan-50 focus:outline-none focus:ring-4 focus:ring-cyan-900 transition-colors min-h-[48px]"
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <ClipboardCheck className="w-4 h-4 text-cyan-800 shrink-0" aria-hidden="true" />
-                          <span className="text-sm font-bold text-main truncate">
-                            CareProof
-                          </span>
-                        </div>
-                        <ChevronRight className="w-4 h-4 text-secondary shrink-0" aria-hidden="true" />
-                      </Link>
-                    </div>
+                    <ul className="m-0 mt-auto flex list-none flex-col gap-2 p-0">
+                      {actions.map((action) => (
+                        <li key={action.href}>
+                          <Link
+                            href={action.href}
+                            aria-label={action.aria}
+                            className="flex min-h-12 items-center justify-center rounded-2xl border-2 border-cyan-800 bg-white px-2 text-center text-sm font-bold text-cyan-900 transition-colors hover:bg-cyan-50 focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900"
+                          >
+                            {action.label}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 );
               })}
             </div>
           )}
         </section>
-
-        {/* Tombol Keluar */}
-        <div className="pt-4 border-t border-cyan-100">
-          <LogoutButton redirectTo="/masuk" className="w-full" />
-        </div>
       </div>
     </PageShell>
   );

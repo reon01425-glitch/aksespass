@@ -48,19 +48,111 @@ function periodLabel(p: DashboardPeriod): string {
   );
 }
 
-function monthLabelFromKey(key: string): string {
-  const [year, month] = key.split("-").map(Number);
-  return new Intl.DateTimeFormat("id-ID", { month: "long", year: "numeric" }).format(
-    new Date(year, month - 1, 1)
+const CARD = "flex flex-col gap-3 rounded-2xl border border-cyan-800 bg-white p-4 shadow-sm";
+const H2 = "text-lg font-bold text-main";
+
+interface ChartPoint {
+  label: string;
+  value: number | null;
+}
+
+/** Grafik garis SVG satu warna (cyan). Titik tersembunyi (kelompok kecil) tidak digambar. */
+function LineChart({
+  points,
+  title,
+  unit = "",
+  max,
+}: {
+  points: ChartPoint[];
+  title: string;
+  unit?: string;
+  max?: number;
+}) {
+  const W = 640;
+  const H = 260;
+  const L = 56;
+  const R = 24;
+  const T = 28;
+  const B = 40;
+  const values = points.map((p) => p.value ?? 0);
+  const top = max ?? Math.max(4, Math.ceil(Math.max(...values, 1) / 4) * 4);
+  const x = (i: number) => (points.length === 1 ? (L + W - R) / 2 : L + (i * (W - L - R)) / (points.length - 1));
+  const y = (v: number) => T + (1 - v / top) * (H - T - B);
+  const drawn = points
+    .map((pt, i) => (pt.value === null ? null : { ...pt, cx: x(i), cy: y(pt.value) }))
+    .filter((d): d is ChartPoint & { value: number; cx: number; cy: number } => d !== null);
+  const path = drawn.map((d, i) => `${i === 0 ? "M" : "L"}${d.cx.toFixed(1)} ${d.cy.toFixed(1)}`).join(" ");
+  const ticks = [0, top / 2, top];
+  const summary = points
+    .map((pt) => `${pt.label}: ${pt.value === null ? "disembunyikan" : `${pt.value}${unit}`}`)
+    .join("; ");
+
+  return (
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      role="img"
+      aria-label={`${title}. ${summary}`}
+      className="h-auto w-full"
+    >
+      {ticks.map((t) => (
+        <g key={t}>
+          <line x1={L} x2={W - R} y1={y(t)} y2={y(t)} className="stroke-cyan-100" strokeWidth={1} />
+          <text x={L - 10} y={y(t) + 5} textAnchor="end" className="fill-cyan-900 text-[13px]">
+            {Math.round(t)}
+            {unit}
+          </text>
+        </g>
+      ))}
+      {drawn.length > 1 && (
+        <path d={path} fill="none" className="stroke-cyan-700" strokeWidth={4} strokeLinejoin="round" strokeLinecap="round" />
+      )}
+      {drawn.map((d) => (
+        <g key={d.label}>
+          <circle cx={d.cx} cy={d.cy} r={7} className="fill-white stroke-cyan-700" strokeWidth={4} />
+          <text x={d.cx} y={d.cy - 14} textAnchor="middle" className="fill-cyan-900 text-[14px] font-bold">
+            {d.value}
+            {unit}
+          </text>
+        </g>
+      ))}
+      {points.map((pt, i) =>
+        pt.value === null ? (
+          <circle key={`h-${pt.label}`} cx={x(i)} cy={y(0)} r={5} className="fill-white stroke-cyan-700" strokeWidth={2} strokeDasharray="3 3" />
+        ) : null
+      )}
+      {points.map((pt, i) => (
+        <text key={pt.label} x={x(i)} y={H - 12} textAnchor="middle" className="fill-cyan-900 text-[13px]">
+          {pt.label}
+          {pt.value === null ? " (disembunyikan)" : ""}
+        </text>
+      ))}
+    </svg>
   );
 }
 
-function renderCell(cell: DashboardCell | undefined, suffix: string = ""): string {
-  if (!cell) return "Belum ada data kunjungan";
-  if (cell.hidden) {
-    return `Disembunyikan (kurang dari ${DASHBOARD_MIN_GROUP_SIZE} pasien)`;
-  }
-  return `${cell.value}${suffix}`;
+/** Daftar batang horizontal; angka selalu ditulis, panjang batang hanya pelengkap. */
+function BarList({ rows }: { rows: { key: string; label: string; cell: DashboardCell | undefined }[] }) {
+  const max = Math.max(1, ...rows.map((r) => (r.cell && !r.cell.hidden ? r.cell.value : 0)));
+  return (
+    <ul className="m-0 flex list-none flex-col gap-3 p-0">
+      {rows.map(({ key, label, cell }) => (
+        <li key={key} className="flex flex-col gap-1">
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="text-sm text-main">{label}</span>
+            <span className="text-sm font-bold text-main">
+              {!cell ? "Belum ada data" : cell.hidden ? `Disembunyikan (<${DASHBOARD_MIN_GROUP_SIZE} pasien)` : cell.value}
+            </span>
+          </div>
+          <div aria-hidden="true" className="h-3 w-full overflow-hidden rounded-full bg-cyan-100">
+            <div
+              className="h-full rounded-full bg-cyan-700"
+              style={{ width: `${cell && !cell.hidden ? Math.max(2, (cell.value / max) * 100) : 0}%` }}
+            />
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 export default async function AdminDashboardPage({
@@ -91,23 +183,22 @@ export default async function AdminDashboardPage({
   const result = await getFacilityDashboard(session, selectedPeriod);
   const selected = result.selected;
 
-  const trendRows = result.trend.map((t) => ({
-    monthLabel: monthLabelFromKey(t.month),
-    hidden: t.hidden,
-    totalVisits: t.hidden ? null : t.totalVisits ?? 0,
-    afr: t.hidden ? null : t.afr ?? null,
-    afrHidden: t.hidden ? false : Boolean(t.afrHidden),
+  const trendMonthShort = (key: string) => {
+    const [year, month] = key.split("-").map(Number);
+    return new Intl.DateTimeFormat("id-ID", { month: "short" }).format(new Date(year, month - 1, 1));
+  };
+  const visitPoints: ChartPoint[] = result.trend.map((t) => ({
+    label: trendMonthShort(t.month),
+    value: t.hidden ? null : t.totalVisits ?? 0,
   }));
-  const maxTotalVisits = Math.max(1, ...trendRows.map((r) => r.totalVisits ?? 0));
+  const afrPoints: ChartPoint[] = result.trend.map((t) => ({
+    label: trendMonthShort(t.month),
+    value: t.hidden || t.afrHidden ? null : t.afr ?? null,
+  }));
 
   return (
-    <PageShell title="Dashboard Aksesibilitas" backHref="/admin" backLabel="Kembali ke Beranda Admin">
-      <div className="flex flex-col gap-8 max-w-full w-full">
-        <p className="text-base text-secondary">
-          Semua angka agregat dan anonim. Hanya pasien yang menyetujui statistik yang dihitung.
-        </p>
-
-        {/* Filter Periode */}
+    <PageShell title="Dashboard" adminNav>
+      <div className="flex w-full max-w-full flex-col gap-5">
         <nav aria-label="Pilih Periode" className="flex flex-wrap gap-2">
           {availablePeriods.map((p) => {
             const key = periodKey(p);
@@ -117,10 +208,10 @@ export default async function AdminDashboardPage({
                 key={key}
                 href={`/admin/dashboard?month=${key}`}
                 aria-current={isActive ? "page" : undefined}
-                className={`inline-flex items-center justify-center min-h-12 px-4 rounded-lg border text-base focus:outline-none focus:ring-4 focus:ring-cyan-900 ${
+                className={`inline-flex min-h-12 items-center justify-center rounded-2xl border px-4 text-sm focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900 ${
                   isActive
-                    ? "bg-cyan-700 text-white border-cyan-700 font-bold"
-                    : "bg-white text-main border-cyan-200 hover:bg-cyan-50"
+                    ? "border-cyan-900 bg-cyan-900 font-bold text-white"
+                    : "border-cyan-800 bg-white text-main hover:bg-cyan-50"
                 }`}
               >
                 {periodLabel(p)}
@@ -130,214 +221,94 @@ export default async function AdminDashboardPage({
         </nav>
 
         {selected.hidden ? (
-          <div className="p-5 rounded-2xl bg-surface border border-cyan-200 text-center">
-            <p className="text-base text-secondary">
+          <div className={`${CARD} text-center`}>
+            <p className="text-sm text-secondary">
               Disembunyikan (kurang dari {DASHBOARD_MIN_GROUP_SIZE} pasien berbeda) untuk{" "}
               {periodLabel(selectedPeriod)}.
             </p>
           </div>
         ) : selected.totalVisits === 0 ? (
-          <div className="p-5 rounded-2xl bg-surface border border-cyan-200 text-center">
-            <p className="text-base text-secondary">Belum ada data kunjungan.</p>
+          <div className={`${CARD} text-center`}>
+            <p className="text-sm text-secondary">Belum ada data kunjungan.</p>
           </div>
         ) : (
           <>
-            {/* AFR Besar */}
-            <section aria-labelledby="heading-afr" className="flex flex-col gap-2">
-              <h2 id="heading-afr" className="text-base font-bold text-main border-b border-cyan-100 pb-2">
-                Accommodation Fulfillment Rate — {periodLabel(selectedPeriod)}
+            <section aria-labelledby="heading-afr" className="grid grid-cols-2 gap-3">
+              <h2 id="heading-afr" className="sr-only">
+                Ringkasan {periodLabel(selectedPeriod)}
               </h2>
-              {selected.afrHidden ? (
-                <p className="text-lg text-main">
-                  Disembunyikan: jumlah pasien terlalu sedikit (kurang dari{" "}
-                  {DASHBOARD_MIN_GROUP_SIZE} pasien berbeda pada kelompok terpenuhi atau belum
-                  terpenuhi) sehingga angka ini dapat mengungkap individu.
+              <div className="flex flex-col gap-1 rounded-2xl border-2 border-cyan-800 bg-white p-4 shadow-sm">
+                <span className="text-xs text-secondary">Accommodation Fulfillment Rate</span>
+                <span className="text-3xl font-bold text-main">
+                  {selected.afrHidden ? "Disembunyikan" : `${selected.afr ?? 0}%`}
+                </span>
+              </div>
+              <div className="flex flex-col gap-1 rounded-2xl border-2 border-cyan-800 bg-white p-4 shadow-sm">
+                <span className="text-xs text-secondary">Kunjungan Tercatat</span>
+                <span className="text-3xl font-bold text-main">{selected.totalVisits}</span>
+              </div>
+              {selected.afrHidden && (
+                <p className="col-span-2 text-xs leading-5 text-secondary">
+                  AFR disembunyikan karena kelompok terpenuhi atau belum terpenuhi berasal dari kurang dari{" "}
+                  {DASHBOARD_MIN_GROUP_SIZE} pasien berbeda.
                 </p>
-              ) : (
-                <>
-                  <div className="text-6xl font-bold text-main" aria-hidden="true">
-                    {selected.afr ?? 0}%
-                  </div>
-                  <p className="text-lg text-main">
-                    {selected.afr ?? 0}% kunjungan kebutuhannya terpenuhi dari total{" "}
-                    {selected.totalVisits} kunjungan tercatat.
-                  </p>
-                </>
               )}
             </section>
 
-            {/* Tren Bulanan */}
-            <section aria-labelledby="heading-tren" className="flex flex-col gap-3">
-              <h2 id="heading-tren" className="text-base font-bold text-main border-b border-cyan-100 pb-2">
-                Tren Bulanan
+            <section aria-labelledby="heading-tren-kunjungan" className={CARD}>
+              <h2 id="heading-tren-kunjungan" className={H2}>
+                Tren Kunjungan
               </h2>
-              <div
-                tabIndex={0}
-                aria-label="Tabel tren bulanan"
-                className="overflow-x-auto max-w-full focus:outline-none focus:ring-2 focus:ring-cyan-900 rounded"
-              >
-                <table className="w-full text-left border-collapse">
-                  <caption className="text-sm text-secondary text-left mb-2">
-                    Jumlah kunjungan dan Accommodation Fulfillment Rate per bulan. Panjang batang
-                    hanya ilustrasi; angka selalu ditulis.
-                  </caption>
-                  <thead>
-                    <tr className="border-b border-cyan-200">
-                      <th scope="col" className="py-2 pr-4 text-sm font-bold text-main">
-                        Bulan
-                      </th>
-                      <th scope="col" className="py-2 pr-4 text-sm font-bold text-main">
-                        Kunjungan
-                      </th>
-                      <th scope="col" className="py-2 text-sm font-bold text-main">
-                        AFR
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {trendRows.map((row) => (
-                      <tr key={row.monthLabel} className="border-b border-cyan-100">
-                        <td className="py-3 pr-4 text-base text-main">{row.monthLabel}</td>
-                        <td className="py-3 pr-4 text-base text-main">
-                          {row.hidden
-                            ? `Disembunyikan (kurang dari ${DASHBOARD_MIN_GROUP_SIZE} pasien)`
-                            : row.totalVisits}
-                        </td>
-                        <td className="py-3 text-base text-main">
-                          {row.hidden || row.afr === null ? (
-                            row.hidden || row.afrHidden ? (
-                              `Disembunyikan (kurang dari ${DASHBOARD_MIN_GROUP_SIZE} pasien)`
-                            ) : (
-                              "Belum ada data"
-                            )
-                          ) : (
-                            <div className="flex items-center gap-2 max-w-full">
-                              <div
-                                className="h-3 bg-cyan-700 rounded"
-                                aria-hidden="true"
-                                style={{
-                                  width: `${Math.max(
-                                    4,
-                                    ((row.totalVisits ?? 0) / maxTotalVisits) * 96
-                                  )}px`,
-                                }}
-                              />
-                              <span>{row.afr}%</span>
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <LineChart points={visitPoints} title="Tren jumlah kunjungan per bulan" />
             </section>
 
-            {/* Rincian Status */}
-            <section aria-labelledby="heading-status" className="flex flex-col gap-3">
-              <h2 id="heading-status" className="text-base font-bold text-main border-b border-cyan-100 pb-2">
-                Rincian Status Konfirmasi
+            <section aria-labelledby="heading-tren-afr" className={CARD}>
+              <h2 id="heading-tren-afr" className={H2}>
+                Tren AFR
               </h2>
-              <div
-                tabIndex={0}
-                aria-label="Tabel rincian status konfirmasi"
-                className="overflow-x-auto max-w-full focus:outline-none focus:ring-2 focus:ring-cyan-900 rounded"
-              >
-                <table className="w-full text-left border-collapse">
-                  <caption className="text-sm text-secondary text-left mb-2">
-                    Jumlah kunjungan per status konfirmasi CareProof pada {periodLabel(selectedPeriod)}.
-                  </caption>
-                  <thead>
-                    <tr className="border-b border-cyan-200">
-                      <th scope="col" className="py-2 pr-4 text-sm font-bold text-main">Status</th>
-                      <th scope="col" className="py-2 text-sm font-bold text-main">Jumlah Kunjungan</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(["terpenuhi", "sebagian", "belum", "belum_dikonfirmasi"] as const).map((key) => (
-                      <tr key={key} className="border-b border-cyan-100">
-                        <td className="py-3 pr-4 text-base text-main">{STATUS_LABELS[key]}</td>
-                        <td className="py-3 text-base text-main">
-                          {renderCell(selected.statusBreakdown?.[key])}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-
-            {/* Rincian Penjawab */}
-            <section aria-labelledby="heading-penjawab" className="flex flex-col gap-3">
-              <h2 id="heading-penjawab" className="text-base font-bold text-main border-b border-cyan-100 pb-2">
-                Rincian Penjawab
-              </h2>
-              <p className="text-sm text-secondary">
-                Jawaban pendamping dan di tempat ditandai terpisah.
+              <LineChart points={afrPoints} title="Tren Accommodation Fulfillment Rate per bulan" unit="%" max={100} />
+              <p className="text-xs text-secondary">
+                Bulan yang kelompoknya terlalu kecil tidak digambar.
               </p>
-              <div
-                tabIndex={0}
-                aria-label="Tabel rincian penjawab"
-                className="overflow-x-auto max-w-full focus:outline-none focus:ring-2 focus:ring-cyan-900 rounded"
-              >
-                <table className="w-full text-left border-collapse">
-                  <caption className="sr-only">
-                    Jumlah kunjungan per pihak yang menjawab konfirmasi CareProof.
-                  </caption>
-                  <thead>
-                    <tr className="border-b border-cyan-200">
-                      <th scope="col" className="py-2 pr-4 text-sm font-bold text-main">Penjawab</th>
-                      <th scope="col" className="py-2 text-sm font-bold text-main">Jumlah Kunjungan</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(["patient", "companion", "on_site"] as const).map((key) => (
-                      <tr key={key} className="border-b border-cyan-100">
-                        <td className="py-3 pr-4 text-base text-main">{ANSWERER_LABELS[key]}</td>
-                        <td className="py-3 text-base text-main">
-                          {renderCell(selected.answererBreakdown?.[key])}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
             </section>
 
-            {/* Rincian Kategori */}
-            <section aria-labelledby="heading-kategori" className="flex flex-col gap-3">
-              <h2 id="heading-kategori" className="text-base font-bold text-main border-b border-cyan-100 pb-2">
-                Rincian Kategori Kebutuhan Belum Terpenuhi
+            <section aria-labelledby="heading-status" className={CARD}>
+              <h2 id="heading-status" className={H2}>
+                Status Konfirmasi
               </h2>
-              <div
-                tabIndex={0}
-                aria-label="Tabel rincian kategori kebutuhan belum terpenuhi"
-                className="overflow-x-auto max-w-full focus:outline-none focus:ring-2 focus:ring-cyan-900 rounded"
-              >
-                <table className="w-full text-left border-collapse">
-                  <caption className="sr-only">
-                    Jumlah kunjungan dengan kebutuhan belum terpenuhi per kategori.
-                  </caption>
-                  <thead>
-                    <tr className="border-b border-cyan-200">
-                      <th scope="col" className="py-2 pr-4 text-sm font-bold text-main">Kategori</th>
-                      <th scope="col" className="py-2 text-sm font-bold text-main">Jumlah Kunjungan</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {Object.entries(NEED_CATEGORY_LABELS).map(([key, label]) => (
-                      <tr key={key} className="border-b border-cyan-100">
-                        <td className="py-3 pr-4 text-base text-main">{label}</td>
-                        <td className="py-3 text-base text-main">
-                          {renderCell(
-                            selected.categoryBreakdown?.[key as keyof typeof NEED_CATEGORY_LABELS]
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <BarList
+                rows={(["terpenuhi", "sebagian", "belum", "belum_dikonfirmasi"] as const).map((key) => ({
+                  key,
+                  label: STATUS_LABELS[key],
+                  cell: selected.statusBreakdown?.[key],
+                }))}
+              />
+            </section>
+
+            <section aria-labelledby="heading-penjawab" className={CARD}>
+              <h2 id="heading-penjawab" className={H2}>
+                Penjawab Konfirmasi
+              </h2>
+              <BarList
+                rows={(["patient", "companion", "on_site"] as const).map((key) => ({
+                  key,
+                  label: ANSWERER_LABELS[key],
+                  cell: selected.answererBreakdown?.[key],
+                }))}
+              />
+            </section>
+
+            <section aria-labelledby="heading-kategori" className={CARD}>
+              <h2 id="heading-kategori" className={H2}>
+                Kebutuhan Belum Terpenuhi
+              </h2>
+              <BarList
+                rows={Object.entries(NEED_CATEGORY_LABELS).map(([key, label]) => ({
+                  key,
+                  label,
+                  cell: selected.categoryBreakdown?.[key as keyof typeof NEED_CATEGORY_LABELS],
+                }))}
+              />
               <Link
                 href={`/admin/belum-terpenuhi?month=${periodKey(selectedPeriod)}`}
                 className="flex min-h-12 items-center justify-center rounded-lg border-2 border-cyan-700 bg-white px-4 py-2 text-base font-bold text-cyan-900 focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900"
@@ -345,6 +316,10 @@ export default async function AdminDashboardPage({
                 Lihat Kebutuhan Belum Terpenuhi
               </Link>
             </section>
+
+            <p className="text-xs text-secondary">
+              Semua angka agregat dan anonim. Hanya pasien yang menyetujui statistik yang dihitung.
+            </p>
           </>
         )}
       </div>

@@ -9,6 +9,7 @@ import { verifySessionCookie } from "@/lib/auth/session";
 import { requireActiveInstitutionPage } from "@/lib/auth/page-guard";
 import { getStaffFacilityInfo } from "@/lib/facility";
 import {
+  HeroCard,
   LogoutButton,
   PageShell,
 } from "@/components";
@@ -43,60 +44,56 @@ export default async function PetugasPage() {
   const todayVisits = await listTodayVisits(session);
 
   return (
-    <PageShell title="Beranda Petugas">
-      <div className="flex flex-col gap-6">
+    <PageShell title="Beranda Petugas" petugasNav>
+      <div className="flex flex-col gap-5">
         {/* Identitas Fasilitas Kesehatan Petugas */}
-        <div className="p-4 rounded-xl border border-cyan-800 bg-surface flex items-center gap-3">
-          <Building2 aria-hidden="true" className="w-6 h-6 text-cyan-800 shrink-0" />
-          <div className="flex flex-col">
+        <div className="p-4 rounded-2xl border border-cyan-800 bg-white shadow-sm flex items-center gap-4">
+          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-cyan-100">
+            <Building2 aria-hidden="true" className="w-7 h-7 text-cyan-800" />
+          </span>
+          <div className="flex min-w-0 flex-col">
             <span className="text-xs text-secondary">Fasilitas Bertugas:</span>
-            <span className="text-base font-bold text-main">
+            <span className="text-base font-bold text-main break-words">
               {facilityInfo?.facilityName || "Fasilitas Kesehatan"}
             </span>
             {facilityInfo?.staffName ? (
-              <span className="text-sm text-secondary">Masuk sebagai {facilityInfo.staffName}</span>
+              <span className="text-sm text-secondary break-words">Masuk sebagai {facilityInfo.staffName}</span>
             ) : null}
           </div>
         </div>
 
-        {/* Tombol Utama Besar: Pindai ConsentQR */}
-        <div className="flex flex-col gap-2">
-          <Link
+        {/* Kartu Aksi: Pindai ConsentQR (utama) dan Kartu Cetak */}
+        <div className="flex flex-col gap-3">
+          <HeroCard
             href="/petugas/pindai"
-            className="flex items-center justify-center gap-3 min-h-[56px] w-full px-6 py-4 bg-cyan-700 text-white font-bold rounded-xl shadow-sm focus:ring-4 focus:ring-cyan-900 focus:ring-offset-2 text-center text-lg"
-          >
-            <QrCode aria-hidden="true" className="w-6 h-6 shrink-0" />
-            <span>Pindai ConsentQR</span>
-          </Link>
-          <p className="text-xs text-secondary text-center">
-            Arahkan kamera ke kode QR di ponsel pasien untuk membuka kebutuhan akomodasi.
-          </p>
+            Icon={QrCode}
+            title="Pindai ConsentQR"
+            description="Arahkan kamera ke kode QR di ponsel pasien untuk membuka kebutuhan akomodasi."
+          />
           <Link
             href="/petugas/kartu"
-            className="flex items-center justify-center gap-2 min-h-12 w-full px-6 py-3 bg-cyan-100 text-cyan-900 border border-cyan-800 font-bold rounded-xl focus:ring-4 focus:ring-cyan-900 focus:ring-offset-2 text-center"
+            className="flex items-center gap-4 w-full p-4 bg-white text-cyan-900 border border-cyan-800 rounded-2xl shadow-sm focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900 focus-visible:ring-offset-2"
           >
-            <CreditCard aria-hidden="true" className="w-5 h-5 shrink-0" />
-            <span>Pasien dengan Kartu Cetak</span>
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-cyan-100">
+              <CreditCard aria-hidden="true" className="w-6 h-6 text-cyan-800" />
+            </span>
+            <span className="flex min-w-0 flex-col">
+              <span className="text-base font-bold">Pasien dengan Kartu Cetak</span>
+              <span className="text-sm text-secondary">
+                Untuk pasien yang hanya membawa kartu cetak atau saat sinyal buruk.
+              </span>
+            </span>
           </Link>
-          <p className="text-xs text-secondary text-center">
-            Untuk pasien yang hanya membawa kartu cetak atau saat sinyal buruk.
-          </p>
         </div>
 
         {/* Daftar Kunjungan Hari Ini (T3) */}
         <section aria-labelledby="heading-antrean" className="flex flex-col gap-3">
-          <div className="flex items-center justify-between border-b border-cyan-100 pb-2">
-            <h2 id="heading-antrean" className="text-base font-bold text-main">
-              Kunjungan Hari Ini
-            </h2>
-            <div className="flex items-center gap-1 text-xs text-secondary">
-              <Clock aria-hidden="true" className="w-3.5 h-3.5" />
-              <span>Hari ini</span>
-            </div>
-          </div>
+          <h2 id="heading-antrean" className="text-lg font-bold text-main">
+            Kunjungan Hari Ini
+          </h2>
 
           {todayVisits.length === 0 ? (
-            <div className="p-6 rounded-xl border border-dashed border-cyan-400 bg-surface text-center flex flex-col items-center justify-center gap-2">
+            <div className="p-6 rounded-2xl border border-dashed border-cyan-800 bg-white text-center flex flex-col items-center justify-center gap-2">
               <p className="text-sm font-bold text-main">
                 Belum ada kunjungan hari ini.
               </p>
@@ -105,13 +102,13 @@ export default async function PetugasPage() {
               </p>
             </div>
           ) : (
-            <ul role="list" className="flex flex-col gap-3 m-0 p-0 list-none">
+            <ul role="list" className="grid grid-cols-1 sm:grid-cols-2 gap-3 m-0 p-0 list-none">
               {todayVisits.map((visit) => (
                 <li
                   key={visit.id}
-                  className="p-4 rounded-xl bg-white border border-cyan-800 shadow-sm flex flex-col gap-2"
+                  className="p-4 rounded-2xl bg-white border border-cyan-800 shadow-sm flex flex-col gap-3"
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2">
                     <span className="text-xs font-bold text-main">
                       Rujukan #{visit.shortRef}
                     </span>
@@ -119,25 +116,18 @@ export default async function PetugasPage() {
                       {visit.time}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 text-sm font-bold text-main">
-                    {visit.statusCode === "unrecorded" && (
-                      <FileEdit
-                        aria-hidden="true"
-                        className="w-4 h-4 shrink-0 text-cyan-800"
-                      />
-                    )}
-                    {visit.statusCode === "pending_confirmation" && (
-                      <Clock
-                        aria-hidden="true"
-                        className="w-4 h-4 shrink-0 text-cyan-800"
-                      />
-                    )}
-                    {visit.statusCode === "confirmed" && (
-                      <CheckCheck
-                        aria-hidden="true"
-                        className="w-4 h-4 shrink-0 text-cyan-800"
-                      />
-                    )}
+                  <div className="flex items-center gap-3 text-sm font-bold text-main">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cyan-100">
+                      {visit.statusCode === "unrecorded" && (
+                        <FileEdit aria-hidden="true" className="w-5 h-5 text-cyan-800" />
+                      )}
+                      {visit.statusCode === "pending_confirmation" && (
+                        <Clock aria-hidden="true" className="w-5 h-5 text-cyan-800" />
+                      )}
+                      {visit.statusCode === "confirmed" && (
+                        <CheckCheck aria-hidden="true" className="w-5 h-5 text-cyan-800" />
+                      )}
+                    </span>
                     <span className="break-words">{visit.statusText}</span>
                   </div>
                 </li>
@@ -147,7 +137,7 @@ export default async function PetugasPage() {
         </section>
 
         {/* Tombol Keluar Menonjol (Perangkat Petugas Dipakai Bergantian) */}
-        <div className="pt-6 border-t border-cyan-100 flex flex-col gap-2">
+        <div className="p-4 rounded-2xl border border-cyan-800 bg-white flex flex-col gap-3">
           <p className="text-xs text-secondary text-center">
             Perangkat ini digunakan bergantian oleh staf medis? Selalu keluar setelah bertugas.
           </p>

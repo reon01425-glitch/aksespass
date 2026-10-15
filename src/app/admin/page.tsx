@@ -9,8 +9,8 @@ import {
 import { verifySessionCookie } from "@/lib/auth/session";
 import { requireActiveInstitutionPage } from "@/lib/auth/page-guard";
 import { getFacilityDashboard, currentJakartaPeriod } from "@/lib/dashboard";
-import { LogoutButton, PageShell } from "@/components";
-import { ShieldCheck, ChevronRight, BarChart3, Users, TriangleAlert, ClipboardList } from "lucide-react";
+import { LayoutDashboard } from "lucide-react";
+import { HeroCard, LogoutButton, PageShell } from "@/components";
 
 export const instant = false;
 
@@ -52,102 +52,80 @@ export default async function AdminPage() {
         )
       : null;
 
+  const MENU = [
+    { href: "/admin/petugas", label: "Akun Petugas", desc: "Tambah, ubah, atau nonaktifkan akun petugas." },
+    { href: "/admin/belum-terpenuhi", label: "Belum Terpenuhi", desc: "Kebutuhan pasien yang belum dipenuhi." },
+    { href: "/admin/tindak-lanjut", label: "Tindak Lanjut", desc: "Pantau tindakan perbaikan yang dicatat." },
+  ];
+  const STAT = "flex flex-col gap-1 rounded-2xl bg-cyan-700 p-4 text-white shadow-md";
+
   return (
-    <PageShell title="Beranda Admin Fasilitas">
-      <div className="flex flex-col gap-6">
-        <div className="p-4 rounded-xl border border-cyan-800 bg-surface flex items-center gap-3">
-          <ShieldCheck aria-hidden="true" className="w-6 h-6 text-cyan-800 shrink-0" />
-          <div className="flex flex-col">
-            <span className="text-xs text-secondary">Peran Pengguna:</span>
-            <span className="text-base font-bold text-main">Admin Fasilitas</span>
-            <span className="text-sm text-secondary">{result.facilityName}</span>
-          </div>
+    <PageShell title="Beranda Admin" adminNav>
+      <div className="flex flex-col gap-5">
+        <div className="flex flex-col rounded-2xl border-2 border-cyan-800 bg-white p-4 shadow-sm">
+          <span className="text-xs text-secondary">Admin Fasilitas:</span>
+          <span className="text-base font-bold text-main break-words">{result.facilityName}</span>
         </div>
 
+        <HeroCard
+          href="/admin/dashboard"
+          Icon={LayoutDashboard}
+          title="Dashboard Fasilitas"
+          description="Statistik akomodasi bulanan yang anonim."
+        />
+
         <section aria-labelledby="heading-ringkasan" className="flex flex-col gap-3">
-          <h2
-            id="heading-ringkasan"
-            className="text-base font-bold text-main border-b border-cyan-100 pb-2"
-          >
-            Ringkasan Bulan Berjalan — {monthLabel}
+          <h2 id="heading-ringkasan" className="text-lg font-bold text-main">
+            Ringkasan {monthLabel}
           </h2>
 
           {selected.hidden ? (
-            <p className="text-base text-secondary">
+            <p className={`max-w-none ${STAT} text-base text-white`}>
               Disembunyikan (kurang dari 5 pasien berbeda) untuk {monthLabel}.
             </p>
           ) : selected.totalVisits === 0 ? (
-            <p className="text-base text-secondary">Belum ada data kunjungan.</p>
+            <p className={`max-w-none ${STAT} text-base text-white`}>Belum ada data kunjungan.</p>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="p-4 rounded-xl bg-surface border border-cyan-100 flex flex-col gap-1">
-                <span className="text-sm text-secondary">Kunjungan Ber-AKSESPASS</span>
-                <span className="text-2xl font-bold text-main">{selected.totalVisits}</span>
+            <div className="grid grid-cols-2 gap-3 [&>*:last-child:nth-child(odd)]:col-span-2">
+              <div className={STAT}>
+                <span className="text-xs text-white">Kunjungan Ber-AKSESPASS</span>
+                <span className="text-2xl font-bold text-white">{selected.totalVisits}</span>
               </div>
-              <div className="p-4 rounded-xl bg-surface border border-cyan-100 flex flex-col gap-1">
-                <span className="text-sm text-secondary">Accommodation Fulfillment Rate</span>
-                <span className="text-2xl font-bold text-main">
+              <div className={STAT}>
+                <span className="text-xs text-white">Accommodation Fulfillment Rate</span>
+                <span className="text-2xl font-bold text-white">
                   {selected.afrHidden ? "Disembunyikan" : `${selected.afr ?? 0}%`}
                 </span>
               </div>
-              <div className="p-4 rounded-xl bg-surface border border-cyan-100 flex flex-col gap-1">
-                <span className="text-sm text-secondary">Kebutuhan Belum Terpenuhi</span>
-                <span className="text-2xl font-bold text-main">{unmetTotal ?? 0}</span>
+              <div className={STAT}>
+                <span className="text-xs text-white">Kebutuhan Belum Terpenuhi</span>
+                <span className="text-2xl font-bold text-white">{unmetTotal ?? 0}</span>
               </div>
             </div>
           )}
 
-          <p className="text-sm text-secondary">
+          <p className="text-xs text-secondary">
             Semua angka agregat dan anonim. Hanya pasien yang menyetujui statistik yang dihitung.
           </p>
         </section>
 
-        <nav aria-label="Menu Admin" className="flex flex-col gap-3">
-          <div className="flex flex-col divide-y divide-cyan-100 border border-cyan-200 rounded-xl bg-surface overflow-hidden">
+        <nav aria-label="Menu Admin" className="grid grid-cols-2 gap-3 [&>*:last-child:nth-child(odd)]:col-span-2">
+          {MENU.map((item) => (
             <Link
-              href="/admin/petugas"
-              className="flex items-center justify-between p-4 min-h-[48px] hover:bg-cyan-200 focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900 transition-colors"
+              key={item.href}
+              href={item.href}
+              className="flex min-h-12 flex-col rounded-2xl border border-cyan-800 bg-white p-4 shadow-sm transition-colors hover:bg-cyan-50 focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900"
             >
-              <div className="flex items-center gap-3">
-                <Users aria-hidden="true" className="w-5 h-5 text-cyan-800 shrink-0" />
-                <span className="text-base font-bold text-main">Akun Petugas</span>
-              </div>
-              <ChevronRight aria-hidden="true" className="w-5 h-5 text-secondary shrink-0" />
+              <span className="text-base font-bold text-main">{item.label}</span>
+              <span className="text-sm text-secondary">{item.desc}</span>
             </Link>
-            <Link
-              href="/admin/dashboard"
-              className="flex items-center justify-between p-4 min-h-[48px] hover:bg-cyan-200 focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <BarChart3 aria-hidden="true" className="w-5 h-5 text-cyan-800 shrink-0" />
-                <span className="text-base font-bold text-main">Dashboard</span>
-              </div>
-              <ChevronRight aria-hidden="true" className="w-5 h-5 text-secondary shrink-0" />
-            </Link>
-            <Link
-              href="/admin/belum-terpenuhi"
-              className="flex items-center justify-between p-4 min-h-[48px] hover:bg-cyan-200 focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <TriangleAlert aria-hidden="true" className="w-5 h-5 text-cyan-800 shrink-0" />
-                <span className="text-base font-bold text-main">Belum Terpenuhi</span>
-              </div>
-              <ChevronRight aria-hidden="true" className="w-5 h-5 text-secondary shrink-0" />
-            </Link>
-            <Link
-              href="/admin/tindak-lanjut"
-              className="flex items-center justify-between p-4 min-h-[48px] hover:bg-cyan-200 focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <ClipboardList aria-hidden="true" className="w-5 h-5 text-cyan-800 shrink-0" />
-                <span className="text-base font-bold text-main">Tindak Lanjut</span>
-              </div>
-              <ChevronRight aria-hidden="true" className="w-5 h-5 text-secondary shrink-0" />
-            </Link>
-          </div>
+          ))}
         </nav>
 
-        <div className="pt-4 border-t border-cyan-100">
+        <div className="flex flex-col gap-3 rounded-2xl border border-cyan-800 bg-white p-4">
+          <p className="text-center text-xs text-secondary">
+            Perangkat dipakai bergantian? Selalu keluar setelah selesai.
+          </p>
           <LogoutButton redirectTo="/masuk/petugas" className="w-full" />
         </div>
       </div>

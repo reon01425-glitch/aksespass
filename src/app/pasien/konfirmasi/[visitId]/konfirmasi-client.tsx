@@ -152,9 +152,9 @@ export function KonfirmasiClient({
 
   return (
     <PageShell title="Konfirmasi Kebutuhan" backHref="/pasien/konfirmasi">
-      <div className="flex flex-col gap-6 max-w-full w-full">
-        <div className="flex flex-col gap-1">
-          <p className="text-lg font-bold text-main break-words">{facilityName}</p>
+      <div className="flex w-full max-w-full flex-col gap-5 pb-24">
+        <div className="flex flex-col gap-1 rounded-2xl border-2 border-cyan-800 bg-white p-4 shadow-sm">
+          <p className="break-words text-lg font-bold text-main">{facilityName}</p>
           <p className="text-sm text-secondary">{formatRecordedDate(recordedAt)}</p>
         </div>
 
@@ -168,17 +168,24 @@ export function KonfirmasiClient({
 
         {assistance.length > 0 && (
           <section aria-labelledby="heading-bantuan" className="flex flex-col gap-3">
-            <h2 id="heading-bantuan" className="text-base font-bold text-main border-b border-cyan-100 pb-2">
+            <h2 id="heading-bantuan" className="text-lg font-bold text-main">
               Bantuan yang Dicatat Petugas
             </h2>
-            <ul className="flex flex-col gap-2">
+            <ul className="m-0 grid list-none grid-cols-2 gap-3 p-0 [&>*:last-child:nth-child(odd)]:col-span-2">
               {assistance.map((item) => (
                 <li
                   key={item.ruleId}
-                  className="flex items-center gap-3 p-3 rounded-xl bg-surface border border-cyan-100"
+                  className="flex min-w-0 flex-col items-start gap-2 rounded-2xl border border-cyan-800 bg-white p-3 shadow-sm"
                 >
-                  {getNeedSummaryIcon(item.iconName)}
-                  <span className="text-base text-main break-words">{item.actionText}</span>
+                  <span
+                    aria-hidden="true"
+                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-cyan-100"
+                  >
+                    {getNeedSummaryIcon(item.iconName)}
+                  </span>
+                  <span className="min-w-0 break-words text-base leading-6 text-main">
+                    {item.actionText}
+                  </span>
                 </li>
               ))}
             </ul>

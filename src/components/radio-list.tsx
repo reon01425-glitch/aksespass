@@ -50,10 +50,10 @@ export function RadioList({
             <label
               key={opt.value}
               htmlFor={inputId}
-              className={`relative flex items-start gap-3 p-4 min-h-12 rounded-xl cursor-pointer select-none border transition-colors focus-within:ring-4 focus-within:ring-cyan-900 focus-within:ring-offset-2 ${
+              className={`relative flex items-start gap-3 p-4 min-h-12 rounded-2xl cursor-pointer select-none border transition-colors focus-within:ring-4 focus-within:ring-cyan-900 focus-within:ring-offset-2 ${
                 isSelected
-                  ? "bg-surface border-2 border-cyan-800 font-bold"
-                  : "bg-white border-input/30 hover:bg-cyan-50/50"
+                  ? "bg-white border-2 border-cyan-800 font-bold"
+                  : "bg-white border-cyan-800/40 hover:bg-cyan-50"
               } ${isOptDisabled ? "opacity-50 cursor-not-allowed" : ""}`}
             >
               <input

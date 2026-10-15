@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import QRCode from "qrcode";
-import { QrCode } from "lucide-react";
 import { StatusBanner } from "@/components";
 import { formatExpiryText, formatTokenForDisplay } from "@/lib/consent/time";
 import { DESIGN_TOKENS } from "@/lib/tokens";
@@ -125,7 +124,7 @@ export function TampilkanQr({ qrId, facilityName, onReplaced, waitingHrefBase }:
         <button
           type="button"
           onClick={() => setShown(null)}
-          className="min-h-12 w-full rounded-xl bg-cyan-100 px-4 py-3 font-bold text-cyan-900 focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900"
+          className="min-h-12 w-full rounded-2xl bg-cyan-100 px-4 py-3 font-bold text-cyan-900 focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900"
         >
           Tutup
         </button>
@@ -142,9 +141,8 @@ export function TampilkanQr({ qrId, facilityName, onReplaced, waitingHrefBase }:
         type="button"
         onClick={handleShow}
         disabled={isLoading}
-        className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-cyan-700 px-4 py-3 font-bold text-white focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900 focus-visible:ring-offset-2 disabled:opacity-60"
+        className="inline-flex min-h-12 w-full items-center justify-center rounded-2xl bg-cyan-700 px-4 py-3 font-bold text-white focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900 focus-visible:ring-offset-2 disabled:opacity-60"
       >
-        <QrCode aria-hidden="true" className="h-5 w-5" />
         {isLoading ? "Menampilkan…" : "Tampilkan QR"}
       </button>
     </div>

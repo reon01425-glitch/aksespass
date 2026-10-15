@@ -1,25 +1,21 @@
 import React from "react";
-import { CheckCircle2, Clock, Inbox } from "lucide-react";
 import type { OwnFollowUpItem, FollowUpStatus } from "@/lib/careproof";
 import { getNeedSummaryIcon } from "./patient-needs-summary";
 
 const STATUS_META: Record<
   FollowUpStatus,
-  { label: string; Icon: typeof Inbox; hint: string }
+  { label: string; hint: string }
 > = {
   diterima: {
     label: "Diterima",
-    Icon: Inbox,
     hint: "Laporan Anda sudah masuk.",
   },
   ditindaklanjuti: {
     label: "Sedang Ditindaklanjuti",
-    Icon: Clock,
     hint: "Fasilitas sedang menanggapi.",
   },
   selesai: {
     label: "Selesai",
-    Icon: CheckCircle2,
     hint: "Tindak lanjut sudah selesai.",
   },
 };
@@ -32,25 +28,19 @@ export interface FollowUpListProps {
 /** Daftar kebutuhan yang belum terpenuhi beserta status tindak lanjut (P17). */
 export function FollowUpList({ items, showFacility = false }: FollowUpListProps) {
   return (
-    <ul className="flex flex-col gap-3">
+    <ul className="m-0 grid list-none grid-cols-2 gap-3 p-0 [&>*:last-child:nth-child(odd)]:col-span-2">
       {items.map((item) => {
         const meta = STATUS_META[item.status];
-        const Icon = meta.Icon;
         return (
           <li
             key={`${item.visitId}-${item.needCode}`}
-            className="flex flex-col gap-2 p-4 rounded-xl bg-white border border-cyan-700"
+            className="flex min-w-0 flex-col items-start gap-2 rounded-2xl border border-cyan-800 bg-white p-4 shadow-sm"
           >
-            <div className="flex items-center gap-3">
-              {getNeedSummaryIcon(item.iconName)}
-              <span className="text-base font-bold text-main break-words flex-1">
-                {item.needLabel}
-              </span>
-            </div>
-            <div className="flex items-center gap-2 text-sm font-bold text-cyan-900">
-              <Icon aria-hidden="true" className="w-5 h-5 shrink-0" />
-              <span>Status: {meta.label}</span>
-            </div>
+            {getNeedSummaryIcon(item.iconName)}
+            <span className="break-words text-base font-bold leading-snug text-main">
+              {item.needLabel}
+            </span>
+            <span className="text-sm font-bold text-cyan-900">Status: {meta.label}</span>
             <p className="text-sm text-secondary">
               {meta.hint}
               {showFacility ? ` ${item.facilityName}.` : ""}
