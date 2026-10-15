@@ -102,7 +102,7 @@ export default async function PetugasPage() {
               </p>
             </div>
           ) : (
-            <ul role="list" className="grid grid-cols-1 sm:grid-cols-2 gap-3 m-0 p-0 list-none">
+            <ul role="list" className="m-0 grid list-none grid-cols-2 gap-3 p-0 [&>*:last-child:nth-child(odd)]:col-span-2">
               {todayVisits.map((visit) => (
                 <li
                   key={visit.id}

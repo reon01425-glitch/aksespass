@@ -107,7 +107,7 @@ function PapanBergambar({ onSend }: { onSend: SendFn }) {
         Tekan gambar. Kalimat besar akan muncul untuk dibaca petugas.
       </p>
       <BigText text={item ? item.sentence : ""} label="Pesan untuk petugas" />
-      <ul className="grid grid-cols-2 gap-3">
+      <ul className="m-0 grid list-none grid-cols-2 gap-3 p-0 [&>*:last-child:nth-child(odd)]:col-span-2">
         {BOARD_ITEMS.map(({ id, label, Icon }) => {
           const active = id === selected;
           return (
