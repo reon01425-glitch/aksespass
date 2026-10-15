@@ -150,7 +150,7 @@ export function CompanionKonfirmasiClient({
             <StatusBanner
               variant="success"
               title="Konfirmasi Tersimpan"
-              message={`Konfirmasi CareProof atas nama ${patientName} berhasil dikirim dengan penanda &quot;Dijawab oleh pendamping&quot;.`}
+              message={`Konfirmasi CareProof atas nama ${patientName} berhasil dikirim dengan penanda “Dijawab oleh pendamping”.`}
             />
             <div>
               <Link

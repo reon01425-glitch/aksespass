@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import Link from "next/link";
 import {
   LogoutButton,
@@ -24,7 +24,16 @@ export interface PendampingClientProps {
 }
 
 export function PendampingClient({ data }: PendampingClientProps) {
-  const { activePatients, revokedCount } = data;
+  const { activePatients, revokedCount, pendingCount } = data;
+
+  // Banner tautan berakhir hanya tampil sekali: tandai sudah dilihat setelah halaman tampil.
+  useEffect(() => {
+    if (revokedCount > 0) {
+      fetch("/api/pendamping/tautan/dilihat", { method: "POST" }).catch(() => {
+        // Banner mungkin muncul sekali lagi bila permintaan gagal.
+      });
+    }
+  }, [revokedCount]);
 
   return (
     <PageShell title="Beranda Pendamping">
@@ -38,6 +47,18 @@ export function PendampingClient({ data }: PendampingClientProps) {
               revokedCount === 1
                 ? "Satu tautan telah berakhir."
                 : `${revokedCount} tautan telah berakhir.`
+            }
+          />
+        )}
+
+        {pendingCount > 0 && (
+          <StatusBanner
+            variant="warning"
+            title="Menunggu Persetujuan Pasien"
+            message={
+              pendingCount === 1
+                ? "Satu permintaan tautan menunggu persetujuan pasien."
+                : `${pendingCount} permintaan tautan menunggu persetujuan pasien.`
             }
           />
         )}
@@ -166,7 +187,7 @@ export function PendampingClient({ data }: PendampingClientProps) {
                         <div className="flex items-center gap-2 min-w-0">
                           <QrCode className="w-4 h-4 text-cyan-800 shrink-0" aria-hidden="true" />
                           <span className="text-sm font-bold text-main truncate">
-                            Buat QR
+                            Kelola QR
                           </span>
                         </div>
                         <ChevronRight className="w-4 h-4 text-secondary shrink-0" aria-hidden="true" />
@@ -174,12 +195,13 @@ export function PendampingClient({ data }: PendampingClientProps) {
 
                       <Link
                         href={`/pendamping/tautan/${patient.linkId}/konfirmasi`}
+                        aria-label={`Konfirmasi CareProof atas nama ${patient.preferredName}`}
                         className="flex items-center justify-between p-3 rounded-lg border border-cyan-200 hover:bg-cyan-50 focus:outline-none focus:ring-4 focus:ring-cyan-900 transition-colors min-h-[48px]"
                       >
                         <div className="flex items-center gap-2 min-w-0">
                           <ClipboardCheck className="w-4 h-4 text-cyan-800 shrink-0" aria-hidden="true" />
                           <span className="text-sm font-bold text-main truncate">
-                            Konfirmasi CareProof
+                            CareProof
                           </span>
                         </div>
                         <ChevronRight className="w-4 h-4 text-secondary shrink-0" aria-hidden="true" />

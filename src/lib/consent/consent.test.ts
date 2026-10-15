@@ -9,7 +9,6 @@ import { getHashPepper } from "../auth/env";
 import { createSessionCookieValue } from "../auth/session";
 import { POST as scanRoutePost, GET as scanRouteGet } from "../../app/api/scan/route";
 import {
-  createConsent,
   revokeQr,
   revokeAllActive,
   scanToken,
@@ -20,6 +19,7 @@ import {
   SCAN_RATE_LIMIT_STAFF_MAX,
 } from "./index";
 import { resetLogSink, setLogSink } from "../privacy";
+import { createConsentReplacingActive } from "@/db/consent-test-support";
 
 const rootDir = path.resolve(__dirname, "..", "..", "..");
 
@@ -125,7 +125,7 @@ describe("Matriks Tes Consent, Pindai, Izin, dan Kebocoran (Bagian 3c)", () => {
       auditSubjectId: IDS.auditSubjects.p1,
     };
 
-    const consentRes = await createConsent(patientSession, {
+    const consentRes = await createConsentReplacingActive(patientSession, {
       facilityId: IDS.facilities.a,
       sharedFields: ["komunikasi", "catatan_pasien"],
       duration: "1 jam",
@@ -180,7 +180,7 @@ describe("Matriks Tes Consent, Pindai, Izin, dan Kebocoran (Bagian 3c)", () => {
     const resMalformed = await scanToken(staffSession, malformedToken);
 
     // c. Token kedaluwarsa: buat QR lalu update expires_at ke masa lalu di DB
-    const consentExpired = await createConsent(
+    const consentExpired = await createConsentReplacingActive(
       { userId: IDS.users.p1, role: "patient" },
       { facilityId: IDS.facilities.a, sharedFields: ["komunikasi"], duration: "1 jam" }
     );
@@ -191,7 +191,7 @@ describe("Matriks Tes Consent, Pindai, Izin, dan Kebocoran (Bagian 3c)", () => {
     const resExpired = await scanToken(staffSession, consentExpired.token);
 
     // d. Token dicabut
-    const consentRevoked = await createConsent(
+    const consentRevoked = await createConsentReplacingActive(
       { userId: IDS.users.p1, role: "patient" },
       { facilityId: IDS.facilities.a, sharedFields: ["komunikasi"], duration: "1 jam" }
     );
@@ -199,7 +199,7 @@ describe("Matriks Tes Consent, Pindai, Izin, dan Kebocoran (Bagian 3c)", () => {
     const resRevoked = await scanToken(staffSession, consentRevoked.token);
 
     // e. Token belum berlaku: update valid_from ke masa depan di DB
-    const futureConsent = await createConsent(
+    const futureConsent = await createConsentReplacingActive(
       { userId: IDS.users.p1, role: "patient" },
       { facilityId: IDS.facilities.a, sharedFields: ["komunikasi"], duration: "1 jam" }
     );
@@ -216,7 +216,7 @@ describe("Matriks Tes Consent, Pindai, Izin, dan Kebocoran (Bagian 3c)", () => {
       facilityId: IDS.facilities.b,
       auditSubjectId: "dummy-staff-b",
     };
-    const consentFacilityA = await createConsent(
+    const consentFacilityA = await createConsentReplacingActive(
       { userId: IDS.users.p1, role: "patient" },
       { facilityId: IDS.facilities.a, sharedFields: ["komunikasi"], duration: "1 jam" }
     );
@@ -281,7 +281,7 @@ describe("Matriks Tes Consent, Pindai, Izin, dan Kebocoran (Bagian 3c)", () => {
   });
 
   it("4. Setiap lolos menulis qr_scanned + profile_read dengan nama field yang benar; setiap gagal menulis qr_scan_rejected; tidak ada token mentah atau nilai profil di audit_events", async () => {
-    const consent = await createConsent(
+    const consent = await createConsentReplacingActive(
       { userId: IDS.users.p1, role: "patient" },
       { facilityId: IDS.facilities.a, sharedFields: ["komunikasi", "catatan_pasien"], duration: "1 jam" }
     );
@@ -343,7 +343,7 @@ describe("Matriks Tes Consent, Pindai, Izin, dan Kebocoran (Bagian 3c)", () => {
   });
 
   it("5. Audit dipaksa gagal -> rollback transaksi, respons tanpa data profil dan tidak ada kunjungan terbuka", async () => {
-    const consent = await createConsent(
+    const consent = await createConsentReplacingActive(
       { userId: IDS.users.p1, role: "patient" },
       { facilityId: IDS.facilities.a, sharedFields: ["komunikasi"], duration: "1 jam" }
     );
@@ -377,7 +377,7 @@ describe("Matriks Tes Consent, Pindai, Izin, dan Kebocoran (Bagian 3c)", () => {
   });
 
   it("6. consent_qr berisi SHA-256 token; token mentah tidak ditemukan di kolom teks consents, consent_qr, audit_events, visits", async () => {
-    const consent = await createConsent(
+    const consent = await createConsentReplacingActive(
       { userId: IDS.users.p1, role: "patient" },
       { facilityId: IDS.facilities.a, sharedFields: ["komunikasi"], duration: "1 jam" }
     );
@@ -402,7 +402,7 @@ describe("Matriks Tes Consent, Pindai, Izin, dan Kebocoran (Bagian 3c)", () => {
   });
 
   it("7. Profil diubah setelah QR dibuat -> pindai mengembalikan data terbaru", async () => {
-    const consent = await createConsent(
+    const consent = await createConsentReplacingActive(
       { userId: IDS.users.p1, role: "patient" },
       { facilityId: IDS.facilities.a, sharedFields: ["komunikasi", "catatan_pasien"], duration: "1 jam" }
     );
@@ -448,7 +448,7 @@ describe("Matriks Tes Consent, Pindai, Izin, dan Kebocoran (Bagian 3c)", () => {
   });
 
   it("8. revokeQr dan revokeAllActive -> pindai berikutnya ditolak; pasien lain tidak bisa mencabut QR orang lain", async () => {
-    const consent = await createConsent(
+    const consent = await createConsentReplacingActive(
       { userId: IDS.users.p1, role: "patient" },
       { facilityId: IDS.facilities.a, sharedFields: ["komunikasi"], duration: "1 jam" }
     );
@@ -483,13 +483,13 @@ describe("Matriks Tes Consent, Pindai, Izin, dan Kebocoran (Bagian 3c)", () => {
     expect(scanAfterRevoke.status).toBe(422);
 
     // 3. revokeAllActive
-    const q1 = await createConsent(
+    const q1 = await createConsentReplacingActive(
       { userId: IDS.users.p1, role: "patient" },
       { facilityId: IDS.facilities.a, sharedFields: ["komunikasi"], duration: "1 jam" }
     );
-    const q2 = await createConsent(
+    const q2 = await createConsentReplacingActive(
       { userId: IDS.users.p1, role: "patient" },
-      { facilityId: IDS.facilities.a, sharedFields: ["komunikasi"], duration: "1 jam" }
+      { facilityId: IDS.facilities.b, sharedFields: ["komunikasi"], duration: "1 jam" }
     );
 
     const revokeAllRes = await revokeAllActive({
@@ -504,7 +504,7 @@ describe("Matriks Tes Consent, Pindai, Izin, dan Kebocoran (Bagian 3c)", () => {
   });
 
   it("9. Pindai lolos membuka satu kunjungan; pindai ulang QR yang sama hari itu tidak membuat kunjungan kedua", async () => {
-    const consent = await createConsent(
+    const consent = await createConsentReplacingActive(
       { userId: IDS.users.p1, role: "patient" },
       { facilityId: IDS.facilities.a, sharedFields: ["komunikasi"], duration: "1 jam" }
     );
@@ -557,7 +557,7 @@ describe("Matriks Tes Consent, Pindai, Izin, dan Kebocoran (Bagian 3c)", () => {
 
     try {
       await expect(
-        createConsent(
+        createConsentReplacingActive(
           { userId: emptyUserId, role: "patient" },
           { facilityId: IDS.facilities.a, sharedFields: ["komunikasi"], duration: "1 jam" }
         )
@@ -567,14 +567,14 @@ describe("Matriks Tes Consent, Pindai, Izin, dan Kebocoran (Bagian 3c)", () => {
     }
 
     await expect(
-      createConsent(
+      createConsentReplacingActive(
         { userId: IDS.users.p1, role: "patient" },
         { facilityId: IDS.facilities.a, sharedFields: [], duration: "1 jam" }
       )
     ).rejects.toThrow(/sharedFields tidak boleh kosong/i);
 
     await expect(
-      createConsent(
+      createConsentReplacingActive(
         { userId: IDS.users.p1, role: "patient" },
         {
           facilityId: IDS.facilities.a,
@@ -654,7 +654,7 @@ describe("Matriks Tes Consent, Pindai, Izin, dan Kebocoran (Bagian 3c)", () => {
   });
 
   it("13. Konteks tidak bocor: dengan pool max=1, pindai lolos oleh petugas A lalu petugas B (fasilitas B) mencoba membaca profil yang sama tanpa token -> 0 baris", async () => {
-    const consent = await createConsent(
+    const consent = await createConsentReplacingActive(
       { userId: IDS.users.p1, role: "patient" },
       { facilityId: IDS.facilities.a, sharedFields: ["komunikasi"], duration: "1 jam" }
     );
@@ -695,7 +695,7 @@ describe("Matriks Tes Consent, Pindai, Izin, dan Kebocoran (Bagian 3c)", () => {
       [markerName, markerNote, IDS.users.p1]
     );
 
-    const consent = await createConsent(
+    const consent = await createConsentReplacingActive(
       { userId: IDS.users.p1, role: "patient" },
       { facilityId: IDS.facilities.a, sharedFields: ["komunikasi", "catatan_pasien"], duration: "1 jam" }
     );
@@ -746,7 +746,7 @@ describe("Matriks Tes Consent, Pindai, Izin, dan Kebocoran (Bagian 3c)", () => {
     );
 
     try {
-      const consent = await createConsent(
+      const consent = await createConsentReplacingActive(
         { userId: IDS.users.p1, role: "patient" },
         { facilityId: IDS.facilities.a, sharedFields: ["komunikasi"], duration: "1 jam" }
       );

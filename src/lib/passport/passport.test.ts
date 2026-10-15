@@ -6,8 +6,9 @@ import {
   saveOwnPassport,
 } from "./index";
 import { getStaffFacilityInfo } from "../facility";
-import { createConsent, scanToken } from "../consent";
+import { scanToken } from "../consent";
 import type { SessionClaims } from "../auth/session";
+import { createConsentReplacingActive } from "@/db/consent-test-support";
 
 const IDS = {
   facilities: {
@@ -199,7 +200,7 @@ describe("Domain Data Paspor (src/lib/passport)", () => {
 
   it("Data dibaca saat dipindai: setelah saveOwnPassport, scanToken pada QR yang sudah aktif mengembalikan data terbaru", async () => {
     // 1. Pasien 1 membuat ConsentQR yang aktif
-    const consent = await createConsent(
+    const consent = await createConsentReplacingActive(
       { userId: IDS.users.p1, role: "patient" },
       {
         facilityId: IDS.facilities.a,

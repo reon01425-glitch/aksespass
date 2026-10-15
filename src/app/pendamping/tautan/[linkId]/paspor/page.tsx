@@ -5,7 +5,7 @@ import { COOKIE_NAME, SECURE_COOKIE_NAME } from "@/lib/auth/constants";
 import { verifySessionCookie } from "@/lib/auth/session";
 import { getLinkedPatientByLinkId } from "@/lib/companions";
 import { getNeedsCatalog, getOwnPassport } from "@/lib/passport";
-import { PassportEditorClient } from "@/app/pasien/paspor/paspor-editor-client";
+import { PassportFormClient } from "@/app/pasien/paspor/paspor-form-client";
 
 export const instant = false;
 
@@ -51,12 +51,17 @@ export default async function CompanionPassportPage({
   ]);
 
   return (
-    <PassportEditorClient
+    <PassportFormClient
       catalog={catalog}
       initialPassport={initialPassport}
-      submitUrl={`/api/pendamping/tautan/${linkId}/paspor`}
-      backUrl="/pendamping"
-      roleLabel={`Atas nama ${patient.preferredName}`}
+      activeQrs={[]}
+      ownerId={`${session.userId}:${linkId}`}
+      companion={{
+        patientName: patient.preferredName,
+        submitUrl: `/api/pendamping/tautan/${linkId}/paspor`,
+        backHref: "/pendamping",
+        qrHref: `/pendamping/tautan/${linkId}/qr`,
+      }}
     />
   );
 }

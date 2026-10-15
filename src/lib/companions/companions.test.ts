@@ -12,7 +12,9 @@ import { getOwnPassport, saveOwnPassport } from "../passport";
 import {
   approveCompanionLink,
   createLinkCode,
+  listLinkedPatients,
   listOwnCompanions,
+  markRevokedLinksSeen,
   redeemLinkCode,
   revokeCompanionLink,
 } from "./index";
@@ -510,5 +512,44 @@ describe("Pendamping: Tautan, RLS, Paspor, ConsentQR, dan CareProof (Bagian 10A)
       return res.rowCount ?? 0;
     });
     expect(updateRes).toBe(0);
+  });
+
+  it("9. D4: banner tautan berakhir hanya sekali dilihat, dan permintaan menunggu terhitung tanpa identitas pasien", async () => {
+    const patientSession = {
+      userId: testPatientId,
+      role: "patient" as const,
+      sessionId: crypto.randomUUID(),
+    };
+    const companionSession = {
+      userId: testCompanionId,
+      role: "companion" as const,
+      sessionId: crypto.randomUUID(),
+    };
+    await adminClient.query("DELETE FROM rate_limit_hits WHERE key LIKE 'companion_redeem:%';");
+
+    // Tautan aktif -> dicabut pasien -> banner muncul (1), pending 0
+    const link = (await listOwnCompanions(patientSession)).find(
+      (l) => l.companionUserId === testCompanionId
+    )!;
+    expect(link.status).toBe("active");
+    await revokeCompanionLink(patientSession, link.id);
+    let list = await listLinkedPatients(companionSession);
+    expect(list.revokedCount).toBe(1);
+    expect(list.pendingCount).toBe(0);
+
+    // Sekali dilihat -> banner hilang
+    expect(await markRevokedLinksSeen(companionSession)).toBe(1);
+    list = await listLinkedPatients(companionSession);
+    expect(list.revokedCount).toBe(0);
+
+    // Diajukan ulang -> pending terhitung; disetujui lalu dicabut lagi -> banner muncul lagi
+    const code = await createLinkCode(patientSession);
+    const re = await redeemLinkCode(companionSession, code.code, { clientIp: "127.0.0.1" });
+    list = await listLinkedPatients(companionSession);
+    expect(list.pendingCount).toBe(1);
+    await approveCompanionLink(patientSession, re.linkId);
+    await revokeCompanionLink(patientSession, re.linkId);
+    list = await listLinkedPatients(companionSession);
+    expect(list.revokedCount).toBe(1);
   });
 });

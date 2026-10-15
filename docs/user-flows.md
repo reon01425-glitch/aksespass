@@ -123,6 +123,7 @@ Berjalan di setiap kunjungan: bagikan kebutuhan, dipanggil sesuai kebutuhan, dil
 - **Tampilan:** toggle per kategori kebutuhan yang benar-benar ada di paspor pasien + "Catatan untuk petugas" (bila ada). Nama panggilan selalu dibagikan (teks tetap). Peringatan "Diagnosis tidak ikut". Bawaan toggle mengikuti shared_fields consent terakhir pasien (diiris dengan kategori paspor aktif); fallback semua aktif. Pilihan masa berlaku (1 jam [bawaan], Hari ini s.d. 23:59 WIB, 24 jam). Pratinjau langsung "Yang akan dilihat petugas" via PatientNeedsSummary.
 - **Aksi Utama:** pilih data dan masa berlaku, lalu [Buat QR].
 - **Aksi Alternatif:** [Batal] → [P9]. Tanpa kategori terpilih → peringatan "Pilih minimal satu kebutuhan untuk dibagikan".
+- **Batas QR:** satu QR aktif per pasien per fasilitas, baik dibuat pasien maupun pendamping. Bila sudah ada, server menolak dengan "Sudah ada QR aktif untuk fasilitas ini. Cabut dulu atau pakai yang ada." Fasilitas lain tetap boleh. **[Disetujui, 15 Okt 2026]**
 - **Navigasi:** setelah [Buat QR] → [P12] (pada komponen/URL yang sama di memori, tanpa navigasi rute bertoken).
 - **US:** P-03, P-04.
 
@@ -185,13 +186,14 @@ Pasien tetap memegang kendali atas data dan siapa yang bisa bertindak atas naman
 ### [P19] Riwayat Akses (Audit Log)
 - **Tampilan:** daftar kronologis setiap pembukaan data: tanggal dan jam, nama petugas, fasilitas, dan data yang dilihat. Filter periode (7 hari, 30 hari, semua waktu) dan fasilitas.
 - **Aksi Utama:** membaca riwayat. [Cabut Semua QR] → konfirmasi di dialog → mencabut semua ConsentQR aktif dan mencatat kejadian `qr_revoked`. Tombol [Laporkan] belum dibuat hari ini karena belum ada layar admin yang menerima laporan, agar tidak menjanjikan tindak lanjut yang belum tersedia.
-- **Aksi Alternatif:** daftar kosong → "Belum ada akses".
+- **Aksi Alternatif:** daftar kosong → "Belum ada akses". Riwayat akses dan kunjungan dibatasi 10 item per halaman dengan tombol Sebelumnya/Berikutnya. **[Disetujui, 15 Okt 2026]**
 - **Navigasi:** [Cabut Semua QR] membuka konfirmasi langsung di P19.
 - **US:** P-06.
 - **Riwayat Kunjungan:** pada layar yang sama tersedia daftar kunjungan milik pasien yang bantuannya sudah dicatat, dengan tautan ke ringkasan baca-saja. Ringkasan menampilkan fasilitas, waktu kunjungan dan pencatatan, bantuan yang dicatat, serta status CareProof bila tersedia. Status pencatatan kunjungan tidak menyiratkan bahwa ConsentQR otomatis dicabut. Data dokter, rating, durasi konsultasi, dan status pencabutan QR tidak ditampilkan bila tidak tersedia dari sumber yang berwenang.
 
 ### [P20] QR Aktif dan Cabut
 - **Tampilan:** daftar QR yang belum kedaluwarsa dengan sisa waktu, fasilitas, dan data yang dibagikan.
+- **Tampilkan QR:** tiap QR aktif punya tombol [Tampilkan QR] (pasien dan pendamping). Token hanya disimpan sebagai hash, jadi tombol ini mencabut QR lama dan membuat QR baru untuk fasilitas yang sama dengan isian dan masa berlaku yang sama, lalu langsung menampilkannya (tercatat `qr_revoked` dan `qr_created`). **[Disetujui, 15 Okt 2026]**
 - **Aksi Utama:** [Cabut] pada satu QR → pop-up "QR ini tidak akan bisa dipakai lagi." → [Ya, Cabut].
 - **Aksi Alternatif:** [Batal] menutup pop-up. Setelah dicabut, QR ditolak saat dipindai dan pencabutan tercatat di [P19].
 - **Navigasi:** → [P18].

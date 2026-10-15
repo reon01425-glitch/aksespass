@@ -7,7 +7,6 @@ import { createSessionCookieValue } from "../auth/session";
 import {
   buildQrPayload,
   calculateConsentExpiry,
-  createConsent,
   formatExpiryText,
   formatRemainingTime,
   formatTimeWib,
@@ -18,6 +17,7 @@ import {
 } from "./index";
 import { GET as statusRouteGet } from "../../app/api/pasien/qr/[qrId]/status/route";
 import { POST as revokeRoutePost } from "../../app/api/pasien/qr/[qrId]/revoke/route";
+import { createConsentReplacingActive } from "@/db/consent-test-support";
 
 const TEST_PATIENT_USER_ID = "22222222-2222-4222-8222-222222222101"; // Pasien Contoh 1
 const TEST_OTHER_PATIENT_USER_ID = "22222222-2222-4222-8222-222222222102"; // Pasien Contoh 2
@@ -169,7 +169,7 @@ describe("ConsentQR: Format, Bawaan Toggle, Waktu WIB, Status Polling & Pencabut
       );
 
       // Buat QR untuk Pasien Contoh 1
-      const created = await createConsent(
+      const created = await createConsentReplacingActive(
         { userId: TEST_PATIENT_USER_ID, role: "patient" },
         {
           facilityId: FACILITY_A_ID,
@@ -211,7 +211,7 @@ describe("ConsentQR: Format, Bawaan Toggle, Waktu WIB, Status Polling & Pencabut
       );
 
       // 1. Buat ConsentQR baru
-      const created = await createConsent(
+      const created = await createConsentReplacingActive(
         { userId: TEST_PATIENT_USER_ID, role: "patient" },
         {
           facilityId: FACILITY_A_ID,
@@ -271,7 +271,7 @@ describe("ConsentQR: Format, Bawaan Toggle, Waktu WIB, Status Polling & Pencabut
       );
 
       // 1. Buat ConsentQR baru
-      const created = await createConsent(
+      const created = await createConsentReplacingActive(
         { userId: TEST_PATIENT_USER_ID, role: "patient" },
         {
           facilityId: FACILITY_A_ID,
@@ -329,5 +329,52 @@ describe("ConsentQR: Format, Bawaan Toggle, Waktu WIB, Status Polling & Pencabut
         message: "Minta pasien membuat ConsentQR baru.",
       });
     });
+  });
+});
+
+describe("Satu QR aktif per pasien per fasilitas", () => {
+  it("QR kedua untuk fasilitas yang sama ditolak; fasilitas lain dan setelah dicabut diizinkan", async () => {
+    const { createConsent: realCreate, revokeQr } = await import("./index");
+    const actor = { userId: "22222222-2222-4222-8222-222222222102", role: "patient" as const };
+    const fa = "11111111-1111-4111-8111-111111111101";
+    const fb = "11111111-1111-4111-8111-111111111102";
+    const input = { sharedFields: ["komunikasi"], duration: "1 jam" as const };
+
+    // Bersihkan QR aktif milik pasien 2 lebih dulu (tes lain berbagi data).
+    const first = await createConsentReplacingActive(actor, { ...input, facilityId: fa });
+    await expect(realCreate(actor, { ...input, facilityId: fa })).rejects.toThrow(
+      "Sudah ada QR aktif untuk fasilitas ini"
+    );
+    const other = await createConsentReplacingActive(actor, { ...input, facilityId: fb });
+    expect(other.ok).toBe(true);
+    await revokeQr(actor, first.qrId);
+    const again = await realCreate(actor, { ...input, facilityId: fa });
+    expect(again.ok).toBe(true);
+  });
+});
+
+describe("Tampilkan QR lewat penggantian (regenerateQr)", () => {
+  it("mencabut QR lama, membuat QR baru dengan isian dan masa berlaku sama, mencatat audit", async () => {
+    const { regenerateQr, revokeQr: revoke } = await import("./index");
+    const actor = { userId: "22222222-2222-4222-8222-222222222102", role: "patient" as const };
+    const fa = "11111111-1111-4111-8111-111111111101";
+    const first = await createConsentReplacingActive(actor, {
+      facilityId: fa,
+      sharedFields: ["komunikasi", "catatan_pasien"],
+      duration: "24 jam",
+    });
+    const again = await regenerateQr(actor, first.qrId);
+    expect(again).not.toBeNull();
+    expect(again!.qrId).not.toBe(first.qrId);
+    expect(again!.token).not.toBe(first.token);
+    expect(again!.expiresAt).toBe(first.expiresAt);
+    // QR lama sudah tidak aktif, tidak bisa diganti lagi
+    expect(await regenerateQr(actor, first.qrId)).toBeNull();
+    expect((await revoke(actor, first.qrId)).ok).toBe(false);
+    // Pasien lain tidak bisa mengganti QR milik orang lain
+    expect(
+      await regenerateQr({ userId: "22222222-2222-4222-8222-222222222101", role: "patient" }, again!.qrId)
+    ).toBeNull();
+    expect((await revoke(actor, again!.qrId)).ok).toBe(true);
   });
 });

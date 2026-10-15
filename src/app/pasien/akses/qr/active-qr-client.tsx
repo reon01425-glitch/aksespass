@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { ConfirmDialog, StatusBanner } from "@/components";
+import { TampilkanQr } from "./tampilkan-qr";
 import type { ActiveQrItem } from "@/lib/consent";
 import {
   AlertCircle,
@@ -50,6 +51,8 @@ export function ActiveQrClient({ initialQrs }: ActiveQrClientProps) {
     message: string;
   } | null>(null);
   const [isRevoking, setIsRevoking] = useState(false);
+  // id QR terbaru per baris setelah "Tampilkan QR" (baris tetap, id server berganti).
+  const [currentIds, setCurrentIds] = useState<Record<string, string>>({});
 
   const listHeadingRef = useRef<HTMLHeadingElement>(null);
 
@@ -58,7 +61,7 @@ export function ActiveQrClient({ initialQrs }: ActiveQrClientProps) {
     setIsRevoking(true);
 
     try {
-      const res = await fetch(`/api/pasien/qr/${confirmTarget.id}/revoke`, {
+      const res = await fetch(`/api/pasien/qr/${currentIds[confirmTarget.id] ?? confirmTarget.id}/revoke`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -304,6 +307,13 @@ export function ActiveQrClient({ initialQrs }: ActiveQrClientProps) {
                     </div>
                     <p className="text-sm text-secondary">{item.expiryText}</p>
 
+                    <TampilkanQr
+                      qrId={currentIds[item.id] ?? item.id}
+                      facilityName={item.facilityName}
+                      onReplaced={(newId) =>
+                        setCurrentIds((prev) => ({ ...prev, [item.id]: newId }))
+                      }
+                    />
                     <button
                       type="button"
                       onClick={() => setConfirmTarget(item)}

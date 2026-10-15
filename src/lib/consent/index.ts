@@ -80,6 +80,7 @@ export function calculateConsentExpiry(
 /**
  * 3a. Membuat ConsentQR baru oleh pasien (atau pendamping resmi):
  * - Memvalidasi sharedFields (tidak kosong, ⊆ konstanta field).
+ * - Menolak bila pasien sudah punya QR aktif untuk fasilitas yang sama.
  * - Memastikan pasien sudah memiliki paspor dengan minimal 1 kebutuhan (kalau belum: "Simpan paspor dulu").
  * - Menghasilkan token acak 128 bit, menyimpan hash SHA-256 di consent_qr.
  * - Mencatat kejadian audit qr_created secara atomik dalam satu transaksi.
@@ -133,6 +134,23 @@ export async function createConsent(
 
       if (needsCountRes.rows[0].count === 0) {
         throw new Error("Simpan paspor dulu");
+      }
+
+      // 1b. Satu QR aktif per pasien per fasilitas.
+      const dupRes = await tx.query<{ count: number }>(
+        `SELECT count(*)::int AS count
+         FROM consent_qr cq
+         JOIN consents c ON c.id = cq.consent_id
+         WHERE c.patient_user_id = $1
+           AND c.facility_id = $2
+           AND cq.revoked_at IS NULL
+           AND cq.expires_at > $3;`,
+        [targetPatientUserId, input.facilityId, now.toISOString()]
+      );
+      if (dupRes.rows[0].count > 0) {
+        throw new Error(
+          "Sudah ada QR aktif untuk fasilitas ini. Cabut dulu atau pakai yang ada."
+        );
       }
 
       // 2. Ambil audit_subject_id pasien untuk disimpan sebagai subject_ref
@@ -273,6 +291,102 @@ export async function revokeQr(
       }
 
       return { ok: true, count: 1 };
+    }
+  );
+}
+
+/**
+ * 3b'. Menampilkan lagi sebuah QR aktif lewat penggantian: QR lama dicabut dan QR baru
+ * dibuat untuk pasien + fasilitas yang sama dengan isian (shared_fields) dan masa berlaku
+ * yang sama. Token tidak pernah disimpan, jadi QR lama tidak bisa digambar ulang.
+ * Atomik dalam satu transaksi; mencatat qr_revoked dan qr_created.
+ */
+export async function regenerateQr(
+  actor: ConsentActor,
+  qrId: string,
+  options?: { now?: Date }
+): Promise<CreateConsentResult | null> {
+  const now = options?.now ?? new Date();
+
+  return await withContext(
+    { userId: actor.userId, role: actor.role },
+    async (tx) => {
+      const oldRes = await tx.query<{
+        consent_id: string;
+        patient_user_id: string;
+        facility_id: string;
+        shared_fields: string[];
+        subject_ref: string;
+        expires_at: Date;
+      }>(
+        `SELECT cq.consent_id, c.patient_user_id, c.facility_id, c.shared_fields,
+                c.subject_ref, cq.expires_at
+         FROM consent_qr cq
+         JOIN consents c ON c.id = cq.consent_id
+         WHERE cq.id = $1 AND cq.revoked_at IS NULL AND cq.expires_at > $2
+         FOR UPDATE OF cq;`,
+        [qrId, now.toISOString()]
+      );
+      if (oldRes.rows.length === 0) return null;
+      const old = oldRes.rows[0];
+
+      await tx.query(
+        "UPDATE consent_qr SET revoked_at = $1 WHERE id = $2;",
+        [now.toISOString(), qrId]
+      );
+      await recordAuditEvent(tx, {
+        eventType: "qr_revoked",
+        actorId: actor.userId,
+        actorRole: actor.role,
+        subjectRef: old.subject_ref,
+        facilityId: old.facility_id,
+        occurredAt: now,
+      });
+
+      const token = generateConsentToken();
+      const tokenHash = hashConsentToken(token);
+      const consentId = crypto.randomUUID();
+      const newQrId = crypto.randomUUID();
+      const expiresAt = new Date(old.expires_at);
+
+      await tx.query(
+        `INSERT INTO consents (
+           id, patient_user_id, facility_id, shared_fields, valid_from, valid_until,
+           created_by_user_id, created_at, subject_ref
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $5, $8);`,
+        [
+          consentId,
+          old.patient_user_id,
+          old.facility_id,
+          old.shared_fields,
+          now.toISOString(),
+          expiresAt.toISOString(),
+          actor.userId,
+          old.subject_ref,
+        ]
+      );
+      await tx.query(
+        `INSERT INTO consent_qr (id, consent_id, token_hash, expires_at, created_at)
+         VALUES ($1, $2, $3, $4, $5);`,
+        [newQrId, consentId, tokenHash, expiresAt.toISOString(), now.toISOString()]
+      );
+      await recordAuditEvent(tx, {
+        eventType: "qr_created",
+        actorId: actor.userId,
+        actorRole: actor.role,
+        subjectRef: old.subject_ref,
+        facilityId: old.facility_id,
+        occurredAt: now,
+      });
+
+      return {
+        ok: true,
+        token,
+        qrUrl: buildConsentQrUrl(token),
+        expiresAt: expiresAt.toISOString(),
+        consentId,
+        qrId: newQrId,
+      };
     }
   );
 }
@@ -891,9 +1005,10 @@ export interface ActiveQrItem {
  */
 export async function listOwnActiveQrs(
   actor: ConsentActor,
-  options?: { now?: Date }
+  options?: { now?: Date; targetPatientUserId?: string }
 ): Promise<ActiveQrItem[]> {
   const now = options?.now ?? new Date();
+  const patientUserId = options?.targetPatientUserId || actor.userId;
 
   return await withContext(
     {
@@ -925,7 +1040,7 @@ export async function listOwnActiveQrs(
            AND cq.revoked_at IS NULL
            AND cq.expires_at > $2
          ORDER BY cq.created_at DESC;`,
-        [actor.userId, now.toISOString()]
+        [patientUserId, now.toISOString()]
       );
 
       return res.rows.map((row) => {
