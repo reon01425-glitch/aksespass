@@ -8,6 +8,7 @@ import {
   PREFERENCE_COOKIE_NAME,
   parsePreferenceCookie,
 } from "@/lib/preferences";
+import { getAccountOverview } from "@/lib/account";
 import { AkunClient } from "./akun-client";
 
 export const instant = false;
@@ -31,5 +32,13 @@ export default async function PasienAkunPage() {
     parsePreferenceCookie(cookieStore.get(PREFERENCE_COOKIE_NAME)?.value) ??
     DEFAULT_PREFERENCES;
 
-  return <AkunClient initialPreferences={preferences} />;
+  const overview = await getAccountOverview(session);
+
+  return (
+    <AkunClient
+      initialPreferences={preferences}
+      maskedPhone={overview.maskedPhone}
+      activeCompanions={overview.activeCompanions}
+    />
+  );
 }

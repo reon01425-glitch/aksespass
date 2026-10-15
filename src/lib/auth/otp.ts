@@ -161,6 +161,73 @@ export async function requestOtp(
 }
 
 /**
+ * Memeriksa dan memakai (sekali pakai) kode OTP di dalam transaksi yang sudah berjalan.
+ * Mengembalikan pesan galat, atau null bila kode sah. Percobaan salah tetap dihitung
+ * karena pemanggil harus meng-commit transaksinya (jangan melempar galat sebelum commit).
+ */
+async function consumeOtpInTx(
+  tx: TransactionClient,
+  phoneHash: string,
+  expectedCodeHash: string
+): Promise<string | null> {
+  // 1. SELECT ... FOR UPDATE pada tabel otp_codes
+  const otpRes = await tx.query<{
+    code_hash: string;
+    expires_at: Date;
+    attempts: number;
+    consumed_at: Date | null;
+  }>(
+    `SELECT code_hash, expires_at, attempts, consumed_at
+     FROM otp_codes
+     WHERE phone_hash = $1
+     FOR UPDATE;`,
+    [phoneHash]
+  );
+
+  if (otpRes.rows.length === 0) {
+    return "Kode verifikasi tidak valid atau telah kedaluwarsa.";
+  }
+
+  const otpRow = otpRes.rows[0];
+
+  if (otpRow.consumed_at !== null) {
+    return "Kode verifikasi sudah digunakan. Silakan minta kode baru.";
+  }
+
+  if (otpRow.attempts >= OTP_MAX_ATTEMPTS) {
+    return "Batas percobaan telah tercapai. Kode hangus, silakan minta kode baru.";
+  }
+
+  if (new Date(otpRow.expires_at).getTime() <= Date.now()) {
+    return "Kode verifikasi telah kedaluwarsa. Silakan minta kode baru.";
+  }
+
+  // Naikkan counter percobaan di DB dan commit
+  const newAttempts = otpRow.attempts + 1;
+  await tx.query(
+    "UPDATE otp_codes SET attempts = $1 WHERE phone_hash = $2;",
+    [newAttempts, phoneHash]
+  );
+
+  // Bandingkan kode secara konstan-waktu
+  const isCodeValid = constantTimeEqual(otpRow.code_hash, expectedCodeHash);
+  if (!isCodeValid) {
+    if (newAttempts >= OTP_MAX_ATTEMPTS) {
+      return "Batas percobaan telah tercapai. Kode hangus, silakan minta kode baru.";
+    }
+    return "Kode verifikasi salah.";
+  }
+
+  // Tandai sekali pakai (consumed)
+  await tx.query(
+    "UPDATE otp_codes SET consumed_at = now() WHERE phone_hash = $1;",
+    [phoneHash]
+  );
+
+  return null;
+}
+
+/**
  * Memverifikasi kode OTP yang dimasukkan pengguna.
  * Mengunci baris (FOR UPDATE), mencegah penggunaan ganda, membatasi 5 percobaan,
  * dan menerbitkan sesi cookie bertanda tangan bila lolos.
@@ -198,65 +265,10 @@ export async function verifyOtp(
   let otpError: string | null = null;
 
   await withContext({}, async (tx) => {
-    // 1. SELECT ... FOR UPDATE pada tabel otp_codes
-    const otpRes = await tx.query<{
-      code_hash: string;
-      expires_at: Date;
-      attempts: number;
-      consumed_at: Date | null;
-    }>(
-      `SELECT code_hash, expires_at, attempts, consumed_at
-       FROM otp_codes
-       WHERE phone_hash = $1
-       FOR UPDATE;`,
-      [phoneHash]
-    );
-
-    if (otpRes.rows.length === 0) {
-      otpError = "Kode verifikasi tidak valid atau telah kedaluwarsa.";
+    otpError = await consumeOtpInTx(tx, phoneHash, expectedCodeHash);
+    if (otpError) {
       return;
     }
-
-    const otpRow = otpRes.rows[0];
-
-    if (otpRow.consumed_at !== null) {
-      otpError = "Kode verifikasi sudah digunakan. Silakan minta kode baru.";
-      return;
-    }
-
-    if (otpRow.attempts >= OTP_MAX_ATTEMPTS) {
-      otpError = "Batas percobaan telah tercapai. Kode hangus, silakan minta kode baru.";
-      return;
-    }
-
-    if (new Date(otpRow.expires_at).getTime() <= Date.now()) {
-      otpError = "Kode verifikasi telah kedaluwarsa. Silakan minta kode baru.";
-      return;
-    }
-
-    // Naikkan counter percobaan di DB dan commit
-    const newAttempts = otpRow.attempts + 1;
-    await tx.query(
-      "UPDATE otp_codes SET attempts = $1 WHERE phone_hash = $2;",
-      [newAttempts, phoneHash]
-    );
-
-    // Bandingkan kode secara konstan-waktu
-    const isCodeValid = constantTimeEqual(otpRow.code_hash, expectedCodeHash);
-    if (!isCodeValid) {
-      if (newAttempts >= OTP_MAX_ATTEMPTS) {
-        otpError = "Batas percobaan telah tercapai. Kode hangus, silakan minta kode baru.";
-      } else {
-        otpError = "Kode verifikasi salah.";
-      }
-      return;
-    }
-
-    // Tandai sekali pakai (consumed)
-    await tx.query(
-      "UPDATE otp_codes SET consumed_at = now() WHERE phone_hash = $1;",
-      [phoneHash]
-    );
 
     // 2. Cari user yang sudah terdaftar (jalur SECURITY DEFINER sempit pra-sesi)
     const existingRes = await tx.query<{
@@ -282,6 +294,21 @@ export async function verifyOtp(
         if (existing.membership_status !== "active") {
           throw new Error("Tidak dapat masuk. Hubungi admin fasilitas.");
         }
+      }
+
+      // Satu nomor = satu peran. Bila pengguna memilih peran lain di halaman masuk, beri tahu
+      // alasannya alih-alih diam-diam masuk sebagai peran yang tersimpan.
+      const intended = options?.intendedRole;
+      if (
+        (intended === "patient" || intended === "companion") &&
+        (existing.role === "patient" || existing.role === "companion") &&
+        intended !== existing.role
+      ) {
+        throw new Error(
+          existing.role === "patient"
+            ? "Nomor ini sudah terdaftar sebagai pasien. Gunakan nomor lain untuk akun pendamping."
+            : "Nomor ini sudah terdaftar sebagai pendamping. Gunakan nomor lain untuk akun pasien."
+        );
       }
 
       verifiedUser = {
@@ -396,4 +423,35 @@ export async function verifyOtp(
     claims,
     cookieHeader: cookieResult.header,
   };
+}
+
+/**
+ * Memverifikasi kode OTP untuk tindakan akun (ubah kontak, hapus akun) tanpa menerbitkan sesi.
+ * Melempar Error berisi pesan yang aman ditampilkan bila kode salah, kedaluwarsa, atau terpakai.
+ */
+export async function verifyOtpForAction(
+  rawPhone: string,
+  rawCode: string
+): Promise<void> {
+  const phone = normalizePhoneNumber(rawPhone);
+  const code = String(rawCode || "").trim();
+
+  if (!/^\d{6}$/.test(code)) {
+    throw new Error(
+      "Format kode verifikasi tidak valid. Masukkan 6 digit angka."
+    );
+  }
+
+  const pepper = getHashPepper();
+  const phoneHash = hmacSha256Hex(pepper, phone);
+  const expectedCodeHash = hmacSha256Hex(pepper, code);
+
+  let otpError: string | null = null;
+  await withContext({}, async (tx) => {
+    otpError = await consumeOtpInTx(tx, phoneHash, expectedCodeHash);
+  });
+
+  if (otpError) {
+    throw new Error(otpError);
+  }
 }

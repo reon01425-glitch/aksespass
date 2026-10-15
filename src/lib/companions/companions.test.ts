@@ -295,6 +295,59 @@ describe("Pendamping: Tautan, RLS, Paspor, ConsentQR, dan CareProof (Bagian 10A)
     expect(approved.status).toBe("active");
   });
 
+  it("4b. Menautkan ulang pendamping yang sudah aktif atau menunggu ditolak, status tidak berubah dan kode tidak hangus", async () => {
+    const patientSession = {
+      userId: testPatientId,
+      role: "patient" as const,
+      sessionId: crypto.randomUUID(),
+    };
+    const companionSession = {
+      userId: testCompanionId,
+      role: "companion" as const,
+      sessionId: crypto.randomUUID(),
+    };
+    const statusOf = async () =>
+      (
+        await adminClient.query<{ status: string }>(
+          "SELECT status FROM companions WHERE patient_user_id = $1 AND companion_user_id = $2;",
+          [testPatientId, testCompanionId]
+        )
+      ).rows[0].status;
+
+    await adminClient.query("DELETE FROM rate_limit_hits WHERE key LIKE 'companion_redeem:%';");
+
+    // Sudah aktif (dari tes 4): tautkan lagi ditolak dan tetap aktif
+    expect(await statusOf()).toBe("active");
+    const codeA = await createLinkCode(patientSession);
+    await expect(
+      redeemLinkCode(companionSession, codeA.code, { clientIp: "127.0.0.1" })
+    ).rejects.toMatchObject({ code: "ALREADY_LINKED", message: "Anda sudah tertaut dengan pasien ini." });
+    expect(await statusOf()).toBe("active");
+
+    // Kode tidak hangus oleh penolakan
+    const used = await adminClient.query(
+      "SELECT used_at FROM companion_link_codes WHERE patient_user_id = $1 AND used_at IS NULL;",
+      [testPatientId]
+    );
+    expect(used.rowCount).toBeGreaterThan(0);
+
+    // Dicabut lalu diajukan ulang -> pending; mengajukan lagi saat pending ditolak
+    const links = await listOwnCompanions(patientSession);
+    const link = links.find((l) => l.companionUserId === testCompanionId)!;
+    await revokeCompanionLink(patientSession, link.id);
+    const re = await redeemLinkCode(companionSession, codeA.code, { clientIp: "127.0.0.1" });
+    expect(await statusOf()).toBe("pending");
+    const codeB = await createLinkCode(patientSession);
+    await expect(
+      redeemLinkCode(companionSession, codeB.code, { clientIp: "127.0.0.1" })
+    ).rejects.toMatchObject({ code: "ALREADY_LINKED" });
+    expect(await statusOf()).toBe("pending");
+
+    // Pulihkan keadaan aktif untuk tes berikutnya
+    await approveCompanionLink(patientSession, re.linkId);
+    expect(await statusOf()).toBe("active");
+  });
+
   it("5. Paspor & Audit: pendamping ubah paspor -> last_updated_by_companion terisi + audit profile_changed_by_companion", async () => {
     const patientSession = {
       userId: testPatientId,

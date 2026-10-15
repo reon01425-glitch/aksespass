@@ -345,7 +345,7 @@ export function RiwayatAksesClient({
                 AKSESPASS Pasien
               </span>
               <h1 className="truncate text-xl font-bold leading-7 text-main">
-                Riwayat Kunjungan
+                Riwayat Akses
               </h1>
             </div>
             <Link
@@ -468,7 +468,7 @@ export function RiwayatAksesClient({
                   aria-hidden="true"
                   className="mx-auto mb-2 h-7 w-7 text-cyan-800"
                 />
-                <p className="font-bold text-main">Belum ada aktivitas akses</p>
+                <p className="font-bold text-main">Belum ada akses</p>
                 <p className="mt-1 text-sm text-secondary">
                   {history.length === 0
                     ? "Belum ada riwayat pembukaan data atau penggunaan ConsentQR."
@@ -519,7 +519,7 @@ export function RiwayatAksesClient({
                         </h4>
                         {item.actorLabel && item.actorLabel !== "Anda" && (
                           <p className="mt-2 break-words text-sm text-secondary">
-                            Pelaku: {item.actorLabel}
+                            {wasRead ? "Petugas" : "Pelaku"}: {item.actorLabel}
                           </p>
                         )}
                         {item.fieldLabels.length > 0 && (

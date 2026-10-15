@@ -17,7 +17,6 @@ import {
   QrCode,
   ShieldCheck,
   ShieldPlus,
-  SlidersHorizontal,
   UserRound,
   Users,
   type LucideIcon,
@@ -318,14 +317,6 @@ export function ActiveQrClient({ initialQrs }: ActiveQrClientProps) {
               </ul>
             </section>
           )}
-
-          <Link
-            href="/pasien/akses"
-            className={`flex min-h-12 items-center justify-center gap-2 rounded-xl bg-cyan-100 px-4 py-3 text-base font-bold text-cyan-900 transition-colors hover:bg-cyan-200 ${FOCUS_RING}`}
-          >
-            <SlidersHorizontal aria-hidden="true" className="h-5 w-5" />
-            Atur Field Izin Akses Data
-          </Link>
 
           {qrs.length > 0 && (
             <Link

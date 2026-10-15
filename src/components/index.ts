@@ -17,3 +17,4 @@ export * from "./petugas-pindai-flow";
 export { PendingConfirmationSync } from "./pending-confirmation-sync";
 export { FollowUpList } from "./follow-up-list";
 export { ServiceDoneRedirect } from "./service-done-redirect";
+export { OtpActionForm } from "./otp-action-form";
