@@ -252,10 +252,30 @@ export async function redeemLinkCode(
       facilityId: session.facilityId,
     },
     async (tx) => {
-      const res = await tx.query<{ redeem_companion_link_code: string | null }>(
-        "SELECT redeem_companion_link_code($1) AS redeem_companion_link_code;",
-        [codeHash]
-      );
+      let res;
+      try {
+        res = await tx.query<{ redeem_companion_link_code: string | null }>(
+          "SELECT redeem_companion_link_code($1) AS redeem_companion_link_code;",
+          [codeHash]
+        );
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "";
+        if (message.includes("ALREADY_LINKED_ACTIVE")) {
+          throw new CompanionError(
+            "Anda sudah tertaut dengan pasien ini.",
+            409,
+            "ALREADY_LINKED"
+          );
+        }
+        if (message.includes("ALREADY_LINKED_PENDING")) {
+          throw new CompanionError(
+            "Permintaan tautan ke pasien ini masih menunggu persetujuan.",
+            409,
+            "ALREADY_LINKED"
+          );
+        }
+        throw err;
+      }
 
       const linkId = res.rows[0]?.redeem_companion_link_code;
       if (!linkId) {

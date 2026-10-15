@@ -10,7 +10,7 @@ import { listOwnVisitHistory } from "@/lib/careproof";
 import { RiwayatAksesClient } from "./riwayat-akses-client";
 
 export const metadata: Metadata = {
-  title: "Riwayat Kunjungan — AKSESPASS",
+  title: "Riwayat Akses — AKSESPASS",
   description: "Lihat riwayat pembukaan data dan detail kunjungan Anda.",
 };
 

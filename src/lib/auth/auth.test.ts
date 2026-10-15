@@ -340,6 +340,31 @@ describe("Autentikasi, Sesi Bertanda Tangan, Guard, OTP Tiruan, dan RLS (Bagian 
   });
 
   describe("7. Otorisasi Pendaftaran Pengguna Baru", () => {
+    it("nomor yang sudah terdaftar sebagai pasien ditolak saat memilih peran pendamping, dan sebaliknya", async () => {
+      const phone = "081299993777";
+      const first = await requestOtp(phone);
+      const patient = await verifyOtp(phone, first.devOtp!, { intendedRole: "patient" });
+      expect(patient.role).toBe("patient");
+
+      const second = await requestOtp(phone);
+      await expect(
+        verifyOtp(phone, second.devOtp!, { intendedRole: "companion" })
+      ).rejects.toThrow(/sudah terdaftar sebagai pasien/);
+
+      // Kode tidak hangus karena penolakan: tetap bisa dipakai pada peran yang benar
+      const again = await verifyOtp(phone, second.devOtp!, { intendedRole: "patient" });
+      expect(again.role).toBe("patient");
+
+      const cPhone = "081299993778";
+      const c1 = await requestOtp(cPhone);
+      const companion = await verifyOtp(cPhone, c1.devOtp!, { intendedRole: "companion" });
+      expect(companion.role).toBe("companion");
+      const c2 = await requestOtp(cPhone);
+      await expect(
+        verifyOtp(cPhone, c2.devOtp!, { intendedRole: "patient" })
+      ).rejects.toThrow(/sudah terdaftar sebagai pendamping/);
+    });
+
     it("nomor baru dengan intendedRole patient membuat akun pasien", async () => {
       const newPhone = "081299993001";
       const req = await requestOtp(newPhone);

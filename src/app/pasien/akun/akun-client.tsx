@@ -1,8 +1,15 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Button, LogoutButton, PageShell, StatusBanner } from "@/components";
+import {
+  Button,
+  LogoutButton,
+  OtpActionForm,
+  PageShell,
+  StatusBanner,
+} from "@/components";
 import type {
   AppPreferences,
   ContrastMode,
@@ -16,13 +23,17 @@ const SELECTED = "bg-cyan-700 text-white border-cyan-700 ring-2 ring-cyan-900";
 const UNSELECTED = "bg-surface text-main border-cyan-800";
 
 /**
- * Akun pasien (bagian awal P22): ubah tampilan aksesibilitas dan keluar.
- * Ubah kontak, pemulihan akses, dan hapus akun belum tersedia di versi ini.
+ * Pengaturan Akun dan Privasi (P22): kontak, bahasa dan aksesibilitas, pemulihan akses,
+ * tautan ke Hapus Data dan Akun (P23), dan keluar.
  */
 export function AkunClient({
   initialPreferences,
+  maskedPhone,
+  activeCompanions,
 }: {
   initialPreferences: AppPreferences;
+  maskedPhone: string;
+  activeCompanions: number;
 }) {
   const router = useRouter();
   const [textSize, setTextSize] = useState<TextSize>(initialPreferences.textSize);
@@ -32,6 +43,8 @@ export function AkunClient({
   );
   const [isSaving, setIsSaving] = useState(false);
   const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
+  const [isChangingPhone, setIsChangingPhone] = useState(false);
+  const [phoneChanged, setPhoneChanged] = useState(false);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -55,6 +68,63 @@ export function AkunClient({
   return (
     <PageShell title="Akun" backHref="/pasien" backLabel="Kembali ke beranda">
       <div className="mx-auto flex w-full max-w-md flex-col gap-6 px-4 py-6">
+        <section aria-labelledby="akun-kontak" className="flex flex-col gap-3">
+          <h2 id="akun-kontak" className="text-xl font-bold text-main">
+            Kontak
+          </h2>
+          <div className="flex flex-col gap-1 rounded-xl border border-decorative bg-surface p-4">
+            <div className="text-sm text-secondary">Nomor HP untuk masuk</div>
+            <div className="text-base font-bold text-main">{maskedPhone}</div>
+          </div>
+          {phoneChanged && (
+            <StatusBanner
+              variant="success"
+              title="Nomor diperbarui"
+              message="Gunakan nomor baru saat masuk berikutnya."
+            />
+          )}
+          {isChangingPhone ? (
+            <OtpActionForm
+              idPrefix="ubah-kontak"
+              askPhone
+              phoneLabel="Nomor HP baru"
+              purpose="kontak"
+              submitUrl="/api/pasien/akun/kontak"
+              sendLabel="Kirim kode ke nomor baru"
+              submitLabel="Simpan Nomor Baru"
+              onSuccess={() => {
+                setIsChangingPhone(false);
+                setPhoneChanged(true);
+                router.refresh();
+              }}
+              onCancel={() => setIsChangingPhone(false)}
+            />
+          ) : (
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setPhoneChanged(false);
+                setIsChangingPhone(true);
+              }}
+              className="w-full"
+            >
+              Ubah Nomor HP
+            </Button>
+          )}
+        </section>
+
+        <section aria-labelledby="akun-bahasa" className="flex flex-col gap-2">
+          <h2 id="akun-bahasa" className="text-xl font-bold text-main">
+            Bahasa
+          </h2>
+          <div className="rounded-xl border border-decorative bg-surface p-4 text-base font-bold text-main">
+            Indonesia sederhana
+          </div>
+          <p className="text-sm text-secondary">
+            Saat ini hanya bahasa Indonesia sederhana yang tersedia.
+          </p>
+        </section>
+
         <section aria-labelledby="akun-tampilan" className="flex flex-col gap-4">
           <h2 id="akun-tampilan" className="text-xl font-bold text-main">
             Tampilan dan Aksesibilitas
@@ -154,17 +224,40 @@ export function AkunClient({
           </Button>
         </section>
 
-        <section
-          aria-labelledby="akun-belum"
-          className="flex flex-col gap-2 rounded-xl border border-dashed border-decorative bg-surface p-4"
-        >
-          <h2 id="akun-belum" className="text-base font-bold text-main">
-            Belum tersedia di versi ini
+        <section aria-labelledby="akun-pemulihan" className="flex flex-col gap-2">
+          <h2 id="akun-pemulihan" className="text-xl font-bold text-main">
+            Pemulihan Akses
           </h2>
           <p className="text-sm text-secondary">
-            Ubah nomor kontak, pemulihan akses, serta hapus data dan akun belum
-            dapat dilakukan dari halaman ini.
+            Jika ponsel hilang, akses dipulihkan lewat nomor HP di atas. Pendamping tertaut
+            dapat membantu Anda.
           </p>
+          <div className="rounded-xl border border-decorative bg-surface p-4 text-base text-main">
+            {activeCompanions > 0
+              ? `${activeCompanions} pendamping aktif tertaut.`
+              : "Belum ada pendamping tertaut."}
+          </div>
+          <Link
+            href="/pasien/pendamping"
+            className="inline-flex min-h-12 items-center font-bold text-cyan-900 underline"
+          >
+            Kelola pendamping
+          </Link>
+        </section>
+
+        <section aria-labelledby="akun-hapus" className="flex flex-col gap-2 border-t border-decorative pt-4">
+          <h2 id="akun-hapus" className="text-xl font-bold text-main">
+            Hapus Data dan Akun
+          </h2>
+          <p className="text-sm text-secondary">
+            Hapus paspor, profil, dan tautan pendamping Anda, lalu cabut semua QR.
+          </p>
+          <Link
+            href="/pasien/akun/hapus"
+            className="inline-flex min-h-12 items-center justify-center rounded-xl border border-cyan-800 px-4 font-bold text-main"
+          >
+            Hapus Data dan Akun
+          </Link>
         </section>
 
         <div className="border-t border-decorative pt-4">
