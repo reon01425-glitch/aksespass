@@ -11,14 +11,19 @@ import type { SessionClaims } from "../auth/session";
 
 describe("Preferensi Pengguna & Logika Rute P1 (src/lib/preferences)", () => {
   describe("1. Serialisasi & Parsing Cookie Preferensi (aksespass_pref)", () => {
-    it("serialisasi nilai valid menghasilkan JSON dengan tepat dua kunci", () => {
+    it("serialisasi nilai valid menghasilkan JSON dengan tepat tiga kunci", () => {
       const serialized = serializePreferenceCookie({
         textSize: "150",
         contrast: "high",
+        readingMode: "standard",
       });
       const parsed = JSON.parse(serialized);
-      expect(parsed).toEqual({ textSize: "150", contrast: "high" });
-      expect(Object.keys(parsed)).toHaveLength(2);
+      expect(parsed).toEqual({
+        textSize: "150",
+        contrast: "high",
+        readingMode: "standard",
+      });
+      expect(Object.keys(parsed)).toHaveLength(3);
     });
 
     it("serialisasi melempar error jika nilai di luar allowlist", () => {
@@ -27,6 +32,7 @@ describe("Preferensi Pengguna & Logika Rute P1 (src/lib/preferences)", () => {
           // @ts-expect-error testing invalid text size
           textSize: "300",
           contrast: "standard",
+          readingMode: "standard",
         })
       ).toThrow(/tidak valid/i);
 
@@ -35,6 +41,16 @@ describe("Preferensi Pengguna & Logika Rute P1 (src/lib/preferences)", () => {
           textSize: "100",
           // @ts-expect-error testing invalid contrast
           contrast: "ultra-high",
+          readingMode: "standard",
+        })
+      ).toThrow(/tidak valid/i);
+
+      expect(() =>
+        serializePreferenceCookie({
+          textSize: "100",
+          contrast: "standard",
+          // @ts-expect-error testing invalid reading mode
+          readingMode: "voice",
         })
       ).toThrow(/tidak valid/i);
     });
@@ -44,13 +60,32 @@ describe("Preferensi Pengguna & Logika Rute P1 (src/lib/preferences)", () => {
       expect(parsePreferenceCookie(rawPlain)).toEqual({
         textSize: "200",
         contrast: "high",
+        readingMode: "standard",
       });
 
       const rawEncoded = encodeURIComponent(rawPlain);
       expect(parsePreferenceCookie(rawEncoded)).toEqual({
         textSize: "200",
         contrast: "high",
+        readingMode: "standard",
       });
+    });
+
+    it("parsing cookie dengan readingMode valid mempertahankan nilainya", () => {
+      expect(
+        parsePreferenceCookie(
+          '{"textSize":"100","contrast":"standard","readingMode":"screen-reader"}'
+        )
+      ).toEqual({
+        textSize: "100",
+        contrast: "standard",
+        readingMode: "screen-reader",
+      });
+      expect(
+        parsePreferenceCookie(
+          '{"textSize":"100","contrast":"standard","readingMode":"voice"}'
+        )
+      ).toBeNull();
     });
 
     it("parsing menolak format rusak atau nilai di luar daftar", () => {

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 import { COOKIE_NAME, SECURE_COOKIE_NAME } from "@/lib/auth/constants";
 import { verifySessionCookie } from "@/lib/auth/session";
 import {
@@ -8,6 +7,7 @@ import {
   parsePreferenceCookie,
   resolveRootDestination,
 } from "@/lib/preferences";
+import { SplashClient } from "./splash-client";
 
 export const instant = false;
 
@@ -18,8 +18,9 @@ export const metadata: Metadata = {
 };
 
 /**
- * [P1] Splash Screen: Arah langsung ke beranda peran atau alur orientasi
- * tanpa jeda buatan, berdasarkan ada/tidaknya sesi dan cookie preferensi.
+ * [P1] Splash Screen: menampilkan logo, tagline, dan indikator memuat secara
+ * singkat (dapat dilewati), lalu mengarahkan ke beranda peran atau alur
+ * orientasi berdasarkan ada/tidaknya sesi dan cookie preferensi.
  */
 export default async function HomePage() {
   const cookieStore = await cookies();
@@ -34,5 +35,5 @@ export default async function HomePage() {
   const hasPref = Boolean(prefRaw && parsePreferenceCookie(prefRaw));
 
   const destination = resolveRootDestination(claims, hasPref);
-  redirect(destination);
+  return <SplashClient destination={destination} />;
 }

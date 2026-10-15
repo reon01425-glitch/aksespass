@@ -3,7 +3,6 @@
 import React, { useRef, useState } from "react";
 import {
   Button,
-  PageShell,
   StatusBanner,
   TextField,
   TextLink,
@@ -18,6 +17,48 @@ const FIELD_CLASS = "h-14 rounded-xl! border-2!";
 const BUTTON_CLASS = "h-14 w-full rounded-full!";
 const LINK_BUTTON_CLASS =
   "min-h-12 rounded-lg px-3 py-2 text-center text-sm font-bold text-link underline focus:outline-none focus:ring-4 focus:ring-cyan-900 disabled:cursor-not-allowed disabled:text-disabled-text";
+
+interface RecoveryHelpProps {
+  role: "patient" | "companion";
+  onUseCompanion: () => void;
+}
+
+/** [P3] Lupa akses: pemulihan lewat nomor yang sama atau lewat pendamping tertaut. */
+function RecoveryHelp({ role, onUseCompanion }: RecoveryHelpProps) {
+  return (
+    <details className="rounded-2xl border border-decorative bg-surface p-3">
+      <summary className="min-h-12 cursor-pointer py-3 text-sm font-bold text-link underline focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900">
+        Lupa akses atau tidak menerima kode?
+      </summary>
+      <div className="mt-2 flex flex-col gap-3 text-sm text-main">
+        <p>
+          <span className="font-bold">Lewat nomor yang sama.</span> Masukkan
+          nomor yang dulu Anda daftarkan, lalu minta kode baru. Kode lama tidak
+          berlaku lagi setelah kode baru dikirim.
+        </p>
+        <p>
+          <span className="font-bold">Lewat pendamping tertaut.</span> Jika
+          nomor tersebut sudah tidak dapat dipakai, minta pendamping yang sudah
+          Anda tautkan untuk masuk. Pendamping dapat membuka paspor dan QR atas
+          nama Anda.
+        </p>
+        {role === "patient" && (
+          <button
+            type="button"
+            onClick={onUseCompanion}
+            className={LINK_BUTTON_CLASS}
+          >
+            Saya pendamping, masuk dengan nomor saya
+          </button>
+        )}
+        <p className="text-xs text-secondary">
+          Jika nomor lama hilang dan Anda belum punya pendamping tertaut,
+          pemulihan akun belum tersedia di versi ini.
+        </p>
+      </div>
+    </details>
+  );
+}
 
 export function MasukClient({ reasonMessage }: MasukClientProps) {
   const [step, setStep] = useState<1 | 2>(1);
@@ -267,6 +308,11 @@ export function MasukClient({ reasonMessage }: MasukClientProps) {
                   Masuk sebagai Petugas atau Admin Fasilitas
                 </TextLink>
               </div>
+
+              <RecoveryHelp
+                role={role}
+                onUseCompanion={() => setRole("companion")}
+              />
             </form>
           )}
 
@@ -387,6 +433,14 @@ export function MasukClient({ reasonMessage }: MasukClientProps) {
                   Kirim Ulang Kode
                 </button>
               </div>
+
+              <RecoveryHelp
+                role={role}
+                onUseCompanion={() => {
+                  setRole("companion");
+                  goBackToPhone();
+                }}
+              />
             </form>
           )}
         </div>

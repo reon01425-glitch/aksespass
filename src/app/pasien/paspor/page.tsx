@@ -43,6 +43,7 @@ export default async function PasienPasporPage() {
       catalog={catalog}
       initialPassport={initialPassport}
       activeQrs={activeQrs}
+      ownerId={session.userId}
     />
   );
 }

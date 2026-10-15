@@ -17,6 +17,8 @@ import {
   ClipboardCheck,
   FileText,
   History,
+  Printer,
+  Settings,
   House,
   Lock,
   QrCode,
@@ -27,6 +29,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
+import { PassportDraftBanner } from "./draft-banner";
 
 export const instant = false;
 
@@ -107,6 +110,18 @@ export default async function PasienPage() {
       subtitle: "Riwayat akses data",
       Icon: History,
     },
+    {
+      href: "/pasien/kartu-cetak",
+      title: "Kartu Cetak",
+      subtitle: "Cetak atau simpan offline",
+      Icon: Printer,
+    },
+    {
+      href: "/pasien/akun",
+      title: "Akun",
+      subtitle: "Tampilan dan keluar",
+      Icon: Settings,
+    },
   ];
 
   const companionNote = passport.lastUpdatedByCompanion && (
@@ -185,6 +200,7 @@ export default async function PasienPage() {
               />
             )}
             {companionNote}
+            <PassportDraftBanner ownerId={session.userId} />
           </div>
 
           {/* Kartu Aksi Utama */}
