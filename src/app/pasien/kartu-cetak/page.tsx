@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { COOKIE_NAME, SECURE_COOKIE_NAME } from "@/lib/auth/constants";
 import { verifySessionCookie } from "@/lib/auth/session";
+import { getOrCreateOwnCardCode } from "@/lib/card";
 import { getNeedsCatalog, getOwnPassport } from "@/lib/passport";
 import {
   DEFAULT_PREFERENCES,
@@ -28,9 +29,10 @@ export default async function PasienKartuCetakPage() {
   const session = await verifySessionCookie(sessionCookie);
   if (!session || session.role !== "patient") redirect("/masuk");
 
-  const [passport, catalog] = await Promise.all([
+  const [passport, catalog, cardCode] = await Promise.all([
     getOwnPassport(session),
     getNeedsCatalog(session),
+    getOrCreateOwnCardCode(session),
   ]);
   const preferences =
     parsePreferenceCookie(cookieStore.get(PREFERENCE_COOKIE_NAME)?.value) ??
@@ -40,6 +42,7 @@ export default async function PasienKartuCetakPage() {
     <KartuCetakClient
       passport={passport}
       catalog={catalog}
+      cardCode={cardCode}
       textSize={preferences.textSize}
       contrast={preferences.contrast}
     />

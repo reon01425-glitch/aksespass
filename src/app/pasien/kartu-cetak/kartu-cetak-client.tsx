@@ -3,7 +3,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Check, Printer, WifiOff } from "lucide-react";
-import { Button, PageShell, StatusBanner } from "@/components";
+import { Button, ConfirmDialog, PageShell, StatusBanner } from "@/components";
+import { formatCardCode } from "@/lib/card/format";
 import type { NeedsCategoryGroup, OwnPassportData } from "@/lib/passport";
 import {
   buildOfflineSummary,
@@ -19,6 +20,8 @@ import { formatDateTimeWib } from "@/lib/consent/time";
 interface KartuCetakClientProps {
   passport: OwnPassportData | null;
   catalog: NeedsCategoryGroup[];
+  /** Kode Kartu pasien (8 karakter), dicetak di kartu untuk jalur T4b. */
+  cardCode: string | null;
   textSize: TextSize;
   contrast: ContrastMode;
 }
@@ -31,9 +34,35 @@ interface KartuCetakClientProps {
 export function KartuCetakClient({
   passport,
   catalog,
+  cardCode: initialCardCode,
   textSize,
   contrast,
 }: KartuCetakClientProps) {
+  const [cardCode, setCardCode] = useState<string | null>(initialCardCode);
+  const [confirmNewCode, setConfirmNewCode] = useState(false);
+  const [isRenewing, setIsRenewing] = useState(false);
+  const [renewError, setRenewError] = useState<string | null>(null);
+
+  const handleRenewCode = async () => {
+    if (isRenewing) return;
+    setIsRenewing(true);
+    setRenewError(null);
+    try {
+      const res = await fetch("/api/pasien/kartu-cetak/kode", { method: "POST" });
+      const data = await res.json().catch(() => null);
+      if (res.ok && data?.ok) {
+        setCardCode(data.code);
+      } else {
+        setRenewError(data?.error || "Gagal membuat kode baru. Coba lagi.");
+      }
+    } catch {
+      setRenewError("Gagal membuat kode baru. Periksa koneksi lalu coba lagi.");
+    } finally {
+      setIsRenewing(false);
+      setConfirmNewCode(false);
+    }
+  };
+
   const passportNeeds = useMemo<OfflineSourceNeed[]>(() => {
     const owned = new Set(passport?.needCodes ?? []);
     return catalog.flatMap((group) =>
@@ -277,6 +306,23 @@ export function KartuCetakClient({
                 </p>
               </div>
             )}
+            {cardCode && (
+              <div className="flex flex-col gap-1 border-t border-cyan-800 pt-3">
+                <p className="text-sm font-bold uppercase tracking-wider text-secondary">
+                  Kode Kartu
+                </p>
+                <p
+                  data-testid="kode-kartu"
+                  className="text-3xl font-bold tracking-widest text-main"
+                >
+                  {formatCardCode(cardCode)}
+                </p>
+                <p className="text-sm text-secondary">
+                  Petugas memakai kode ini untuk mencatat kunjungan bila sinyal buruk.
+                  Kode tidak berisi data Anda.
+                </p>
+              </div>
+            )}
             <p className="border-t border-cyan-800 pt-3 text-sm text-secondary">
               Kartu ini hanya berisi ringkasan kebutuhan layanan.
               Tidak meminta diagnosis, dan tidak memuat QR akses.
@@ -320,6 +366,26 @@ export function KartuCetakClient({
             Yang tercetak hanya kartu di atas.
           </p>
 
+          {cardCode && (
+            <div className="flex flex-col gap-2 rounded-xl border border-dashed border-decorative bg-surface p-4">
+              <p className="text-sm text-main">
+                Kartu hilang atau terbaca orang lain? Buat Kode Kartu baru. Kode lama
+                langsung tidak berlaku, dan kartu lama perlu dicetak ulang.
+              </p>
+              {renewError && (
+                <StatusBanner variant="error" title="Gagal" message={renewError} />
+              )}
+              <Button
+                variant="secondary"
+                onClick={() => setConfirmNewCode(true)}
+                disabled={isRenewing}
+                className="w-full"
+              >
+                Buat Kode Kartu Baru
+              </Button>
+            </div>
+          )}
+
           <Button
             variant="secondary"
             onClick={handleSaveOffline}
@@ -351,6 +417,14 @@ export function KartuCetakClient({
           )}
         </section>
       </div>
+      <ConfirmDialog
+        isOpen={confirmNewCode}
+        title="Buat Kode Kartu baru?"
+        description="Kode lama langsung tidak berlaku. Cetak ulang kartu agar memuat kode yang baru."
+        confirmLabel="Ya, Buat Baru"
+        onClose={() => setConfirmNewCode(false)}
+        onConfirm={handleRenewCode}
+      />
     </PageShell>
   );
 }

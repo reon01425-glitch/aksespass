@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import QRCode from "qrcode";
 import { QrCode } from "lucide-react";
 import { StatusBanner } from "@/components";
@@ -12,6 +13,8 @@ interface TampilkanQrProps {
   facilityName: string;
   /** Dipanggil setelah QR diganti, agar daftar memakai id QR baru (untuk Cabut). */
   onReplaced: (newQrId: string, newExpiresAt: string) => void;
+  /** Bila diisi (sisi pasien), pasien dialihkan ke halaman menunggu saat petugas memindai QR yang sedang ditampilkan. */
+  waitingHrefBase?: string;
 }
 
 /**
@@ -19,7 +22,9 @@ interface TampilkanQrProps {
  * dibuat tidak bisa digambar ulang. Tombol ini mengganti QR lama dengan QR baru (isian dan
  * masa berlaku sama) lalu menampilkannya. Token hanya ada di memori halaman ini.
  */
-export function TampilkanQr({ qrId, facilityName, onReplaced }: TampilkanQrProps) {
+export function TampilkanQr({ qrId, facilityName, onReplaced, waitingHrefBase }: TampilkanQrProps) {
+  const router = useRouter();
+  const [liveQrId, setLiveQrId] = useState(qrId);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [shown, setShown] = useState<{
@@ -27,6 +32,37 @@ export function TampilkanQr({ qrId, facilityName, onReplaced }: TampilkanQrProps
     token: string;
     expiresAt: string;
   } | null>(null);
+
+  // Setelah QR ditampilkan, pantau status tiap 5 detik; bila sudah dipindai petugas, buka halaman menunggu.
+  useEffect(() => {
+    if (!shown || !waitingHrefBase) return;
+    let active = true;
+    const poll = async () => {
+      if (document.visibilityState === "hidden") return;
+      try {
+        const res = await fetch(`/api/pasien/qr/${encodeURIComponent(liveQrId)}/status`, {
+          cache: "no-store",
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (active && data.ok && data.status === "dipindai" && typeof data.visitId === "string") {
+          router.push(`${waitingHrefBase}/${encodeURIComponent(data.visitId)}`);
+        }
+      } catch {
+        // abaikan galat jaringan sementara
+      }
+    };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void poll();
+    };
+    const timer = window.setInterval(poll, 5000);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [shown, liveQrId, waitingHrefBase, router]);
 
   const handleShow = async () => {
     if (isLoading) return;
@@ -49,6 +85,7 @@ export function TampilkanQr({ qrId, facilityName, onReplaced }: TampilkanQrProps
           light: DESIGN_TOKENS["--color-white"],
         },
       });
+      setLiveQrId(data.qrId);
       setShown({ svg, token: data.token, expiresAt: data.expiresAt });
       onReplaced(data.qrId, data.expiresAt);
     } catch {

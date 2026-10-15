@@ -14,6 +14,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Button, StatusBanner, TextField } from "@/components";
+import { KomunikaMessageList, useKomunikaThread } from "@/components/komunikacare-thread";
+import { messageText } from "@/lib/komunikacare/board";
 
 type TabId = "papan" | "suara" | "teks";
 
@@ -94,7 +96,9 @@ function BigText({ text, label }: { text: string; label: string }) {
 }
 
 /* ---------------------------------- P15.1 ---------------------------------- */
-function PapanBergambar() {
+type SendFn = (kind: "icon" | "text", body: string) => void;
+
+function PapanBergambar({ onSend }: { onSend: SendFn }) {
   const [selected, setSelected] = useState<string | null>(null);
   const item = BOARD_ITEMS.find((b) => b.id === selected);
   return (
@@ -111,7 +115,10 @@ function PapanBergambar() {
               <button
                 type="button"
                 aria-pressed={active}
-                onClick={() => setSelected(id)}
+                onClick={() => {
+                  setSelected(id);
+                  onSend("icon", id);
+                }}
                 className={`flex min-h-32 w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 p-3 text-lg font-bold focus:outline-none focus:ring-4 focus:ring-cyan-900 ${
                   active
                     ? "bg-cyan-800 border-cyan-900 text-white"
@@ -130,7 +137,7 @@ function PapanBergambar() {
 }
 
 /* ---------------------------------- P15.2 ---------------------------------- */
-function TeksKeSuara() {
+function TeksKeSuara({ onSend }: { onSend: SendFn }) {
   const [text, setText] = useState("");
   const [supported, setSupported] = useState(true);
   const [speaking, setSpeaking] = useState(false);
@@ -148,7 +155,9 @@ function TeksKeSuara() {
 
   const speak = () => {
     const value = text.trim();
-    if (!value || !supported) return;
+    if (!value) return;
+    onSend("text", value);
+    if (!supported) return;
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(value);
     utterance.lang = "id-ID";
@@ -206,7 +215,7 @@ function TeksKeSuara() {
         <Button
           type="button"
           onClick={speak}
-          disabled={!supported || !text.trim()}
+          disabled={!text.trim()}
           className="w-full sm:w-auto flex items-center justify-center gap-2"
         >
           <Volume2 aria-hidden="true" className="h-5 w-5 shrink-0" />
@@ -234,7 +243,7 @@ function TeksKeSuara() {
 }
 
 /* ---------------------------------- P15.3 ---------------------------------- */
-function TeksLangsung() {
+function TeksLangsung({ synced }: { synced: boolean }) {
   const [supported, setSupported] = useState(true);
   const [listening, setListening] = useState(false);
   const [finalText, setFinalText] = useState("");
@@ -402,16 +411,32 @@ function TeksLangsung() {
       <p className="text-sm text-secondary">
         Privasi: di sebagian peramban (misalnya Chrome di Android), suara
         diproses layanan pengenalan suara pihak ketiga seperti Google. AKSESPASS
-        tidak menyimpan atau mengirim suara maupun teks hasilnya ke server kami.
-        Teks hilang saat halaman ditutup.
+        tidak menyimpan atau mengirim suara maupun teks hasil pengenalan suara
+        ke server kami.
+        {synced
+          ? " Pesan yang Anda kirim lewat gambar atau tombol Ucapkan, dan pesan tulisan petugas, disimpan sementara selama kunjungan ini dan dihapus saat pelayanan selesai."
+          : " Teks hilang saat halaman ditutup."}
       </p>
     </div>
   );
 }
 
 /* ---------------------------------- Halaman --------------------------------- */
-export function KomunikaCareClient() {
+export function KomunikaCareClient({ visitId = null }: { visitId?: string | null }) {
   const [tab, setTab] = useState<TabId>("papan");
+  const thread = useKomunikaThread(visitId);
+  const [sendNote, setSendNote] = useState<{ ok: boolean; text: string } | null>(null);
+  const onSend: SendFn = (kind, body) => {
+    if (!visitId) return;
+    void thread.send(kind, body).then((r) =>
+      setSendNote(
+        r.ok
+          ? { ok: true, text: "Terkirim ke petugas." }
+          : { ok: false, text: r.message ?? "Pesan tidak terkirim." }
+      )
+    );
+  };
+  const latestStaff = [...thread.messages].reverse().find((m) => m.sender === "staff");
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
     const index = TABS.findIndex((t) => t.id === tab);
@@ -426,6 +451,58 @@ export function KomunikaCareClient() {
 
   return (
     <div className="flex flex-col gap-6 max-w-full w-full">
+      {visitId && (
+        <section aria-label="Percakapan dengan petugas" className="flex flex-col gap-3">
+          {thread.ended && (
+            <p role="status" className="text-base font-bold text-main">
+              Pelayanan selesai. Percakapan ditutup dan pesan dihapus.
+            </p>
+          )}
+          {!thread.online && !thread.ended && (
+            <StatusBanner
+              variant="warning"
+              title="Sambungan terputus"
+              message="Pesan petugas belum bisa dimuat. Mencoba lagi otomatis."
+            />
+          )}
+          {sendNote && !sendNote.ok && (
+            <StatusBanner variant="error" title="Perlu perhatian" message={sendNote.text} />
+          )}
+          {sendNote?.ok && (
+            <p role="status" className="text-base font-bold text-main">
+              {sendNote.text}
+            </p>
+          )}
+          <h2 className="text-xl font-bold text-main">Pesan dari petugas</h2>
+          {latestStaff ? (
+            <div
+              role="region"
+              aria-label="Pesan terbaru dari petugas"
+              aria-live="assertive"
+              data-testid="pesan-petugas-besar"
+              className="w-full p-5 rounded-2xl bg-white border-2 border-cyan-800 text-main"
+            >
+              <div className="text-4xl font-bold break-words leading-tight">
+                {messageText(latestStaff)}
+              </div>
+            </div>
+          ) : (
+            <p className="text-base text-secondary">Belum ada pesan dari petugas.</p>
+          )}
+          {thread.messages.length > 1 && (
+            <details>
+              <summary className="min-h-12 cursor-pointer py-3 text-base font-bold text-cyan-900">
+                Riwayat percakapan
+              </summary>
+              <KomunikaMessageList
+                messages={thread.messages}
+                viewer="patient"
+                label="Riwayat percakapan"
+              />
+            </details>
+          )}
+        </section>
+      )}
       <div role="tablist" aria-label="Cara berkomunikasi" className="grid grid-cols-3 gap-2">
         {TABS.map(({ id, label }) => {
           const active = id === tab;
@@ -453,9 +530,9 @@ export function KomunikaCareClient() {
       </div>
 
       <div id={`panel-${tab}`} role="tabpanel" aria-labelledby={`tab-${tab}`}>
-        {tab === "papan" && <PapanBergambar />}
-        {tab === "suara" && <TeksKeSuara />}
-        {tab === "teks" && <TeksLangsung />}
+        {tab === "papan" && <PapanBergambar onSend={onSend} />}
+        {tab === "suara" && <TeksKeSuara onSend={onSend} />}
+        {tab === "teks" && <TeksLangsung synced={visitId !== null} />}
       </div>
     </div>
   );

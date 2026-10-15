@@ -1,7 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ConfirmDialog, StatusBanner } from "@/components";
 import { TampilkanQr } from "./tampilkan-qr";
 import type { ActiveQrItem } from "@/lib/consent";
@@ -55,6 +56,55 @@ export function ActiveQrClient({ initialQrs }: ActiveQrClientProps) {
   const [currentIds, setCurrentIds] = useState<Record<string, string>>({});
 
   const listHeadingRef = useRef<HTMLHeadingElement>(null);
+  const router = useRouter();
+
+  // Pantau semua QR aktif: bila petugas memindai salah satunya saat halaman ini terbuka
+  // (status berubah menjadi "dipindai"), pasien dialihkan ke halaman menunggu.
+  // QR yang sudah dipindai sebelum halaman dibuka tidak memicu pengalihan.
+  const idsKey = qrs.map((q) => currentIds[q.id] ?? q.id).join(",");
+  useEffect(() => {
+    const ids = idsKey ? idsKey.split(",") : [];
+    if (ids.length === 0) return;
+    let active = true;
+    const baseline = new Map<string, string>();
+    const poll = async () => {
+      if (document.visibilityState === "hidden") return;
+      for (const id of ids) {
+        try {
+          const res = await fetch(`/api/pasien/qr/${encodeURIComponent(id)}/status`, {
+            cache: "no-store",
+          });
+          if (!res.ok) continue;
+          const data = await res.json();
+          if (!active || !data.ok) continue;
+          const before = baseline.get(id);
+          baseline.set(id, data.status);
+          if (
+            before !== undefined &&
+            before !== "dipindai" &&
+            data.status === "dipindai" &&
+            typeof data.visitId === "string"
+          ) {
+            router.push(`/pasien/menunggu/${encodeURIComponent(data.visitId)}`);
+            return;
+          }
+        } catch {
+          // abaikan galat jaringan sementara
+        }
+      }
+    };
+    void poll();
+    const timer = window.setInterval(poll, 3000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void poll();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [idsKey, router]);
 
   const handleRevoke = async () => {
     if (!confirmTarget || isRevoking) return;
@@ -310,6 +360,7 @@ export function ActiveQrClient({ initialQrs }: ActiveQrClientProps) {
                     <TampilkanQr
                       qrId={currentIds[item.id] ?? item.id}
                       facilityName={item.facilityName}
+                      waitingHrefBase="/pasien/menunggu"
                       onReplaced={(newId) =>
                         setCurrentIds((prev) => ({ ...prev, [item.id]: newId }))
                       }

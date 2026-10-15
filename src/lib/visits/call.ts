@@ -112,6 +112,10 @@ export async function completeVisit(
           "NOT_FOUND_OR_NOT_RECORDED"
         );
       }
+      // KomunikaCare dua perangkat bersifat sementara: hapus pesan saat selesai.
+      await tx.query(`DELETE FROM komunikacare_messages WHERE visit_id = $1;`, [
+        input.visitId,
+      ]);
       return {
         ok: true,
         visitId: input.visitId,

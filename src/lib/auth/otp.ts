@@ -238,6 +238,8 @@ export async function verifyOtp(
   options?: {
     intendedRole?: string;
     statsConsent?: boolean;
+    /** Halaman masuk petugas/admin/kurator: akun pasien atau pendamping tidak boleh masuk lewat sini. */
+    institutionalPortal?: boolean;
   }
 ): Promise<VerifyOtpResult> {
   const phone = normalizePhoneNumber(rawPhone);
@@ -294,6 +296,13 @@ export async function verifyOtp(
         if (existing.membership_status !== "active") {
           throw new Error("Tidak dapat masuk. Hubungi admin fasilitas.");
         }
+      }
+
+      if (
+        options?.institutionalPortal &&
+        (existing.role === "patient" || existing.role === "companion")
+      ) {
+        throw new Error("Tidak dapat masuk. Hubungi admin fasilitas.");
       }
 
       // Satu nomor = satu peran. Bila pengguna memilih peran lain di halaman masuk, beri tahu
