@@ -37,8 +37,9 @@ export default async function PasienKunjunganPage() {
         title="Mulai Kunjungan"
         backHref="/pasien"
         backLabel="Kembali ke Beranda"
+        patientNav
       >
-        <div className="flex flex-col gap-6 max-w-full w-full">
+        <div className="flex flex-col gap-5 max-w-full w-full">
           <StatusBanner
             variant="warning"
             title="Isi paspor dulu"
@@ -64,8 +65,9 @@ export default async function PasienKunjunganPage() {
       title="Mulai Kunjungan"
       backHref="/pasien"
       backLabel="Kembali ke Beranda"
+      patientNav
     >
-      <div className="flex flex-col gap-6 max-w-full w-full">
+      <div className="flex flex-col gap-5 max-w-full w-full">
         <KunjunganClient facilities={facilities} showPatientShortcuts />
       </div>
     </PageShell>

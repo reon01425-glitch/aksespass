@@ -126,7 +126,7 @@ p {
   font-size: 1rem;
   line-height: 1.6;
   font-weight: 400;
-  max-width: min(60ch, 100%);
+  max-width: 100%;
   overflow-wrap: anywhere;
 }
 
@@ -154,6 +154,37 @@ button {
   }
 }
 
+
+/* Notifikasi melayang dari atas (StatusBanner). Gerak dinonaktifkan oleh aturan reduced-motion di atas. */
+@keyframes toast-in {
+  from {
+    transform: translateY(-140%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes toast-out {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-140%);
+    opacity: 0;
+  }
+}
+
+.toast-in {
+  animation: toast-in 280ms ease-out both;
+}
+
+.toast-out {
+  animation: toast-out 240ms ease-in both;
+}
 
 /* Cetak kartu (P7): hanya kartu ringkasan yang tercetak, hitam putih terbaca. */
 @page {

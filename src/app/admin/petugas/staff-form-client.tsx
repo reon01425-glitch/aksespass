@@ -7,6 +7,8 @@ import { STAFF_NAME_MAX_LENGTH, STAFF_UNIT_MAX_LENGTH } from "@/lib/staff/limits
 
 const DRAFT_KEY = "aksespass:admin-staff-draft:v1";
 
+const CARD = "flex flex-col gap-4 rounded-2xl border border-cyan-800 bg-white p-4 shadow-sm";
+
 interface Props {
   mode: "tambah" | "ubah";
   userId?: string;
@@ -89,56 +91,61 @@ export function StaffFormClient({ mode, userId, initial }: Props) {
   return (
     <form onSubmit={submit} className="flex flex-col gap-5" noValidate>
       {draftNote && (
-        <p role="status" className="text-sm text-secondary">
+        <p role="status" className="max-w-none rounded-2xl border-2 border-cyan-800 bg-white p-4 text-sm text-secondary">
           Draft yang belum dikirim dipulihkan dari perangkat ini.
         </p>
       )}
       {error && <StatusBanner variant="error" title="Perlu perhatian" message={error} />}
 
-      <TextField
-        id="petugas-nama"
-        label="Nama petugas"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        maxLength={STAFF_NAME_MAX_LENGTH}
-        autoComplete="off"
-        required
-      />
-      <div className="flex flex-col gap-1">
-        <span className="text-base font-bold text-main">Peran</span>
-        <span className="text-base text-secondary">Petugas</span>
-      </div>
-      <TextField
-        id="petugas-unit"
-        label="Unit"
-        value={unit}
-        onChange={(e) => setUnit(e.target.value)}
-        maxLength={STAFF_UNIT_MAX_LENGTH}
-        helperText="Contoh: Poli Umum"
-        autoComplete="off"
-        required
-      />
-      {mode === "tambah" ? (
+      <div className={CARD}>
         <TextField
-          id="petugas-hp"
-          label="Nomor HP"
-          variant="tel"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          helperText="Petugas masuk dengan nomor ini (nomor HP + kode). Contoh: 0812 3456 7890"
+          id="petugas-nama"
+          label="Nama petugas"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          maxLength={STAFF_NAME_MAX_LENGTH}
+          autoComplete="off"
           required
         />
-      ) : (
+        <TextField
+          id="petugas-unit"
+          label="Unit"
+          value={unit}
+          onChange={(e) => setUnit(e.target.value)}
+          maxLength={STAFF_UNIT_MAX_LENGTH}
+          helperText="Contoh: Poli Umum"
+          autoComplete="off"
+          required
+        />
         <div className="flex flex-col gap-1">
-          <span className="text-base font-bold text-main">Nomor HP</span>
-          <span className="text-base text-secondary">{initial?.phoneMasked}</span>
-          <span className="text-sm text-secondary">
-            Nomor tidak dapat diubah. Untuk mengganti nomor, nonaktifkan petugas lalu daftarkan ulang.
-          </span>
+          <span className="text-base font-bold text-main">Peran</span>
+          <span className="text-base text-secondary">Petugas</span>
         </div>
-      )}
+      </div>
 
-      <div className="flex flex-col gap-3 pt-2">
+      <div className={CARD}>
+        {mode === "tambah" ? (
+          <TextField
+            id="petugas-hp"
+            label="Nomor HP"
+            variant="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            helperText="Petugas masuk dengan nomor ini (nomor HP + kode). Contoh: 0812 3456 7890"
+            required
+          />
+        ) : (
+          <div className="flex flex-col gap-1">
+            <span className="text-base font-bold text-main">Nomor HP</span>
+            <span className="text-base text-secondary">{initial?.phoneMasked}</span>
+            <span className="text-sm text-secondary">
+              Nomor tidak dapat diubah. Untuk mengganti nomor, nonaktifkan petugas lalu daftarkan ulang.
+            </span>
+          </div>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-3">
         <Button type="submit" isLoading={sending} className="w-full">
           {mode === "tambah" ? "Daftarkan Petugas" : "Simpan Perubahan"}
         </Button>

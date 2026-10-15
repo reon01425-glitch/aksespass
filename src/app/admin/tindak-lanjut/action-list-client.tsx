@@ -55,13 +55,13 @@ function ActionCard({
   return (
     <li
       data-testid="kartu-tindak-lanjut"
-      className={`flex flex-col gap-4 rounded-xl bg-white p-4 ${
+      className={`flex flex-col gap-4 rounded-2xl bg-white p-4 shadow-sm ${
         highlighted ? "border-4 border-cyan-800" : "border border-cyan-800"
       }`}
     >
       <div className="flex flex-col gap-1">
         <h2 className="text-lg font-bold text-main">{item.categoryLabel}</h2>
-        <span className="text-base font-bold text-main">
+        <span className="text-sm font-bold text-main">
           Status: {FACILITY_ACTION_STATUS_LABELS[item.status]}
         </span>
         <span className="text-sm text-secondary">
@@ -130,16 +130,16 @@ export function ActionListClient({
   const [items, setItems] = useState(initialItems);
   return (
     <div className="flex flex-col gap-5">
-      <p className="text-base text-secondary">
+      <p className="max-w-none rounded-2xl border-2 border-cyan-800 bg-white p-4 text-sm leading-6 text-secondary">
         Tentukan langkah dan ubah status. Pasien yang melaporkan kebutuhan di kategori yang sama
         melihat ringkasan umum ini tanpa data pribadi lain.
       </p>
       {items.length === 0 ? (
-        <p role="status" className="text-base text-main">
+        <p role="status" className="max-w-none rounded-2xl border border-dashed border-cyan-800 bg-white p-6 text-center text-sm font-bold text-main">
           Belum ada tindak lanjut. Buat dari halaman Belum Terpenuhi.
         </p>
       ) : (
-        <ul aria-label="Daftar tindak lanjut" className="flex flex-col gap-4">
+        <ul aria-label="Daftar tindak lanjut" className="m-0 flex list-none flex-col gap-3 p-0">
           {items.map((it) => (
             <ActionCard
               key={it.id}

@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useRef, useState } from "react";
-import { Button, StatusBanner, TextField, TextLink } from "@/components";
-import { ArrowLeft, Info, ShieldCheck } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
+import { Button, DemoOtpNote, OtpCodeInput, StatusBanner, TextField } from "@/components";
 
 export interface MasukPetugasClientProps {
   reasonMessage?: string | null;
@@ -10,10 +11,12 @@ export interface MasukPetugasClientProps {
 
 /* Tanda "!" di akhir kelas (Tailwind v4) memaksa kelas ini menang atas
    rounded-lg / border bawaan Button dan TextField. */
-const FIELD_CLASS = "h-14 rounded-xl! border-2!";
-const BUTTON_CLASS = "h-14 w-full rounded-full!";
+const FIELD_CLASS = "h-14 rounded-2xl! border-2!";
+const BUTTON_CLASS = "h-14 w-full rounded-2xl!";
 const LINK_BUTTON_CLASS =
-  "min-h-12 rounded-lg px-3 py-2 text-center text-sm font-bold text-link underline focus:outline-none focus:ring-4 focus:ring-cyan-900 disabled:cursor-not-allowed disabled:text-disabled-text";
+  "flex min-h-12 w-full items-center justify-center rounded-2xl border border-cyan-800 bg-white px-3 py-2 text-center text-sm font-bold text-cyan-900 shadow-sm focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900 disabled:cursor-not-allowed disabled:opacity-60";
+
+const TITLE = "Masuk Petugas & Faskes";
 
 export function MasukPetugasClient({ reasonMessage }: MasukPetugasClientProps) {
   const [step, setStep] = useState<1 | 2>(1);
@@ -22,7 +25,6 @@ export function MasukPetugasClient({ reasonMessage }: MasukPetugasClientProps) {
 
   const [isRequesting, setIsRequesting] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
-  const [isOtpFocused, setIsOtpFocused] = useState(false);
   const [devOtp, setDevOtp] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -148,17 +150,17 @@ export function MasukPetugasClient({ reasonMessage }: MasukPetugasClientProps) {
             onClick={goBackToPhone}
             disabled={isVerifying}
             aria-label="Kembali ke input nomor telepon"
-            className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-input bg-white text-main focus:outline-none focus:ring-4 focus:ring-cyan-900 disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex h-12 w-12 items-center justify-center rounded-2xl border border-cyan-800 bg-white text-main shadow-sm focus:outline-none focus:ring-4 focus:ring-cyan-900 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <ArrowLeft aria-hidden="true" className="h-5 w-5" />
           </button>
         )}
 
         <h1 className={`text-center text-main ${step === 2 ? "mt-6" : "mt-16"}`}>
-          Masuk Petugas &amp; Faskes
+          {TITLE}
         </h1>
 
-        <div className="mt-6 flex flex-col gap-6">
+        <div className="mt-6 flex flex-col gap-5">
           {/* Banner Peringatan Sesi Berakhir */}
           {reasonMessage && (
             <StatusBanner
@@ -178,16 +180,10 @@ export function MasukPetugasClient({ reasonMessage }: MasukPetugasClientProps) {
           )}
 
           {/* Catatan Peran & Privasi */}
-          <div className="flex items-center gap-3 rounded-2xl border border-decorative bg-surface p-3">
-            <ShieldCheck
-              aria-hidden="true"
-              className="h-5 w-5 shrink-0 text-icon-accent"
-            />
-            <p className="text-sm text-main">
-              Khusus akun petugas kesehatan, admin faskes, dan kurator yang telah
-              diundang.
-            </p>
-          </div>
+          <p className="rounded-2xl border-2 border-cyan-800 bg-white p-4 text-sm leading-6 text-main shadow-sm">
+            Khusus akun petugas kesehatan, admin faskes, dan kurator yang telah
+            diundang.
+          </p>
 
           {/* LANGKAH 1: Masukkan Nomor Telepon Staf */}
           {step === 1 && (
@@ -196,7 +192,8 @@ export function MasukPetugasClient({ reasonMessage }: MasukPetugasClientProps) {
               className="flex flex-col gap-5"
               noValidate
             >
-              <TextField
+              <div className="rounded-2xl border border-cyan-800 bg-white p-4 shadow-sm">
+<TextField
                 id="petugas-phone"
                 label="Nomor Telepon Petugas"
                 variant="tel"
@@ -206,6 +203,7 @@ export function MasukPetugasClient({ reasonMessage }: MasukPetugasClientProps) {
                 disabled={isRequesting}
                 className={FIELD_CLASS}
               />
+              </div>
 
               <Button
                 type="submit"
@@ -216,11 +214,9 @@ export function MasukPetugasClient({ reasonMessage }: MasukPetugasClientProps) {
                 Kirim Kode
               </Button>
 
-              <div className="flex flex-col items-center gap-1 border-t border-decorative pt-4">
-                <TextLink href="/masuk" standalone className="font-bold">
-                  Kembali ke Masuk Pasien atau Pendamping
-                </TextLink>
-              </div>
+              <Link href="/masuk" className={LINK_BUTTON_CLASS}>
+                Kembali ke Masuk Pasien atau Pendamping
+              </Link>
             </form>
           )}
 
@@ -231,86 +227,23 @@ export function MasukPetugasClient({ reasonMessage }: MasukPetugasClientProps) {
               className="flex flex-col gap-5"
               noValidate
             >
-              <div className="text-center">
+              <div className="rounded-2xl border border-cyan-800 bg-white p-4 text-center shadow-sm">
                 <p className="mx-auto text-xs text-secondary">
                   Nomor tujuan verifikasi:
                 </p>
-                <p className="mx-auto text-base font-bold text-link">{phone}</p>
+                <p className="mx-auto text-base font-bold text-main">{phone}</p>
               </div>
 
               {/* Kotak Mode Demo untuk OTP Tiruan */}
-              {devOtp && (
-                <div
-                  role="note"
-                  className="flex items-start gap-3 rounded-2xl border-2 border-input bg-surface p-4"
-                >
-                  <Info
-                    aria-hidden="true"
-                    className="mt-0.5 h-5 w-5 shrink-0 text-main"
-                  />
-                  <div className="flex flex-col">
-                    <span className="text-sm font-bold text-main">
-                      Mode demo: SMS belum aktif.
-                    </span>
-                    <span className="text-base font-bold text-main">
-                      Kode Anda: {devOtp}
-                    </span>
-                  </div>
-                </div>
-              )}
+              {devOtp && <DemoOtpNote code={devOtp} />}
 
-              <div className="flex flex-col gap-2">
-                <label
-                  htmlFor="petugas-otp"
-                  className="text-sm font-bold text-main"
-                >
-                  Kode Verifikasi (6 Digit)
-                </label>
-
-                {/* Satu input asli (mendukung isi otomatis SMS dan tempel);
-                    enam kotak di bawahnya hanya tampilan. */}
-                <div className="relative">
-                  <input
-                    ref={codeInputRef}
-                    id="petugas-otp"
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    maxLength={6}
-                    value={code}
-                    onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
-                    onFocus={() => setIsOtpFocused(true)}
-                    onBlur={() => setIsOtpFocused(false)}
-                    aria-describedby="petugas-otp-help"
-                    disabled={isVerifying}
-                    className="absolute inset-0 z-10 h-full w-full cursor-text opacity-0"
-                  />
-                  <div aria-hidden="true" className="flex gap-2">
-                    {Array.from({ length: 6 }).map((_, i) => {
-                      const isActive =
-                        isOtpFocused && i === Math.min(code.length, 5);
-                      return (
-                        <div
-                          key={i}
-                          className={`flex h-14 flex-1 items-center justify-center rounded-xl border-2 text-xl font-bold text-main ${
-                            isVerifying ? "bg-disabled-surface" : "bg-white"
-                          } ${
-                            isActive
-                              ? "border-btn-primary ring-2 ring-btn-primary"
-                              : "border-input"
-                          }`}
-                        >
-                          {code[i] ?? ""}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <p id="petugas-otp-help" className="text-sm text-secondary">
-                  Kode berlaku 5 menit.
-                </p>
-              </div>
+              <OtpCodeInput
+                id="petugas-otp"
+                inputRef={codeInputRef}
+                value={code}
+                onChange={setCode}
+                disabled={isVerifying}
+              />
 
               <Button
                 type="submit"
@@ -322,7 +255,7 @@ export function MasukPetugasClient({ reasonMessage }: MasukPetugasClientProps) {
                 Masuk sebagai Petugas
               </Button>
 
-              <div className="flex items-center justify-between border-t border-decorative pt-2">
+              <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
                   onClick={goBackToPhone}

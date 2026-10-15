@@ -3,7 +3,8 @@
  *
  * Disimpan di perangkat pasien (localStorage) dalam SATU slot tetap, karena
  * halaman offline statis tidak tahu siapa penggunanya saat tidak ada sinyal.
- * Hanya berisi ringkasan teks kebutuhan. TIDAK pernah memuat token atau data QR.
+ * Hanya berisi ringkasan teks kebutuhan dan Kode Kartu pasien (identitas jalur kartu cetak [T4b],
+ * bukan token atau data QR). TIDAK pernah memuat token atau data QR.
  * Dihapus saat pasien keluar atau memilih "Hapus dari perangkat".
  * Kunci yang sama dibaca oleh public/offline.html.
  */
@@ -26,6 +27,8 @@ export interface OfflineSummary {
   /** Pilihan isi kartu: semua kebutuhan, atau daftar kode tertentu. */
   selection: "all" | string[];
   includeNote: boolean;
+  /** Kode Kartu 8 karakter agar petugas dapat memakainya di T4b walau tanpa sinyal; null bila belum ada. */
+  cardCode: string | null;
   textSize: OfflineTextSize;
   contrast: OfflineContrast;
   savedAt: string;
@@ -46,6 +49,7 @@ export interface BuildOfflineSummaryInput {
   note: string | null;
   selection: "all" | string[];
   includeNote: boolean;
+  cardCode?: string | null;
   textSize: OfflineTextSize;
   contrast: OfflineContrast;
   savedAt: string;
@@ -69,6 +73,7 @@ export function buildOfflineSummary(
     note: input.includeNote && note ? note : null,
     selection: input.selection,
     includeNote: input.includeNote,
+    cardCode: input.cardCode ?? null,
     textSize: input.textSize,
     contrast: input.contrast,
     savedAt: input.savedAt,
@@ -107,6 +112,7 @@ export function parseOfflineSummary(
           o.selection.every((c) => typeof c === "string"))
       ) ||
       typeof o.includeNote !== "boolean" ||
+      !(o.cardCode === undefined || o.cardCode === null || typeof o.cardCode === "string") ||
       typeof o.textSize !== "string" ||
       !TEXT_SIZES.includes(o.textSize) ||
       typeof o.contrast !== "string" ||
@@ -126,6 +132,7 @@ export function parseOfflineSummary(
       note: o.note as string | null,
       selection: o.selection as "all" | string[],
       includeNote: o.includeNote,
+      cardCode: typeof o.cardCode === "string" ? o.cardCode : null,
       textSize: o.textSize as OfflineTextSize,
       contrast: o.contrast as OfflineContrast,
       savedAt: o.savedAt,
@@ -180,6 +187,7 @@ export function refreshOfflineSummary(source: {
     note: source.note,
     selection: existing.selection,
     includeNote: existing.includeNote,
+    cardCode: existing.cardCode,
     textSize: existing.textSize,
     contrast: existing.contrast,
     savedAt: existing.savedAt,

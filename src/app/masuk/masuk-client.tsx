@@ -3,20 +3,24 @@
 import React, { useRef, useState } from "react";
 import {
   Button,
+  DemoOtpNote,
+  OtpCodeInput,
   StatusBanner,
   TextField,
-  TextLink,
 } from "@/components";
-import { ArrowLeft, Info, ShieldCheck } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 
 export interface MasukClientProps {
   reasonMessage?: string | null;
 }
 
-const FIELD_CLASS = "h-14 rounded-xl! border-2!";
-const BUTTON_CLASS = "h-14 w-full rounded-full!";
+const FIELD_CLASS = "h-14 rounded-2xl! border-2!";
+const BUTTON_CLASS = "h-14 w-full rounded-2xl!";
+const SWITCH_BUTTON_CLASS =
+  "flex min-h-12 w-full items-center justify-center rounded-2xl border border-cyan-800 bg-white px-4 py-2 text-center text-sm font-bold shadow-sm text-cyan-900 focus:outline-none focus:ring-4 focus:ring-cyan-900";
 const LINK_BUTTON_CLASS =
-  "min-h-12 rounded-lg px-3 py-2 text-center text-sm font-bold text-link underline focus:outline-none focus:ring-4 focus:ring-cyan-900 disabled:cursor-not-allowed disabled:text-disabled-text";
+  "flex min-h-12 w-full items-center justify-center rounded-2xl border border-cyan-800 bg-white px-3 py-2 text-center text-sm font-bold text-cyan-900 shadow-sm focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900 disabled:cursor-not-allowed disabled:opacity-60";
 
 interface RecoveryHelpProps {
   role: "patient" | "companion";
@@ -26,11 +30,11 @@ interface RecoveryHelpProps {
 /** [P3] Lupa akses: pemulihan lewat nomor yang sama atau lewat pendamping tertaut. */
 function RecoveryHelp({ role, onUseCompanion }: RecoveryHelpProps) {
   return (
-    <details className="rounded-2xl border border-decorative bg-surface p-3">
-      <summary className="min-h-12 cursor-pointer py-3 text-sm font-bold text-link underline focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900">
+    <details className="rounded-2xl border border-cyan-800 bg-white px-4 py-1">
+      <summary className="flex min-h-12 cursor-pointer items-center text-sm font-bold text-cyan-900 focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900">
         Lupa akses atau tidak menerima kode?
       </summary>
-      <div className="mt-2 flex flex-col gap-3 text-sm text-main">
+      <div className="flex flex-col gap-3 border-t border-cyan-800 pb-3 pt-3 text-sm leading-6 text-main">
         <p>
           <span className="font-bold">Lewat nomor yang sama.</span> Masukkan
           nomor yang dulu Anda daftarkan, lalu minta kode baru. Kode lama tidak
@@ -46,7 +50,7 @@ function RecoveryHelp({ role, onUseCompanion }: RecoveryHelpProps) {
           <button
             type="button"
             onClick={onUseCompanion}
-            className={LINK_BUTTON_CLASS}
+            className={SWITCH_BUTTON_CLASS}
           >
             Saya pendamping, masuk dengan nomor saya
           </button>
@@ -69,7 +73,6 @@ export function MasukClient({ reasonMessage }: MasukClientProps) {
 
   const [isRequesting, setIsRequesting] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
-  const [isOtpFocused, setIsOtpFocused] = useState(false);
   const [devOtp, setDevOtp] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -171,7 +174,7 @@ export function MasukClient({ reasonMessage }: MasukClientProps) {
   setErrorMessage(null);
   };
 
-  const title =
+  const TITLE =
     role === "companion" ? "Masuk sebagai Pendamping" : "Masuk ke AKSESPASS";
 
   return (
@@ -193,17 +196,17 @@ export function MasukClient({ reasonMessage }: MasukClientProps) {
             onClick={goBackToPhone}
             disabled={isVerifying}
             aria-label="Kembali ke input nomor telepon"
-            className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-input bg-white text-main focus:outline-none focus:ring-4 focus:ring-cyan-900 disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex h-12 w-12 items-center justify-center rounded-2xl border border-cyan-800 bg-white text-main shadow-sm focus:outline-none focus:ring-4 focus:ring-cyan-900 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <ArrowLeft aria-hidden="true" className="h-5 w-5" />
           </button>
         )}
 
         <h1 className={`text-center text-main ${step === 2 ? "mt-6" : "mt-16"}`}>
-          {title}
+          {TITLE}
         </h1>
 
-        <div className="mt-6 flex flex-col gap-6">
+        <div className="mt-6 flex flex-col gap-5">
           {/* Banner Peringatan Sesi Berakhir dari Daftar Alasan Tetap */}
           {reasonMessage && (
             <StatusBanner
@@ -223,15 +226,9 @@ export function MasukClient({ reasonMessage }: MasukClientProps) {
           )}
 
           {/* Pernyataan Privasi */}
-          <div className="flex items-center gap-3 rounded-2xl border border-decorative bg-surface p-3">
-            <ShieldCheck
-              aria-hidden="true"
-              className="h-5 w-5 shrink-0 text-icon-accent"
-            />
-            <p className="text-sm text-main">
-              Aplikasi ini tidak meminta diagnosis medis Anda.
-            </p>
-          </div>
+          <p className="rounded-2xl border-2 border-cyan-800 bg-white p-4 text-sm leading-6 text-main shadow-sm">
+            Aplikasi ini tidak meminta diagnosis medis Anda.
+          </p>
 
           {/* LANGKAH 1: Masukkan Nomor Telepon */}
           {step === 1 && (
@@ -240,7 +237,8 @@ export function MasukClient({ reasonMessage }: MasukClientProps) {
               className="flex flex-col gap-5"
               noValidate
             >
-              <TextField
+              <div className="rounded-2xl border border-cyan-800 bg-white p-4 shadow-sm">
+<TextField
                 id="masuk-phone"
                 label="Nomor Telepon Seluler"
                 variant="tel"
@@ -250,30 +248,32 @@ export function MasukClient({ reasonMessage }: MasukClientProps) {
                 disabled={isRequesting}
                 className={FIELD_CLASS}
               />
+              </div>
 
               {/* Kotak Persetujuan Statistik Anonim (Opsional) */}
-              <div className="flex items-start gap-3 rounded-2xl border border-decorative bg-surface p-3">
+              <label
+                htmlFor="stats-consent-checkbox"
+                className={`flex cursor-pointer select-none flex-col gap-1 rounded-2xl border-2 bg-white p-4 text-sm text-main shadow-sm focus-within:ring-4 focus-within:ring-cyan-900 ${
+                  statsConsent ? "border-cyan-800" : "border-cyan-200"
+                }`}
+              >
                 <input
                   id="stats-consent-checkbox"
                   type="checkbox"
                   checked={statsConsent}
                   onChange={(e) => setStatsConsent(e.target.checked)}
-                  className="mt-1 h-6 w-6 shrink-0 cursor-pointer rounded border-2 border-input accent-btn-primary focus:ring-4 focus:ring-cyan-900"
+                  className="sr-only"
                 />
-                <label
-                  htmlFor="stats-consent-checkbox"
-                  className="cursor-pointer select-none text-sm text-main"
-                >
-                  <span className="block font-bold">
-                    Izinkan kunjungan saya dihitung dalam statistik anonim
-                    fasilitas
-                  </span>
-                  <span className="mt-0.5 block text-xs text-secondary">
-                    (Tanpa nama atau nomor Anda. Pilihan ini berlaku saat akun
-                    baru dibuat).
-                  </span>
-                </label>
-              </div>
+                <span className="block font-bold">
+                  Izinkan kunjungan saya dihitung dalam statistik anonim
+                  fasilitas
+                </span>
+                <span className="block text-xs text-secondary">
+                  {statsConsent ? "Dipilih. " : "Tidak dipilih. "}
+                  Tanpa nama atau nomor Anda. Pilihan ini berlaku saat akun
+                  baru dibuat.
+                </span>
+              </label>
 
               <Button
                 type="submit"
@@ -285,28 +285,28 @@ export function MasukClient({ reasonMessage }: MasukClientProps) {
               </Button>
 
               {/* Alihkan Peran: Pasien vs Pendamping */}
-              <div className="flex flex-col items-center gap-1 border-t border-decorative pt-4">
+              <div className="flex flex-col gap-3">
                 {role === "patient" ? (
                   <button
                     type="button"
                     onClick={() => setRole("companion")}
-                    className={LINK_BUTTON_CLASS}
+                    className={SWITCH_BUTTON_CLASS}
                   >
-                    Saya pendamping pasien (Masuk dengan bantuan pendamping)
+                    Saya pendamping pasien
                   </button>
                 ) : (
                   <button
                     type="button"
                     onClick={() => setRole("patient")}
-                    className={LINK_BUTTON_CLASS}
+                    className={SWITCH_BUTTON_CLASS}
                   >
-                    Saya pasien (Kembali ke alur pasien)
+                    Saya pasien
                   </button>
                 )}
 
-                <TextLink href="/masuk/petugas" standalone className="font-bold">
+                <Link href="/masuk/petugas" className={SWITCH_BUTTON_CLASS}>
                   Masuk sebagai Petugas atau Admin Fasilitas
-                </TextLink>
+                </Link>
               </div>
 
               <RecoveryHelp
@@ -323,86 +323,23 @@ export function MasukClient({ reasonMessage }: MasukClientProps) {
               className="flex flex-col gap-5"
               noValidate
             >
-              <div className="text-center">
+              <div className="rounded-2xl border border-cyan-800 bg-white p-4 text-center shadow-sm">
                 <p className="mx-auto text-xs text-secondary">
                   Nomor tujuan verifikasi:
                 </p>
-                <p className="mx-auto text-base font-bold text-link">{phone}</p>
+                <p className="mx-auto text-base font-bold text-main">{phone}</p>
               </div>
 
               {/* Kotak Mode Demo untuk OTP Tiruan */}
-              {devOtp && (
-                <div
-                  role="note"
-                  className="flex items-start gap-3 rounded-2xl border-2 border-input bg-surface p-4"
-                >
-                  <Info
-                    aria-hidden="true"
-                    className="mt-0.5 h-5 w-5 shrink-0 text-main"
-                  />
-                  <div className="flex flex-col">
-                    <span className="text-sm font-bold text-main">
-                      Mode demo: SMS belum aktif.
-                    </span>
-                    <span className="text-base font-bold text-main">
-                      Kode Anda: {devOtp}
-                    </span>
-                  </div>
-                </div>
-              )}
+              {devOtp && <DemoOtpNote code={devOtp} />}
 
-              <div className="flex flex-col gap-2">
-                <label
-                  htmlFor="masuk-otp"
-                  className="text-sm font-bold text-main"
-                >
-                  Kode Verifikasi (6 Digit)
-                </label>
-
-                {/* Satu input asli (mendukung isi otomatis SMS dan tempel);
-                    enam kotak di bawahnya hanya tampilan. */}
-                <div className="relative">
-                  <input
-                    ref={codeInputRef}
-                    id="masuk-otp"
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    maxLength={6}
-                    value={code}
-                    onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
-                    onFocus={() => setIsOtpFocused(true)}
-                    onBlur={() => setIsOtpFocused(false)}
-                    aria-describedby="masuk-otp-help"
-                    disabled={isVerifying}
-                    className="absolute inset-0 z-10 h-full w-full cursor-text opacity-0"
-                  />
-                  <div aria-hidden="true" className="flex gap-2">
-                    {Array.from({ length: 6 }).map((_, i) => {
-                      const isActive =
-                        isOtpFocused && i === Math.min(code.length, 5);
-                      return (
-                        <div
-                          key={i}
-                          className={`flex h-14 flex-1 items-center justify-center rounded-xl border-2 text-xl font-bold text-main ${
-                            isVerifying ? "bg-disabled-surface" : "bg-white"
-                          } ${
-                            isActive
-                              ? "border-btn-primary ring-2 ring-btn-primary"
-                              : "border-input"
-                          }`}
-                        >
-                          {code[i] ?? ""}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <p id="masuk-otp-help" className="text-sm text-secondary">
-                  Kode berlaku 5 menit.
-                </p>
-              </div>
+              <OtpCodeInput
+                id="masuk-otp"
+                inputRef={codeInputRef}
+                value={code}
+                onChange={setCode}
+                disabled={isVerifying}
+              />
 
               <Button
                 type="submit"
@@ -414,7 +351,7 @@ export function MasukClient({ reasonMessage }: MasukClientProps) {
                 Masuk
               </Button>
 
-              <div className="flex items-center justify-between border-t border-decorative pt-2">
+              <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
                   onClick={goBackToPhone}

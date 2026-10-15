@@ -240,6 +240,14 @@ async function consumeOtpInTx(
  * Mengunci baris (FOR UPDATE), mencegah penggunaan ganda, membatasi 5 percobaan,
  * dan menerbitkan sesi cookie bertanda tangan bila lolos.
  */
+function formatRecoveryTime(iso: string): string {
+  return new Intl.DateTimeFormat("id-ID", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Asia/Jakarta",
+  }).format(new Date(iso)) + " WIB";
+}
+
 export async function verifyOtp(
   rawPhone: string,
   rawCode: string,
@@ -274,6 +282,7 @@ export async function verifyOtp(
 
   let otpError: string | null = null;
   let activatedStaffId: string | null = null;
+  let recoveredPatientId: string | null = null;
 
   await withContext({}, async (tx) => {
     otpError = await consumeOtpInTx(tx, phoneHash, expectedCodeHash);
@@ -293,6 +302,20 @@ export async function verifyOtp(
 
     if (existingRes.rows.length > 0) {
       const existing = existingRes.rows[0];
+
+      // Halaman masuk pasien/pendamping tidak boleh dipakai akun petugas, admin, atau kurator.
+      const intendedPortalRole = options?.intendedRole;
+      if (
+        !options?.institutionalPortal &&
+        (intendedPortalRole === "patient" || intendedPortalRole === "companion") &&
+        (existing.role === "staff" ||
+          existing.role === "facility_admin" ||
+          existing.role === "curator")
+      ) {
+        throw new Error(
+          "Nomor ini tidak dapat dipakai di halaman pasien atau pendamping. Gunakan halaman Masuk Petugas atau Admin Fasilitas."
+        );
+      }
 
       if (existing.role === "staff" && existing.membership_status === "invited") {
         // Aktivasi login pertama (A2): nomor didaftarkan admin, OTP sudah valid.
@@ -351,6 +374,45 @@ export async function verifyOtp(
         audit_subject_id: existing.audit_subject_id,
       };
     } else {
+      // 2b. Nomor ini mungkin nomor baru hasil pemulihan akun lewat pendamping (migrasi 023).
+      const rec = await tx.query<{ outcome: string; user_id: string | null; eligible_at: string }>(
+        "SELECT * FROM complete_account_recovery_pre_session($1);",
+        [phone]
+      );
+      const recRow = rec.rows[0];
+      if (recRow?.outcome === "waiting") {
+        throw new Error(
+          `Nomor ini sedang dalam jeda keselamatan pemulihan akun. Coba masuk lagi setelah ${formatRecoveryTime(recRow.eligible_at)}.`
+        );
+      }
+      if (recRow?.outcome === "blocked") {
+        throw new Error("Pemulihan akun untuk nomor ini tidak dapat dilanjutkan. Hubungi pendamping Anda.");
+      }
+      if (recRow?.outcome === "completed" && recRow.user_id) {
+        const moved = await tx.query<{
+          id: string;
+          role: string;
+          status: string;
+          facility_id: string | null;
+          membership_status: string | null;
+          audit_subject_id: string;
+        }>("SELECT * FROM find_user_by_phone_pre_session($1);", [phone]);
+        const m = moved.rows[0];
+        if (!m || m.id !== recRow.user_id || m.role !== "patient" || options?.intendedRole === "companion") {
+          throw new Error("Tidak dapat masuk. Hubungi admin fasilitas.");
+        }
+        recoveredPatientId = m.id;
+        verifiedUser = {
+          id: m.id,
+          role: m.role as AppDbRole,
+          status: m.status,
+          facility_id: m.facility_id,
+          membership_status: m.membership_status,
+          audit_subject_id: m.audit_subject_id,
+        };
+        return;
+      }
+
       // 3. User baru: hanya peran patient atau companion yang dapat mendaftar mandiri bila intendedRole diisi
       const intendedRole = options?.intendedRole;
       if (!intendedRole) {
@@ -426,6 +488,14 @@ export async function verifyOtp(
           expiresAt,
         ]
       );
+      if (recoveredPatientId) {
+        await recordAuditEvent(sessTx, {
+          eventType: "recovery_completed",
+          actorId: verifiedUser!.id,
+          actorRole: verifiedUser!.role,
+          subjectRef: verifiedUser!.audit_subject_id,
+        });
+      }
       if (activatedStaffId) {
         await recordAuditEvent(sessTx, {
           eventType: "staff_activated",

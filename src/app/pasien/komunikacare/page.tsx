@@ -34,6 +34,7 @@ export default async function PasienKomunikaCarePage({
       title="KomunikaCare"
       backHref={visitId ? `/pasien/menunggu/${visitId}` : "/pasien"}
       backLabel={visitId ? "Kembali ke Status Kunjungan" : "Kembali ke Beranda"}
+      patientNav={!visitId}
     >
       {visitId && <ServiceDoneRedirect visitId={visitId} />}
       <KomunikaCareClient visitId={visitId} />

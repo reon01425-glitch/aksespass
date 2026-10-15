@@ -18,9 +18,11 @@ import type {
 } from "@/lib/preferences";
 
 const OPTION_BASE =
-  "min-h-[48px] px-3 py-2 rounded-lg font-bold border text-center transition-colors";
-const SELECTED = "bg-cyan-700 text-white border-cyan-700 ring-2 ring-cyan-900";
-const UNSELECTED = "bg-surface text-main border-cyan-800";
+  "min-h-12 rounded-2xl border-2 px-3 py-2 text-center font-bold transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900";
+const SELECTED = "border-cyan-900 bg-cyan-900 text-white";
+const UNSELECTED = "border-cyan-800 bg-white text-cyan-900";
+const CARD = "flex flex-col gap-3 rounded-2xl border border-cyan-800 bg-white p-4 shadow-sm";
+const H2 = "text-lg font-bold text-main";
 
 /**
  * Pengaturan Akun dan Privasi (P22): kontak, bahasa dan aksesibilitas, pemulihan akses,
@@ -66,14 +68,16 @@ export function AkunClient({
   };
 
   return (
-    <PageShell title="Akun" backHref="/pasien" backLabel="Kembali ke beranda">
-      <div className="mx-auto flex w-full max-w-md flex-col gap-6 px-4 py-6">
-        <section aria-labelledby="akun-kontak" className="flex flex-col gap-3">
-          <h2 id="akun-kontak" className="text-xl font-bold text-main">
+    <PageShell title="Akun" backHref="/pasien" backLabel="Kembali ke beranda" patientNav>
+      <div className="flex w-full max-w-full flex-col gap-5">
+        <section aria-labelledby="akun-kontak" className={CARD}>
+          <h2 id="akun-kontak" className={H2}>
             Kontak
           </h2>
-          <div className="flex flex-col gap-1 rounded-xl border border-decorative bg-surface p-4">
-            <div className="text-sm text-secondary">Nomor HP untuk masuk</div>
+          <div className="flex flex-col gap-0.5">
+            <div className="text-xs font-bold uppercase tracking-wider text-secondary">
+              Nomor HP untuk masuk
+            </div>
             <div className="text-base font-bold text-main">{maskedPhone}</div>
           </div>
           {phoneChanged && (
@@ -106,32 +110,30 @@ export function AkunClient({
                 setPhoneChanged(false);
                 setIsChangingPhone(true);
               }}
-              className="w-full"
+              className="w-full rounded-2xl! border-2! border-cyan-800! bg-white!"
             >
               Ubah Nomor HP
             </Button>
           )}
         </section>
 
-        <section aria-labelledby="akun-bahasa" className="flex flex-col gap-2">
-          <h2 id="akun-bahasa" className="text-xl font-bold text-main">
+        <section aria-labelledby="akun-bahasa" className={CARD}>
+          <h2 id="akun-bahasa" className={H2}>
             Bahasa
           </h2>
-          <div className="rounded-xl border border-decorative bg-surface p-4 text-base font-bold text-main">
-            Indonesia sederhana
-          </div>
-          <p className="text-sm text-secondary">
+          <div className="text-base font-bold text-main">Indonesia sederhana</div>
+          <p className="text-sm leading-6 text-secondary">
             Saat ini hanya bahasa Indonesia sederhana yang tersedia.
           </p>
         </section>
 
-        <section aria-labelledby="akun-tampilan" className="flex flex-col gap-4">
-          <h2 id="akun-tampilan" className="text-xl font-bold text-main">
+        <section aria-labelledby="akun-tampilan" className={`${CARD} gap-4`}>
+          <h2 id="akun-tampilan" className={H2}>
             Tampilan dan Aksesibilitas
           </h2>
 
           <fieldset className="flex flex-col gap-2">
-            <legend className="mb-1 text-sm font-bold text-main">Ukuran Teks</legend>
+            <legend className="mb-1 text-xs font-bold uppercase tracking-wider text-secondary">Ukuran Teks</legend>
             <div className="grid grid-cols-3 gap-2">
               {(["100", "150", "200"] as const).map((size) => (
                 <button
@@ -151,7 +153,7 @@ export function AkunClient({
           </fieldset>
 
           <fieldset className="flex flex-col gap-2">
-            <legend className="mb-1 text-sm font-bold text-main">Kontras</legend>
+            <legend className="mb-1 text-xs font-bold uppercase tracking-wider text-secondary">Kontras</legend>
             <div className="grid grid-cols-2 gap-2">
               {(
                 [
@@ -176,7 +178,7 @@ export function AkunClient({
           </fieldset>
 
           <fieldset className="flex flex-col gap-2">
-            <legend className="mb-1 text-sm font-bold text-main">Mode Pembaca Layar</legend>
+            <legend className="mb-1 text-xs font-bold uppercase tracking-wider text-secondary">Mode Pembaca Layar</legend>
             <div className="grid grid-cols-1 gap-2">
               {(
                 [
@@ -198,7 +200,7 @@ export function AkunClient({
                 </button>
               ))}
             </div>
-            <p className="text-sm text-secondary">
+            <p className="text-sm leading-6 text-secondary">
               Pilihan pembaca layar baru disimpan sebagai preferensi dan belum
               mengubah tampilan.
             </p>
@@ -224,43 +226,43 @@ export function AkunClient({
           </Button>
         </section>
 
-        <section aria-labelledby="akun-pemulihan" className="flex flex-col gap-2">
-          <h2 id="akun-pemulihan" className="text-xl font-bold text-main">
+        <section aria-labelledby="akun-pemulihan" className={CARD}>
+          <h2 id="akun-pemulihan" className={H2}>
             Pemulihan Akses
           </h2>
-          <p className="text-sm text-secondary">
+          <p className="text-sm leading-6 text-secondary">
             Jika ponsel hilang, akses dipulihkan lewat nomor HP di atas. Pendamping tertaut
             dapat membantu Anda.
           </p>
-          <div className="rounded-xl border border-decorative bg-surface p-4 text-base text-main">
+          <div className="text-base font-bold text-main">
             {activeCompanions > 0
               ? `${activeCompanions} pendamping aktif tertaut.`
               : "Belum ada pendamping tertaut."}
           </div>
           <Link
             href="/pasien/pendamping"
-            className="inline-flex min-h-12 items-center font-bold text-cyan-900 underline"
+            className="flex min-h-12 items-center justify-center rounded-2xl border-2 border-cyan-800 bg-white px-4 font-bold text-cyan-900 focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900"
           >
             Kelola pendamping
           </Link>
         </section>
 
-        <section aria-labelledby="akun-hapus" className="flex flex-col gap-2 border-t border-decorative pt-4">
-          <h2 id="akun-hapus" className="text-xl font-bold text-main">
+        <section aria-labelledby="akun-hapus" className={CARD}>
+          <h2 id="akun-hapus" className={H2}>
             Hapus Data dan Akun
           </h2>
-          <p className="text-sm text-secondary">
+          <p className="text-sm leading-6 text-secondary">
             Hapus paspor, profil, dan tautan pendamping Anda, lalu cabut semua QR.
           </p>
           <Link
             href="/pasien/akun/hapus"
-            className="inline-flex min-h-12 items-center justify-center rounded-xl border border-cyan-800 px-4 font-bold text-main"
+            className="flex min-h-12 items-center justify-center rounded-2xl border-2 border-cyan-800 bg-white px-4 font-bold text-cyan-900 focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900"
           >
             Hapus Data dan Akun
           </Link>
         </section>
 
-        <div className="border-t border-decorative pt-4">
+        <div>
           <LogoutButton redirectTo="/masuk" className="w-full" />
         </div>
       </div>

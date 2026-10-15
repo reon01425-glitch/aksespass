@@ -347,19 +347,19 @@ export function ConsentQrFlowClient({
     return (
       <form
         onSubmit={handleCreateQr}
-        className="flex flex-col gap-6 max-w-full w-full"
+        className="flex flex-col gap-5 max-w-full w-full"
       >
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1 rounded-2xl border-2 border-cyan-800 bg-white p-4 shadow-sm">
           {patientLabel && (
-            <span className="text-xs font-bold text-cyan-900 uppercase tracking-wider">
+            <span className="text-xs font-bold text-cyan-900">
               {patientLabel}
             </span>
           )}
-          <p className="text-base text-secondary">
+          <p className="max-w-none text-base text-secondary">
             Tujuan kunjungan:{" "}
             <strong className="text-main font-bold">{facility.name}</strong>
           </p>
-          <p className="text-sm text-secondary">
+          <p className="max-w-none text-sm text-secondary">
             Pilih data yang ingin Anda bagikan kepada petugas di fasilitas ini.
           </p>
         </div>
@@ -373,7 +373,7 @@ export function ConsentQrFlowClient({
         )}
 
         {/* Info nama panggilan dan privasi */}
-        <div className="p-4 rounded-xl bg-white border border-cyan-800 flex flex-col gap-2">
+        <div className="flex flex-col gap-2 rounded-2xl border border-cyan-800 bg-white p-4 shadow-sm">
           <div className="flex flex-col">
             <span className="text-sm font-bold text-main">
               Nama Panggilan Pasien
@@ -385,7 +385,7 @@ export function ConsentQrFlowClient({
               Nama panggilan selalu dibagikan agar petugas dapat menyapa Anda.
             </span>
           </div>
-          <div className="border-t border-cyan-100 pt-2 mt-1">
+          <div>
             <span className="text-xs text-secondary">
               Diagnosis tidak diminta dan tidak ikut ke dalam ConsentQR.
             </span>
@@ -406,7 +406,7 @@ export function ConsentQrFlowClient({
               return (
                 <div
                   key={category}
-                  className="p-3 bg-white border border-cyan-800/30 rounded-xl"
+                  className="rounded-2xl border border-cyan-800 bg-white p-3 shadow-sm"
                 >
                   <Toggle
                     id={`toggle-${category}`}
@@ -419,7 +419,7 @@ export function ConsentQrFlowClient({
             })}
 
             {hasNote && (
-              <div className="p-3 bg-white border border-cyan-800/30 rounded-xl">
+              <div className="rounded-2xl border border-cyan-800 bg-white p-3 shadow-sm">
                 <Toggle
                   id="toggle-catatan-pasien"
                   label="Catatan untuk Petugas"
@@ -442,6 +442,7 @@ export function ConsentQrFlowClient({
         )}
 
         {/* Masa Berlaku */}
+        <div className="rounded-2xl border border-cyan-800 bg-white p-4 shadow-sm">
         <RadioList
           name="consent-duration"
           legend="Masa Berlaku ConsentQR"
@@ -465,10 +466,11 @@ export function ConsentQrFlowClient({
             },
           ]}
         />
+        </div>
 
         {/* Pratinjau "Yang akan dilihat petugas" */}
-        <div className="flex flex-col gap-3 pt-2">
-          <h2 className="text-lg font-bold text-main border-b border-cyan-100 pb-2">
+        <div className="flex flex-col gap-3">
+          <h2 className="text-lg font-bold text-main">
             Yang akan dilihat petugas
           </h2>
           <PatientNeedsSummary
@@ -480,17 +482,17 @@ export function ConsentQrFlowClient({
         </div>
 
         {/* Tombol Aksi */}
-        <div className="flex flex-wrap gap-3 pt-4 border-t border-cyan-100">
+        <div className="flex flex-col gap-3">
           <Button
             type="submit"
             disabled={activeNeedsCategories.length === 0 || isSubmitting}
-            className="w-full sm:w-auto"
+            className="w-full"
           >
             {isSubmitting ? "Memproses…" : "Buat QR"}
           </Button>
           <Link
             href={cancelHref}
-            className="inline-flex items-center justify-center min-h-12 py-2.5 px-6 bg-cyan-100 border border-cyan-700 text-cyan-900 font-bold rounded-lg hover:bg-cyan-200 focus:ring-4 focus:ring-cyan-900 text-center w-full sm:w-auto"
+            className="inline-flex w-full items-center justify-center min-h-12 rounded-2xl border border-cyan-800 bg-white px-6 py-2.5 text-center font-bold text-cyan-900 hover:bg-cyan-50 focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900"
           >
             Batal
           </Link>
@@ -506,12 +508,12 @@ export function ConsentQrFlowClient({
   const expiryFullText = expiresAt ? formatExpiryText(expiresAt, now) : "";
 
   return (
-    <div className="flex flex-col gap-6 max-w-full w-full">
-      <div className="flex flex-col gap-1">
-        <h2 className="text-xl font-bold text-main">
+    <div className="flex flex-col gap-5 max-w-full w-full">
+      <div className="flex flex-col gap-1 rounded-2xl border-2 border-cyan-800 bg-white p-4 shadow-sm">
+        <h2 className="text-lg font-bold text-main">
           ConsentQR untuk {facility.name}
         </h2>
-        <p className="text-sm text-secondary">
+        <p className="max-w-none text-sm text-secondary">
           Tunjukkan QR ini ke petugas saat giliran Anda tiba.
         </p>
       </div>
@@ -534,7 +536,7 @@ export function ConsentQrFlowClient({
           />
           <Link
             href={homeHref}
-            className="inline-flex items-center justify-center min-h-12 py-2.5 px-6 bg-cyan-700 text-white font-bold rounded-lg shadow-sm hover:bg-cyan-800 focus:ring-4 focus:ring-cyan-900 focus:ring-offset-2 text-center w-full sm:w-auto"
+            className="inline-flex items-center justify-center min-h-12 py-2.5 px-6 bg-cyan-700 text-white font-bold rounded-lg shadow-sm hover:bg-cyan-800 focus:ring-4 focus:ring-cyan-900 focus:ring-offset-2 text-center w-full"
           >
             Ke Beranda
           </Link>
@@ -550,7 +552,7 @@ export function ConsentQrFlowClient({
             message="Masa berlaku QR sudah habis dan tidak dapat dipakai lagi."
           />
           <div>
-            <Button onClick={handleResetToConfigure} className="w-full sm:w-auto">Buat QR Baru</Button>
+            <Button onClick={handleResetToConfigure} className="w-full">Buat QR Baru</Button>
           </div>
         </div>
       )}
@@ -563,11 +565,11 @@ export function ConsentQrFlowClient({
             title="QR dicabut"
             message="ConsentQR telah dicabut dan tidak dapat dipakai lagi."
           />
-          <div className="flex flex-wrap gap-2">
-            <Button onClick={handleResetToConfigure} className="w-full sm:w-auto">Buat QR Baru</Button>
+          <div className="flex flex-col gap-3">
+            <Button onClick={handleResetToConfigure} className="w-full">Buat QR Baru</Button>
             <Link
               href={homeHref}
-              className="inline-flex items-center justify-center min-h-12 py-2.5 px-6 bg-cyan-100 border border-cyan-700 text-cyan-900 font-bold rounded-lg hover:bg-cyan-200 focus:ring-4 focus:ring-cyan-900 text-center w-full sm:w-auto"
+              className="inline-flex w-full items-center justify-center min-h-12 rounded-2xl border border-cyan-800 bg-white px-6 py-2.5 text-center font-bold text-cyan-900 hover:bg-cyan-50 focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900"
             >
               Ke Beranda
             </Link>
@@ -618,7 +620,7 @@ export function ConsentQrFlowClient({
       )}
 
       {/* Teks Penjelasan Keamanan di Bawah QR */}
-      <div className="p-4 rounded-xl bg-cyan-50/50 border border-cyan-800/20 flex flex-col gap-2">
+      <div className="flex flex-col gap-2 rounded-2xl border border-cyan-800 bg-white p-4 shadow-sm">
         <p className="text-sm text-secondary">
           QR ini hanya tampil sekarang. Bila halaman ditutup, buat QR baru; QR
           lama tetap aktif sampai kedaluwarsa atau dicabut di Kontrol Akses.
@@ -639,8 +641,8 @@ export function ConsentQrFlowClient({
       </div>
 
       {/* Ringkasan Data yang Dibagikan */}
-      <div className="flex flex-col gap-3 pt-2">
-        <h3 className="text-base font-bold text-main border-b border-cyan-100 pb-2">
+      <div className="flex flex-col gap-3">
+        <h3 className="text-lg font-bold text-main">
           Data yang dibagikan pada kunjungan ini
         </h3>
         <PatientNeedsSummary
@@ -653,12 +655,12 @@ export function ConsentQrFlowClient({
 
       {/* Tombol Cabut Sekarang (Bila belum dicabut dan belum kedaluwarsa) */}
       {qrStatus !== "dicabut" && qrStatus !== "kedaluwarsa" && (
-        <div className="flex flex-wrap gap-3 pt-4 border-t border-cyan-100">
+        <div className="flex flex-col gap-3">
           <Button
             type="button"
             variant="secondary"
             onClick={() => setIsRevokeDialogOpen(true)}
-            className="w-full sm:w-auto"
+            className="w-full"
           >
             Cabut Sekarang
           </Button>
@@ -667,7 +669,7 @@ export function ConsentQrFlowClient({
               type="button"
               variant="secondary"
               onClick={() => setIsRejectedDialogOpen(true)}
-              className="w-full sm:w-auto"
+              className="w-full"
             >
               Petugas bilang QR ditolak
             </Button>

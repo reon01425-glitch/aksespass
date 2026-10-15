@@ -30,6 +30,9 @@ export const AUDIT_EVENT_TYPES = [
   "staff_reactivated",
   "facility_action_created",
   "facility_action_updated",
+  "recovery_requested",
+  "recovery_cancelled",
+  "recovery_completed",
 ] as const;
 
 export type AuditEventType = (typeof AUDIT_EVENT_TYPES)[number];
@@ -291,6 +294,21 @@ export function mapAuditEventToDisplayEntry(
     }
     case "account_deleted": {
       title = "Akun dihapus";
+      break;
+    }
+    case "recovery_requested": {
+      title =
+        actor && actor !== "Sistem" && actor !== "Anda"
+          ? `Pemulihan nomor akun diajukan oleh ${actor}`
+          : "Pemulihan nomor akun diajukan";
+      break;
+    }
+    case "recovery_cancelled": {
+      title = "Permintaan pemulihan nomor akun dibatalkan";
+      break;
+    }
+    case "recovery_completed": {
+      title = "Nomor akun dipindahkan";
       break;
     }
     default: {

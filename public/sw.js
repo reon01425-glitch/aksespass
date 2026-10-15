@@ -6,7 +6,7 @@
  * aplikasi tidak pernah disimpan. Data ringkasan kebutuhan ada di
  * localStorage perangkat (dibaca oleh offline.html), bukan di cache ini.
  */
-const CACHE_NAME = "aksespass-shell-v1";
+const CACHE_NAME = "aksespass-shell-v2";
 const SHELL_URLS = [
   "/offline.html",
   "/manifest.webmanifest",

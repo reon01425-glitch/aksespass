@@ -19,7 +19,7 @@ export default async function TambahPetugasPage() {
   if (!session || session.role !== "facility_admin") redirect("/masuk/petugas");
   await requireActiveInstitutionPage("facility_admin");
   return (
-    <PageShell title="Tambah Petugas" backHref="/admin/petugas" backLabel="Kembali ke Akun Petugas">
+    <PageShell title="Tambah Petugas" backHref="/admin/petugas" backLabel="Kembali ke Akun Petugas" adminNav>
       <StaffFormClient mode="tambah" />
     </PageShell>
   );

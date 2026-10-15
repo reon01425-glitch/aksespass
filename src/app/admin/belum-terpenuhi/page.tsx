@@ -52,9 +52,9 @@ export default async function BelumTerpenuhiPage({
   const { rows } = await getUnmetNeeds(session, period);
 
   return (
-    <PageShell title="Belum Terpenuhi" backHref="/admin" backLabel="Kembali ke Beranda Admin">
-      <div className="flex flex-col gap-6 max-w-full w-full">
-        <p className="text-base text-secondary">
+    <PageShell title="Belum Terpenuhi" backHref="/admin" backLabel="Kembali ke Beranda Admin" adminNav>
+      <div className="flex w-full max-w-full flex-col gap-5">
+        <p className="max-w-none rounded-2xl border-2 border-cyan-800 bg-white p-4 text-sm leading-6 text-secondary">
           Kategori kebutuhan yang paling sering belum terpenuhi. Semua angka agregat dan anonim;
           kelompok kurang dari {DASHBOARD_MIN_GROUP_SIZE} pasien disembunyikan.
         </p>
@@ -67,10 +67,10 @@ export default async function BelumTerpenuhiPage({
                 key={key(p)}
                 href={`/admin/belum-terpenuhi?month=${key(p)}`}
                 aria-current={active ? "page" : undefined}
-                className={`inline-flex items-center justify-center min-h-12 px-4 rounded-lg border text-base focus:outline-none focus:ring-4 focus:ring-cyan-900 ${
+                className={`inline-flex min-h-12 items-center justify-center rounded-2xl border px-4 text-sm focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900 ${
                   active
-                    ? "bg-cyan-700 text-white border-cyan-700 font-bold"
-                    : "bg-white text-main border-cyan-200 hover:bg-cyan-50"
+                    ? "border-cyan-900 bg-cyan-900 font-bold text-white"
+                    : "border-cyan-800 bg-white text-main hover:bg-cyan-50"
                 }`}
               >
                 {label(p)}
@@ -79,37 +79,44 @@ export default async function BelumTerpenuhiPage({
           })}
         </nav>
 
-        <ol aria-label="Kategori belum terpenuhi" className="flex flex-col gap-3">
+        <ol aria-label="Kategori belum terpenuhi" className="m-0 grid w-full list-none grid-cols-2 gap-3 p-0 [&>*:last-child:nth-child(odd)]:col-span-2">
           {rows.map((r) => (
             <li
               key={r.category}
               data-testid="baris-kategori"
-              className="flex flex-col gap-3 rounded-xl border border-cyan-800 bg-white p-4"
+              className="flex min-w-0 flex-col gap-3 rounded-2xl border border-cyan-800 bg-white p-4 shadow-sm"
             >
               <div className="flex flex-col gap-1">
-                <span className="text-lg font-bold text-main">{r.categoryLabel}</span>
-                <span className="text-base text-main">
-                  {r.current.hidden
-                    ? `Disembunyikan (kurang dari ${DASHBOARD_MIN_GROUP_SIZE} pasien)`
-                    : `${r.current.value} kunjungan belum terpenuhi`}
-                </span>
-                <span className="text-sm text-secondary">{TREND_LABEL[r.trend]}</span>
+                <span className="break-words text-base font-bold text-main">{r.categoryLabel}</span>
+                {r.current.hidden ? (
+                  <span className="text-sm text-secondary">
+                    Disembunyikan (kurang dari {DASHBOARD_MIN_GROUP_SIZE} pasien)
+                  </span>
+                ) : (
+                  <span className="flex items-baseline gap-2">
+                    <span className="text-3xl font-bold text-main">{r.current.value}</span>
+                    <span className="text-xs text-secondary">kunjungan</span>
+                  </span>
+                )}
+                <span className="text-xs text-secondary">{TREND_LABEL[r.trend]}</span>
                 {r.openActionStatus && (
-                  <span className="text-sm font-bold text-main">
+                  <span className="text-xs font-bold text-main">
                     Tindak lanjut: {FACILITY_ACTION_STATUS_LABELS[r.openActionStatus]}
                   </span>
                 )}
               </div>
+              <div className="mt-auto">
               {r.openActionId ? (
                 <Link
                   href="/admin/tindak-lanjut"
-                  className="flex min-h-12 items-center justify-center rounded-lg border-2 border-cyan-700 bg-white px-4 py-2 text-base font-bold text-cyan-900 focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900"
+                  className="flex min-h-12 items-center justify-center rounded-lg border-2 border-cyan-700 bg-white px-2 py-2 text-center text-sm font-bold text-cyan-900 focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900"
                 >
                   Lihat Tindak Lanjut
                 </Link>
               ) : (
                 <NewActionButton category={r.category} categoryLabel={r.categoryLabel} />
               )}
+              </div>
             </li>
           ))}
         </ol>
