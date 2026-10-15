@@ -141,6 +141,11 @@ export function PetugasPindaiClient({
   const [onSiteSuccess, setOnSiteSuccess] = useState<boolean>(false);
   const [onSiteError, setOnSiteError] = useState<string | null>(null);
 
+  // Panggil Pasien (T6 -> P14 di sisi pasien)
+  const [callRoom, setCallRoom] = useState<string>("");
+  const [isCalling, setIsCalling] = useState<boolean>(false);
+  const [callResult, setCallResult] = useState<{ ok: boolean; message: string } | null>(null);
+
   const stepHeadingRef = useRef<HTMLHeadingElement>(null);
   const manualInputRef = useRef<HTMLInputElement>(null);
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
@@ -482,6 +487,34 @@ export function PetugasPindaiClient({
     window.location.replace(returnHref);
   };
 
+  // Pelayanan selesai: beri tahu pasien (P16), lalu keluar. Gagal -> tetap di layar agar bisa dicoba lagi.
+  const [isCompleting, setIsCompleting] = useState<boolean>(false);
+  const [completeError, setCompleteError] = useState<string | null>(null);
+  const handleCompleteService = async () => {
+    if (!scanData || isCompleting) return;
+    setIsCompleting(true);
+    setCompleteError(null);
+    try {
+      const res = await fetch("/api/petugas/kunjungan/selesai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ visitId: scanData.visitId }),
+      });
+      const data = await res.json().catch(() => null);
+      if (res.ok && data?.ok) {
+        handleFinishAndExit();
+        return;
+      }
+      setCompleteError(
+        data?.message || data?.error || "Gagal menandai pelayanan selesai. Coba lagi."
+      );
+    } catch {
+      setCompleteError("Gagal menandai pelayanan selesai. Periksa koneksi lalu coba lagi.");
+    } finally {
+      setIsCompleting(false);
+    }
+  };
+
   // 8. Simpan Bantuan (T8 -> POST /api/petugas/kunjungan/catat)
   const handleSaveAssistance = async () => {
     if (!scanData || isSavingAssistance) return;
@@ -569,6 +602,37 @@ export function PetugasPindaiClient({
   // ==========================================
   // RENDER LANGKAH 1: PINDAI & KODE MANUAL (T4)
   // ==========================================
+  const handleCallPatient = async () => {
+    if (!scanData || isCalling) return;
+    setIsCalling(true);
+    setCallResult(null);
+    try {
+      const res = await fetch("/api/petugas/kunjungan/panggil", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ visitId: scanData.visitId, room: callRoom }),
+      });
+      const data = await res.json().catch(() => null);
+      if (res.ok && data?.ok) {
+        setCallResult({
+          ok: true,
+          message: callRoom.trim()
+            ? `Pasien dipanggil ke ${callRoom.trim()}.`
+            : "Pasien dipanggil.",
+        });
+      } else {
+        setCallResult({
+          ok: false,
+          message: data?.message || data?.error || "Gagal memanggil pasien.",
+        });
+      }
+    } catch {
+      setCallResult({ ok: false, message: "Gagal memanggil pasien. Periksa koneksi." });
+    } finally {
+      setIsCalling(false);
+    }
+  };
+
   if (step === "pindai") {
     return (
       <PageShell
@@ -888,6 +952,40 @@ export function PetugasPindaiClient({
             </div>
           )}
 
+          {/* Panggil Pasien */}
+          <section
+            aria-labelledby="heading-panggil"
+            className="flex flex-col gap-3 p-4 rounded-xl bg-white border border-cyan-800"
+          >
+            <h2 id="heading-panggil" className="text-base font-bold text-main">
+              Panggil Pasien
+            </h2>
+            <TextField
+              id="panggil-ruangan"
+              label="Ruangan (opsional)"
+              value={callRoom}
+              onChange={(e) => setCallRoom(e.target.value)}
+              maxLength={40}
+              helperText="Contoh: Ruang Periksa 2. Tampil besar di layar pasien."
+            />
+            <Button
+              variant="secondary"
+              onClick={handleCallPatient}
+              isLoading={isCalling}
+              className="w-full flex items-center justify-center gap-2"
+            >
+              <BellRing aria-hidden="true" className="w-5 h-5 shrink-0" />
+              <span>Panggil Pasien</span>
+            </Button>
+            {callResult && (
+              <StatusBanner
+                variant={callResult.ok ? "success" : "error"}
+                title={callResult.ok ? "Panggilan terkirim" : "Gagal memanggil"}
+                message={callResult.message}
+              />
+            )}
+          </section>
+
           {/* Tombol Aksi Layar T6 */}
           <div className="flex flex-col gap-3 pt-4 border-t border-cyan-100">
             <Button
@@ -1101,9 +1199,17 @@ export function PetugasPindaiClient({
               </div>
 
               <div className="flex flex-col gap-3 pt-2">
+                {completeError && (
+                  <StatusBanner
+                    variant="error"
+                    title="Pasien belum diberi tahu"
+                    message={completeError}
+                  />
+                )}
                 <Button
                   variant="primary"
-                  onClick={handleFinishAndExit}
+                  onClick={handleCompleteService}
+                  isLoading={isCompleting}
                   className="w-full text-base"
                 >
                   Selesai dan Kembali ke Beranda
@@ -1139,9 +1245,17 @@ export function PetugasPindaiClient({
                     title="Konfirmasi Berhasil Disimpan"
                     message="Jawaban konfirmasi di tempat telah tercatat."
                   />
+                  {completeError && (
+                    <StatusBanner
+                      variant="error"
+                      title="Pasien belum diberi tahu"
+                      message={completeError}
+                    />
+                  )}
                   <Button
                     variant="primary"
-                    onClick={handleFinishAndExit}
+                    onClick={handleCompleteService}
+                    isLoading={isCompleting}
                     className="w-full"
                   >
                     Kembali ke Beranda

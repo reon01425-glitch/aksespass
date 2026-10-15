@@ -705,6 +705,8 @@ export type ConsentQrStatusResult =
       facilityId: string;
       expiresAt: string;
       scannedAt?: string;
+      /** Hanya terisi saat status "dipindai": dipakai pasien untuk membuka P13. */
+      visitId?: string;
     };
 
 /**
@@ -799,6 +801,7 @@ export async function getConsentQrStatus(
           facilityId: row.facility_id,
           expiresAt: expiresAtDate.toISOString(),
           scannedAt: new Date(visitRes.rows[0].created_at).toISOString(),
+          visitId: visitRes.rows[0].id,
         };
       }
 

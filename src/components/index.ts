@@ -14,3 +14,6 @@ export * from "./logout-button";
 export * from "./patient-needs-summary";
 export * from "./radio-list";
 export * from "./petugas-pindai-flow";
+export { PendingConfirmationSync } from "./pending-confirmation-sync";
+export { FollowUpList } from "./follow-up-list";
+export { ServiceDoneRedirect } from "./service-done-redirect";
