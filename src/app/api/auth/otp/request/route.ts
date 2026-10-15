@@ -1,4 +1,4 @@
-import { requestOtp } from "../../../../../lib/auth";
+import { OtpRateLimitError, requestOtp } from "../../../../../lib/auth";
 import { jsonResponse, wrapRouteHandler } from "../../../../../lib/http";
 
 export const POST = wrapRouteHandler(async (request: Request) => {
@@ -22,6 +22,13 @@ export const POST = wrapRouteHandler(async (request: Request) => {
   const forwarded = request.headers.get("x-forwarded-for");
   const ip = forwarded ? forwarded.split(",")[0].trim() : "local";
 
-  const result = await requestOtp(body.phone, { ip });
-  return jsonResponse(result);
+  try {
+    const result = await requestOtp(body.phone, { ip });
+    return jsonResponse(result);
+  } catch (err) {
+    if (err instanceof OtpRateLimitError) {
+      return jsonResponse({ error: err.message }, { status: 429 });
+    }
+    throw err;
+  }
 });

@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { COOKIE_NAME, SECURE_COOKIE_NAME } from "@/lib/auth/constants";
 import { verifySessionCookie } from "@/lib/auth/session";
+import { requireActiveInstitutionPage } from "@/lib/auth/page-guard";
 import { getNeedsCatalog } from "@/lib/passport";
 import { KartuPetugasClient } from "./kartu-petugas-client";
 
@@ -21,6 +22,7 @@ export default async function PetugasKartuPage() {
 
   const session = await verifySessionCookie(sessionCookie);
   if (!session || session.role !== "staff") redirect("/masuk/petugas");
+  await requireActiveInstitutionPage("staff");
 
   const catalog = await getNeedsCatalog(session);
   return <KartuPetugasClient catalog={catalog} />;

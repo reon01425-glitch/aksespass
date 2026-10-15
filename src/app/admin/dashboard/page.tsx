@@ -7,6 +7,7 @@ import {
   SECURE_COOKIE_NAME,
 } from "@/lib/auth/constants";
 import { verifySessionCookie } from "@/lib/auth/session";
+import { requireActiveInstitutionPage } from "@/lib/auth/page-guard";
 import {
   getFacilityDashboard,
   recentJakartaPeriods,
@@ -80,6 +81,7 @@ export default async function AdminDashboardPage({
   if (!session || session.role !== "facility_admin") {
     redirect("/masuk/petugas");
   }
+  await requireActiveInstitutionPage("facility_admin");
 
   const availablePeriods = recentJakartaPeriods(new Date(), 3);
   const params = await searchParams;
@@ -94,11 +96,12 @@ export default async function AdminDashboardPage({
     hidden: t.hidden,
     totalVisits: t.hidden ? null : t.totalVisits ?? 0,
     afr: t.hidden ? null : t.afr ?? null,
+    afrHidden: t.hidden ? false : Boolean(t.afrHidden),
   }));
   const maxTotalVisits = Math.max(1, ...trendRows.map((r) => r.totalVisits ?? 0));
 
   return (
-    <PageShell title="Dashboard Kesenjangan Aksesibilitas" backHref="/admin" backLabel="Kembali ke Beranda Admin">
+    <PageShell title="Dashboard Aksesibilitas" backHref="/admin" backLabel="Kembali ke Beranda Admin">
       <div className="flex flex-col gap-8 max-w-full w-full">
         <p className="text-base text-secondary">
           Semua angka agregat dan anonim. Hanya pasien yang menyetujui statistik yang dihitung.
@@ -144,13 +147,23 @@ export default async function AdminDashboardPage({
               <h2 id="heading-afr" className="text-base font-bold text-main border-b border-cyan-100 pb-2">
                 Accommodation Fulfillment Rate — {periodLabel(selectedPeriod)}
               </h2>
-              <p className="text-5xl font-bold text-main" aria-hidden="true">
-                {selected.afr ?? 0}%
-              </p>
-              <p className="text-lg text-main">
-                {selected.afr ?? 0}% kunjungan kebutuhannya terpenuhi dari total{" "}
-                {selected.totalVisits} kunjungan tercatat.
-              </p>
+              {selected.afrHidden ? (
+                <p className="text-lg text-main">
+                  Disembunyikan: jumlah pasien terlalu sedikit (kurang dari{" "}
+                  {DASHBOARD_MIN_GROUP_SIZE} pasien berbeda pada kelompok terpenuhi atau belum
+                  terpenuhi) sehingga angka ini dapat mengungkap individu.
+                </p>
+              ) : (
+                <>
+                  <div className="text-6xl font-bold text-main" aria-hidden="true">
+                    {selected.afr ?? 0}%
+                  </div>
+                  <p className="text-lg text-main">
+                    {selected.afr ?? 0}% kunjungan kebutuhannya terpenuhi dari total{" "}
+                    {selected.totalVisits} kunjungan tercatat.
+                  </p>
+                </>
+              )}
             </section>
 
             {/* Tren Bulanan */}
@@ -192,7 +205,7 @@ export default async function AdminDashboardPage({
                         </td>
                         <td className="py-3 text-base text-main">
                           {row.hidden || row.afr === null ? (
-                            row.hidden ? (
+                            row.hidden || row.afrHidden ? (
                               `Disembunyikan (kurang dari ${DASHBOARD_MIN_GROUP_SIZE} pasien)`
                             ) : (
                               "Belum ada data"
@@ -325,6 +338,12 @@ export default async function AdminDashboardPage({
                   </tbody>
                 </table>
               </div>
+              <Link
+                href={`/admin/belum-terpenuhi?month=${periodKey(selectedPeriod)}`}
+                className="flex min-h-12 items-center justify-center rounded-lg border-2 border-cyan-700 bg-white px-4 py-2 text-base font-bold text-cyan-900 focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900"
+              >
+                Lihat Kebutuhan Belum Terpenuhi
+              </Link>
             </section>
           </>
         )}

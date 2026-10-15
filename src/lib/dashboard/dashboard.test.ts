@@ -37,9 +37,11 @@ describe("src/lib/dashboard: Accessibility Gap Dashboard (A3, A6, K-10)", () => 
       // idx20 (p1, belum dikonfirmasi), idx21 (p5, sebagian), idx22 (p6, sebagian),
       // idx23 (p7, sebagian), idx24 (p8, sebagian) = 8 kunjungan dihitung.
       // idx17 (p4, Pasien Contoh 4) DIKECUALIKAN karena stats_consent = false.
-      // AFR = 2 terpenuhi / 8 total = 25%.
+      // AFR akan 25% (2/8), tetapi 'terpenuhi' berasal dari hanya 2 pasien: AFR DISEMBUNYIKAN
+      // agar sel kecil yang disembunyikan tidak bocor lewat metrik turunan.
       expect(result.selected.totalVisits).toBe(8);
-      expect(result.selected.afr).toBe(25);
+      expect(result.selected.afr).toBeNull();
+      expect(result.selected.afrHidden).toBe(true);
 
       // Rincian kategori: sensorik_lingkungan memiliki tepat 5 pasien berbeda
       // (p2, p5, p6, p7, p8) -> tepat di ambang, HARUS tampil.
@@ -67,7 +69,8 @@ describe("src/lib/dashboard: Accessibility Gap Dashboard (A3, A6, K-10)", () => 
         { year: 2026, month: 10 }
       );
       expect(result.selected.totalVisits).toBe(8);
-      expect(result.selected.afr).toBe(25);
+      expect(result.selected.afr).toBeNull();
+      expect(result.selected.afrHidden).toBe(true);
     });
 
     it("Pasien Contoh 4 (stats_consent = false) tidak dihitung sama sekali walau kunjungannya terpenuhi di fasilitas dan bulan yang sama", async () => {
@@ -78,7 +81,8 @@ describe("src/lib/dashboard: Accessibility Gap Dashboard (A3, A6, K-10)", () => 
         { year: 2026, month: 10 }
       );
       expect(result.selected.totalVisits).toBe(8);
-      expect(result.selected.afr).toBe(25);
+      expect(result.selected.afr).toBeNull();
+      expect(result.selected.afrHidden).toBe(true);
     });
 
     it("serialisasi JSON hasil dashboard tidak memuat ID, nama, atau kontak pasien apa pun", async () => {

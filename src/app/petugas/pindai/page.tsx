@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { PetugasPindaiClient } from "@/components";
+import { requireActiveInstitutionPage } from "@/lib/auth/page-guard";
 
 
 export const metadata: Metadata = {
@@ -7,6 +8,7 @@ export const metadata: Metadata = {
   description: "Pindai ConsentQR pasien dengan kamera atau masukkan kode manual.",
 };
 
-export default function PetugasPindaiPage() {
+export default async function PetugasPindaiPage() {
+  await requireActiveInstitutionPage("staff");
   return <PetugasPindaiClient />;
 }

@@ -170,7 +170,7 @@ Empat sub-layar yang dapat dibuka kapan saja selama kunjungan.
 - **Aksi Utama:** [Kembali ke Beranda]. Status tindak lanjut dapat dibuka lagi dari beranda.
 - **Navigasi:** → [P4]; status diperbarui saat admin menandai tindak lanjut.
 - **US:** P-08.
-- **Cakupan Bagian 8 (13 Okt 2026) [Diputuskan untuk rilis ini]:** versi minimal P-07 saja — `StatusBanner` sukses "Terima kasih, jawaban tersimpan" + ringkasan status dan daftar kebutuhan belum terpenuhi yang dipilih pasien + [Kembali ke Beranda]. **Status tindak lanjut (Diterima/Sedang Ditindaklanjuti/Selesai) TIDAK ditampilkan hari ini** karena bergantung pada tabel `follow_ups` dan layar [A8] yang belum dibuat (P-08 ditunda, menunggu Bagian 8 lanjutan atau Bagian 10).
+- **Cakupan Bagian 8 (13 Okt 2026) [Diputuskan untuk rilis ini]:** versi minimal P-07 saja — `StatusBanner` sukses "Terima kasih, jawaban tersimpan" + ringkasan status dan daftar kebutuhan belum terpenuhi yang dipilih pasien + [Kembali ke Beranda]. **Diperbarui 15 Okt 2026:** status tindak lanjut (Diterima/Sedang Ditindaklanjuti/Selesai) dan catatan langkah fasilitas kini ditampilkan, bersumber dari tindak lanjut fasilitas di [A8] (P-08).
 
 ---
 
@@ -370,9 +370,9 @@ Mengelola akun petugas dan menindaklanjuti kebutuhan yang belum terpenuhi, tanpa
 - **Navigasi:** belum masuk → [A2]; sudah masuk → [A3].
 
 ### [A2] Login dan Aktivasi Admin
-- **Tampilan:** login akun admin. Fasilitas sudah didaftarkan oleh admin sistem melalui onboarding; admin fasilitas menerima undangan aktivasi pertama kali.
-- **Aksi Utama:** aktivasi akun lalu masuk.
-- **Aksi Alternatif atau Error:** undangan kedaluwarsa → "Hubungi admin sistem".
+- **Tampilan:** login akun admin lewat halaman masuk petugas (nomor HP + kode verifikasi, sesuai [T2]). Fasilitas dan akun admin didaftarkan oleh admin sistem melalui onboarding.
+- **Aksi Utama:** masuk. **Aktivasi petugas [Disetujui, 15 Okt 2026]:** petugas yang didaftarkan admin ([A5]) berstatus "Menunggu aktivasi" dan menjadi aktif otomatis saat masuk pertama kali dengan nomor HP yang didaftarkan (tanpa tautan atau SMS pada prototipe). Akun nonaktif tidak pernah diaktifkan oleh login.
+- **Aksi Alternatif atau Error:** nomor tidak terdaftar atau akun nonaktif → satu pesan generik "Tidak dapat masuk. Hubungi admin fasilitas." Petugas yang dinonaktifkan saat sedang masuk ditolak di setiap halaman dan API berikutnya ("Akses akun ini ditutup").
 - **Navigasi:** berhasil → [A3].
 - **US:** A-01.
 
@@ -380,19 +380,19 @@ Mengelola akun petugas dan menindaklanjuti kebutuhan yang belum terpenuhi, tanpa
 - **Tampilan:** ringkasan bulan berjalan: jumlah kunjungan ber-AKSESPASS, Accommodation Fulfillment Rate, jumlah kebutuhan belum terpenuhi.
 - **Navigasi:** Akun Petugas → [A4]; Dashboard → [A6]; Belum Terpenuhi → [A7].
 - **US:** A-02.
-- **Cakupan Bagian 8 (13 Okt 2026) [Diputuskan untuk rilis ini]:** ringkasan bulan berjalan (3 angka di atas) dan tombol Dashboard → [A6] sudah dibangun dari fungsi `get_facility_dashboard`. **Menu Akun Petugas [A4] dan Belum Terpenuhi [A7] TIDAK ditampilkan hari ini** (menunggu Bagian 8 lanjutan/Bagian 10); beranda hanya menampilkan ringkasan, tombol Dashboard, dan [Keluar].
+- **Cakupan (diperbarui 15 Okt 2026):** ringkasan bulan berjalan (3 angka di atas, dari `get_facility_dashboard`; AFR tertulis "Disembunyikan" bila membuka kelompok kecil), menu Akun Petugas [A4], Dashboard [A6], Belum Terpenuhi [A7], Tindak Lanjut [A8], dan [Keluar].
 
 ### [A4] Kelola Akun Petugas
-- **Tampilan:** daftar petugas: nama, peran, unit, status aktif atau nonaktif. [Tambah Petugas].
-- **Aksi Utama:** [Tambah Petugas], atau pilih petugas untuk [Nonaktifkan] (misalnya resign atau pindah), dengan konfirmasi.
+- **Tampilan:** daftar petugas fasilitas ini (semua dibuat oleh admin; petugas tidak mendaftar mandiri): nama, peran, unit, nomor HP disamarkan, status "Menunggu aktivasi", "Aktif", atau "Nonaktif" (ikon + teks). [Tambah Petugas].
+- **Aksi Utama:** [Tambah Petugas], [Ubah] nama/unit, atau [Nonaktifkan] (misalnya resign atau pindah) dengan konfirmasi. Petugas nonaktif dapat [Aktifkan Kembali] (kembali "Menunggu aktivasi" bila belum pernah masuk). Setiap perubahan tercatat di audit (tanpa data pasien).
 - **Aksi Alternatif:** setelah dinonaktifkan, akses ConsentQR petugas tertutup langsung; upaya pindai berikutnya ditolak dan tercatat.
 - **Navigasi:** tambah → [A5].
 - **US:** A-01.
 
 ### [A5] Tambah atau Ubah Petugas
-- **Tampilan:** formulir nama, peran, unit, kontak.
-- **Aksi Utama:** [Kirim Undangan]; petugas menerima tautan aktivasi.
-- **Simpan Draft:** formulir yang belum dikirim tersimpan sebagai draft.
+- **Tampilan:** formulir nama, peran (tetap "Petugas"), unit, nomor HP (kontak sekaligus identitas login). Saat [Ubah], nomor ditampilkan disamarkan dan tidak dapat diubah (ganti nomor = nonaktifkan lalu daftarkan ulang).
+- **Aksi Utama:** [Daftarkan Petugas]; status awal "Menunggu aktivasi" (aktif saat petugas masuk pertama kali, lihat [A2]). Nomor yang sudah dipakai ditolak dengan pesan generik.
+- **Simpan Draft:** isian yang belum dikirim tersimpan otomatis di perangkat admin ini saja (penyimpanan peramban) dan dihapus saat dikirim atau [Batal].
 - **Aksi Alternatif:** [Batal] → [A4].
 - **Navigasi:** → [A4] dengan status "Menunggu aktivasi".
 - **US:** A-01.
@@ -403,17 +403,18 @@ Mengelola akun petugas dan menindaklanjuti kebutuhan yang belum terpenuhi, tanpa
 - **Aksi Alternatif:** data belum cukup → "Belum ada data kunjungan".
 - **Navigasi:** → [A7] untuk rincian kebutuhan belum terpenuhi.
 - **US:** A-02.
-- **Cakupan Bagian 8 (13 Okt 2026) [Diputuskan untuk rilis ini]:** filter periode terbatas pada bulan berjalan dan 2 bulan sebelumnya (tanpa filter kategori terpisah — rincian kategori sudah tampil sebagai satu tabel). AFR besar (angka + teks), tren bulanan sebagai tabel ber-caption dengan batang CSS (`aria-hidden`, angka selalu tertulis), rincian status, rincian penjawab (pasien/pendamping/di tempat, dengan keterangan tetap "Jawaban pendamping dan di tempat ditandai terpisah"), dan rincian per kategori. Sel di bawah ambang K-10 tertulis "Disembunyikan (kurang dari 5 pasien)"; periode tanpa kunjungan tertulis "Belum ada data kunjungan". **Navigasi ke [A7] TIDAK dibuat hari ini** (layar [A7] ditunda ke Bagian 8 lanjutan/Bagian 10).
+- **Privasi sel kecil (diperbarui 15 Okt 2026):** AFR tertulis "Disembunyikan" bila kelompok "terpenuhi" atau komplemennya berasal dari kurang dari 5 pasien berbeda, karena AFR akan membuka sel yang disembunyikan. Pada rincian status, bila tepat satu sel disembunyikan, sel terlihat terkecil ikut disembunyikan agar tidak dapat dihitung dari total. Judul layar dipersingkat menjadi "Dashboard Aksesibilitas".
+- **Cakupan Bagian 8 (13 Okt 2026) [Diputuskan untuk rilis ini]:** filter periode terbatas pada bulan berjalan dan 2 bulan sebelumnya (tanpa filter kategori terpisah — rincian kategori sudah tampil sebagai satu tabel). AFR besar (angka + teks), tren bulanan sebagai tabel ber-caption dengan batang CSS (`aria-hidden`, angka selalu tertulis), rincian status, rincian penjawab (pasien/pendamping/di tempat, dengan keterangan tetap "Jawaban pendamping dan di tempat ditandai terpisah"), dan rincian per kategori. Sel di bawah ambang K-10 tertulis "Disembunyikan (kurang dari 5 pasien)"; periode tanpa kunjungan tertulis "Belum ada data kunjungan". Tombol [Lihat Kebutuhan Belum Terpenuhi] → [A7] (ditambahkan 15 Okt 2026).
 
 ### [A7] Kebutuhan Belum Terpenuhi
-- **Tampilan:** kategori kebutuhan yang paling sering belum terpenuhi (misalnya antrean visual, juru bahasa isyarat) dengan jumlah dan tren, tanpa identitas pasien.
-- **Aksi Utama:** pilih kategori, lalu [Buat Tindak Lanjut].
+- **Tampilan:** enam kategori kebutuhan, terurut dari yang paling sering belum terpenuhi, dengan jumlah kunjungan dan tren dibanding bulan lalu (naik/turun/sama; "belum tersedia" bila salah satu bulan disembunyikan). Filter periode: bulan berjalan dan 2 bulan sebelumnya. Agregat anonim; kelompok kurang dari 5 pasien disembunyikan (memakai fungsi dashboard yang sama).
+- **Aksi Utama:** pilih kategori, lalu [Buat Tindak Lanjut]; bila sudah ada tindak lanjut berjalan, tombol berubah menjadi [Lihat Tindak Lanjut].
 - **Navigasi:** → [A8].
 - **US:** A-03.
 
 ### [A8] Tindak Lanjut
-- **Tampilan:** daftar tindak lanjut dengan status (Baru, Sedang Dikerjakan, Selesai), catatan langkah, tanggal.
-- **Aksi Utama:** tentukan langkah, ubah status, [Tandai Selesai]. Perubahan status terlihat pasien di [P17] sebagai ringkasan umum tanpa data pribadi lain.
+- **Tampilan:** daftar tindak lanjut fasilitas per kategori kebutuhan (tabel `facility_actions`, terpisah dari `follow_ups` per pasien), dengan status (Baru, Sedang Dikerjakan, Selesai), catatan langkah (maks 280 karakter), tanggal dibuat/diperbarui/selesai. Satu tindak lanjut berjalan per kategori.
+- **Aksi Utama:** tentukan langkah, ubah status, [Tandai Selesai]. **Ringkasan di [P17] [Disetujui, 15 Okt 2026]:** pasien yang melaporkan kebutuhan belum terpenuhi di kategori dan fasilitas yang sama melihat status tindak lanjut fasilitas dan catatan langkah (tanpa data pribadi lain). Tindak lanjut yang selesai sebelum laporan pasien dibuat tidak menutup laporan itu. Catatan dapat dibaca pasien terkait, sehingga admin diminta tidak menulis data pribadi.
 - **Aksi Alternatif:** [Kembali] → [A7].
 - **Navigasi:** → [A3].
 - **US:** A-04, P-08.
