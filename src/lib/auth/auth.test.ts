@@ -365,6 +365,16 @@ describe("Autentikasi, Sesi Bertanda Tangan, Guard, OTP Tiruan, dan RLS (Bagian 
       ).rejects.toThrow(/sudah terdaftar sebagai pendamping/);
     });
 
+    it("halaman masuk petugas (institutionalPortal) menolak akun pasien atau pendamping dengan pesan generik", async () => {
+      const phone = "081299993779";
+      const r1 = await requestOtp(phone);
+      await verifyOtp(phone, r1.devOtp!, { intendedRole: "patient" });
+      const r2 = await requestOtp(phone);
+      await expect(
+        verifyOtp(phone, r2.devOtp!, { institutionalPortal: true })
+      ).rejects.toThrow("Tidak dapat masuk. Hubungi admin fasilitas.");
+    });
+
     it("nomor baru dengan intendedRole patient membuat akun pasien", async () => {
       const newPhone = "081299993001";
       const req = await requestOtp(newPhone);

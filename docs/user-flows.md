@@ -87,7 +87,7 @@ Satu kelompok kebutuhan per layar, dengan indikator langkah (misalnya 2 dari 5).
 
 ### [P7] Kartu Cetak
 - **Tampilan:** daftar isi ringkasan yang bisa dicentang untuk dicetak (misalnya bahasa isyarat, bantuan mobilitas, pendampingan), pratinjau kartu, catatan bahwa kartu hanya memuat ringkasan kebutuhan.
-- **Aksi Utama:** pilih isi, lalu [Cetak] atau [Unduh PDF]. Kartu hanya memuat ringkasan tertulis **tanpa QR akses** (sudah diputuskan).
+- **Aksi Utama:** pilih isi, lalu [Cetak] atau [Unduh PDF]. Kartu hanya memuat ringkasan tertulis **tanpa QR akses** (sudah diputuskan). Kartu mencetak **Kode Kartu** 8 karakter (contoh ABCD-EFGH) yang statis per pasien; [Buat Kode Kartu Baru] mengganti kode dan mematikan kode lama.
 - **Aksi Alternatif:** [Simpan untuk offline] menyimpan ringkasan di perangkat → [P8].
 - **Navigasi:** selesai → [P4].
 - **US:** P-14, T-05.
@@ -149,8 +149,8 @@ Berjalan di setiap kunjungan: bagikan kebutuhan, dipanggil sesuai kebutuhan, dil
 
 ### [P15] KomunikaCare
 Empat sub-layar yang dapat dibuka kapan saja selama kunjungan.
-- **[P15.1] Papan Bergambar:** ikon keluhan dan kebutuhan (nyeri, haus, toilet, ulang). Menekan ikon menampilkan teks besar untuk petugas.
-- **[P15.2] Teks ke Suara:** ketik atau pilih kalimat, [Ucapkan] memutar suara untuk petugas.
+- **[P15.1] Papan Bergambar:** ikon keluhan dan kebutuhan (nyeri, haus, toilet, ulang). Menekan ikon menampilkan teks besar untuk petugas dan, bila dibuka dari kunjungan, mengirimnya ke panel [T7] petugas.
+- **[P15.2] Teks ke Suara:** ketik atau pilih kalimat, [Ucapkan] memutar suara untuk petugas dan mengirim teksnya ke panel [T7] (bila dari kunjungan).
 - **[P15.3] Teks Langsung dari Ucapan Petugas:** ucapan petugas tampil sebagai teks besar, dengan peringatan "Alat bantu, bukan pengganti juru bahasa isyarat". Bila akurasi rendah: [Ulangi] atau minta petugas menulis.
 - **[P15.4] Frasa BISINDO (Could):** klip video pendek frasa medis umum untuk ditunjukkan ke petugas.
 - **Aksi Alternatif:** jika mikrofon atau browser tidak mendukung, teks langsung dinonaktifkan dengan pesan jelas dan tersedia input ketik.
@@ -286,15 +286,16 @@ Dirancang ringan: pindai, lihat satu layar, layani, catat paling banyak tiga ket
 - **Navigasi:** belum masuk → [T2]; sudah masuk → [T3].
 
 ### [T2] Login Petugas
-- **Tampilan:** nomor HP atau email dan kode verifikasi, atau kata sandi sesuai kebijakan fasilitas. Pertama kali: [Aktivasi Akun] lewat undangan admin fasilitas.
+- **Tampilan:** nomor HP dan kode verifikasi (OTP). Login email dan kata sandi tidak dibuat pada prototipe. Akun hanya dikenali bila sudah didaftarkan admin fasilitas; pendaftaran dan aktivasi lewat undangan ada di [A2]/[A4]. **[Disetujui, 15 Okt 2026]**
 - **Aksi Utama:** masuk.
 - **Aksi Alternatif atau Error:** akun nonaktif atau belum diaktivasi → "Hubungi admin fasilitas" dan tidak membuka layar berikutnya.
 - **Navigasi:** berhasil → [T3].
 - **US:** T-01, A-01.
 
 ### [T3] Beranda Petugas
-- **Tampilan:** tombol besar [Pindai ConsentQR], daftar kunjungan fasilitas hari ini (jam, rujukan 4 karakter, status teks netral tanpa warna status demi §14: "Belum dicatat", "Menunggu konfirmasi", "Dikonfirmasi"). Daftar tidak menampilkan nama panggilan atau data profil pasien untuk menjaga kerahasiaan sebelum token dipindai. Jalur kartu cetak [T4b] tidak ditampilkan pada rilis ini karena kartu cetak hanya berisi ringkasan kebutuhan fisik tanpa QR akses online. Tombol [Keluar] untuk membersihkan sesi di perangkat bersama.
+- **Tampilan:** tombol besar [Pindai ConsentQR], daftar kunjungan fasilitas hari ini (jam, rujukan 4 karakter, status teks netral tanpa warna status demi §14: "Belum dicatat", "Menunggu konfirmasi", "Dikonfirmasi"). Daftar tidak menampilkan nama panggilan atau data profil pasien untuk menjaga kerahasiaan sebelum token dipindai. Tombol [Pasien dengan Kartu Cetak] membuka [T4b]. Tombol [Keluar] untuk membersihkan sesi di perangkat bersama.
 - **Aksi Utama:** [Pindai ConsentQR].
+- **Aksi Alternatif:** [Pasien dengan Kartu Cetak] → [T4b].
 - **Navigasi:** pindai → [T4].
 - **US:** T-02, P-12.
 
@@ -309,6 +310,13 @@ Dirancang ringan: pindai, lihat satu layar, layani, catat paling banyak tiga ket
   - Sesi habis (401) → diarahkan ke login petugas dengan alasan sesi berakhir.
 - **Navigasi:** berhasil → [T5].
 - **US:** T-01, T-02, T-05, P-06.
+
+### [T4b] Kunjungan dari Kartu Cetak
+- **Tampilan:** isian Kode Kartu (8 karakter, huruf besar/kecil dan tanda hubung diabaikan), pilihan kebutuhan dari kartu, bantuan yang diberikan (saran aturan), dan catatan petugas opsional (maks 280 karakter).
+- **Aksi Utama:** [Catat Kunjungan]. Server mencari pasien dari kode (fungsi khusus petugas, tidak membuka profil), membuat kunjungan `channel=kartu` tanpa consent, idempoten lewat `client_id`, dan mencatat audit `visit_recorded` tanpa isi catatan. Kode salah → pesan generik; percobaan dibatasi laju.
+- **Cakupan:** versi online. Antrean offline (IndexedDB, `POST /api/sync`) menyusul pada Bagian 9.
+- **Navigasi:** selesai → [T3]; pasien mengonfirmasi lewat [P16].
+- **US:** T-05.
 
 ### [/s] URL Publik / Petugas (Tujuan ConsentQR)
 - **Tampilan:** URL tertera pada QR fisik/digital (`https://.../s#<token>`).
@@ -325,13 +333,17 @@ Dirancang ringan: pindai, lihat satu layar, layani, catat paling banyak tiga ket
 
 ### [T6] Saran Tindakan dan Panggilan
 - **Tampilan:** saran tindakan dari Smart Accommodation Engine sesuai profil kebutuhan yang dibagikan pada pemindaian ini, berlabel "Saran, bukan instruksi klinis. Keputusan tetap di tangan tenaga kesehatan." Setiap saran memuat ikon, teks besar, serta versi dan sumber aturan. Kebutuhan tanpa aturan ditampilkan terpisah sebagai "belum ada saran". Teks panduan: "Panggil pasien secara langsung dan visual sesuai saran di atas."
-- **Catatan Implementasi:** tombol [Panggil Pasien] (P-13, Could) tidak dibuat hari ini; petugas langsung diarahkan dengan tombol [Lanjut: Catat Bantuan] → [T8].
+- **Panggil Pasien:** tombol [Panggil Pasien] dengan isian ruangan opsional menampilkan giliran besar di HP pasien ([P14]).
+- **KomunikaCare:** panel [T7] ditampilkan di layar ini dan di [T8].
 - **Aksi Utama:** baca saran, lalu [Lanjut: Catat Bantuan].
-- **Navigasi:** → [T8] (T7 dilewati).
+- **Navigasi:** → [T8].
 - **US:** T-03.
 
 ### [T7] Layani Pasien (KomunikaCare)
-- **Status:** Fitur KomunikaCare (10B: teks langsung & papan komunikasi interaktif) dilewati hari ini sesuai prioritas Bagian 7. Alur langsung berpindah dari [T6] ke [T8].
+- **Tampilan:** panel di [T6] dan [T8]: riwayat percakapan dengan pasien, kalimat cepat petugas, kolom tulis (maks 300 karakter) dan [Kirim ke Pasien].
+- **Sinkron dua perangkat [Disetujui, 15 Okt 2026]:** KomunikaCare di HP pasien ([P15], dibuka dengan `?kunjungan=`) dan panel petugas saling terhubung. Gambar papan dan teks "Ucapkan" pasien muncul di panel petugas; tulisan petugas tampil besar di HP pasien. Polling tiap 2 detik saat tab terlihat.
+- **Privasi:** hanya teks atau pilihan gambar yang dikirim, tidak pernah suara. Pesan disimpan sementara di server, hanya terbaca pasien pemilik dan petugas fasilitas yang sama, tidak masuk audit log, dihapus saat petugas menyelesaikan pelayanan, dan tidak dibaca lagi setelah 12 jam. Hasil pengenalan suara ([P15.3]) tetap hanya di perangkat.
+- **Navigasi:** tetap di layar petugas; pelayanan selesai menutup percakapan.
 
 ### [T8] Catat Bantuan (≤ 3 Ketukan)
 - **Tampilan:** daftar saran tindakan dari [T6] disajikan melalui `ChoiceGroup` dengan **semua opsi tercentang di awal** [Usulan] dan instruksi "Hapus centang bantuan yang tidak diberikan." Catatan petugas bersifat opsional via varian textarea `TextField` (maks 280 karakter, dengan penghitung karakter dan teks bantuan "Jangan menulis diagnosis atau data sensitif.").

@@ -12,7 +12,7 @@ import {
   PageShell,
 } from "@/components";
 import { listTodayVisits } from "@/lib/visits";
-import { QrCode, Building2, Clock, FileEdit, CheckCheck } from "lucide-react";
+import { QrCode, Building2, Clock, FileEdit, CheckCheck, CreditCard } from "lucide-react";
 import Link from "next/link";
 
 export const instant = false;
@@ -65,6 +65,16 @@ export default async function PetugasPage() {
           </Link>
           <p className="text-xs text-secondary text-center">
             Arahkan kamera ke kode QR di ponsel pasien untuk membuka kebutuhan akomodasi.
+          </p>
+          <Link
+            href="/petugas/kartu"
+            className="flex items-center justify-center gap-2 min-h-12 w-full px-6 py-3 bg-cyan-100 text-cyan-900 border border-cyan-800 font-bold rounded-xl focus:ring-4 focus:ring-cyan-900 focus:ring-offset-2 text-center"
+          >
+            <CreditCard aria-hidden="true" className="w-5 h-5 shrink-0" />
+            <span>Pasien dengan Kartu Cetak</span>
+          </Link>
+          <p className="text-xs text-secondary text-center">
+            Untuk pasien yang hanya membawa kartu cetak atau saat sinyal buruk.
           </p>
         </div>
 

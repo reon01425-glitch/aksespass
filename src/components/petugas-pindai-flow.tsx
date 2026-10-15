@@ -15,6 +15,7 @@ import {
 } from "@/components";
 import { extractToken } from "@/lib/consent/extract-token";
 import { formatVisitTimeWIB } from "@/lib/visits/format";
+import { PetugasKomunikaPanel } from "@/components/petugas-komunikacare-panel";
 import type { Html5Qrcode } from "html5-qrcode";
 import {
   Camera,
@@ -86,7 +87,7 @@ interface PetugasPindaiClientProps {
 
 const INACTIVITY_TIMEOUT_MS = 10 * 60 * 1000; // 10 menit
 
-function renderRuleIcon(iconName: string) {
+export function renderRuleIcon(iconName: string) {
   const iconMap: Record<
     string,
     React.ComponentType<{ className?: string; "aria-hidden"?: boolean | "true" | "false" }>
@@ -986,6 +987,9 @@ export function PetugasPindaiClient({
             )}
           </section>
 
+          {/* KomunikaCare dua perangkat (T7) */}
+          <PetugasKomunikaPanel visitId={scanData.visitId} />
+
           {/* Tombol Aksi Layar T6 */}
           <div className="flex flex-col gap-3 pt-4 border-t border-cyan-100">
             <Button
@@ -1093,6 +1097,8 @@ export function PetugasPindaiClient({
             value={staffNote}
             onChange={(e) => setStaffNote(e.target.value)}
           />
+
+          <PetugasKomunikaPanel visitId={scanData.visitId} />
 
           {/* Tombol Aksi Simpan T8 */}
           <div className="flex flex-col gap-3 pt-4 border-t border-cyan-100">

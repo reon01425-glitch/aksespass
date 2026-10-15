@@ -36,7 +36,7 @@ export default async function PasienKomunikaCarePage({
       backLabel={visitId ? "Kembali ke Status Kunjungan" : "Kembali ke Beranda"}
     >
       {visitId && <ServiceDoneRedirect visitId={visitId} />}
-      <KomunikaCareClient />
+      <KomunikaCareClient visitId={visitId} />
     </PageShell>
   );
 }

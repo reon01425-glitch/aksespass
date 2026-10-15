@@ -199,6 +199,7 @@ describe("Tes Arsitektur Kode (Statik & Tanpa DB)", () => {
         relPath.startsWith("lib/consent/") ||
         relPath.startsWith("lib\\consent\\") ||
         relPath.startsWith("lib/passport/") ||
+        relPath.startsWith("lib/card/") ||
         relPath.startsWith("lib\\passport\\") ||
         relPath.startsWith("db/") ||
         relPath.startsWith("db\\")
@@ -531,6 +532,8 @@ describe("Tes Arsitektur Kode (Statik & Tanpa DB)", () => {
         relPath.startsWith("lib/visits/") ||
         relPath.startsWith("lib\\visits\\") ||
         relPath.startsWith("lib/careproof/") ||
+        relPath.startsWith("lib/card/") ||
+        relPath.startsWith("lib/komunikacare/") ||
         relPath.startsWith("lib\\careproof\\") ||
         relPath.startsWith("db/") ||
         relPath.startsWith("db\\")

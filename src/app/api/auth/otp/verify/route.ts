@@ -7,6 +7,7 @@ export const POST = wrapRouteHandler(async (request: Request) => {
     code?: string;
     intendedRole?: string;
     statsConsent?: boolean;
+    portal?: string;
   };
 
   try {
@@ -29,6 +30,7 @@ export const POST = wrapRouteHandler(async (request: Request) => {
     const result = await verifyOtp(body.phone, body.code, {
       intendedRole: body.intendedRole,
       statsConsent: body.statsConsent,
+      institutionalPortal: body.portal === "institusi",
     });
 
     return jsonResponse(

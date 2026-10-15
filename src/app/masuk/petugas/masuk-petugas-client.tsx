@@ -88,6 +88,7 @@ export function MasukPetugasClient({ reasonMessage }: MasukPetugasClientProps) {
         body: JSON.stringify({
           phone: phone.trim(),
           code: trimmedCode,
+          portal: "institusi",
         }),
       });
 
