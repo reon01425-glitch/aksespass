@@ -6,7 +6,6 @@ import { hmacSha256Hex } from "../auth/crypto";
 import { getHashPepper } from "../auth/env";
 import { createSessionCookieValue } from "../auth/session";
 import {
-  createConsent,
   listOwnActiveQrs,
   revokeAllActive,
   revokeQr,
@@ -20,11 +19,13 @@ import {
 import { GET as historyRouteGet } from "../../app/api/pasien/akses/riwayat/route";
 import { GET as activeQrsRouteGet } from "../../app/api/pasien/akses/qr/route";
 import { POST as revokeQrRoutePost } from "../../app/api/pasien/qr/[qrId]/revoke/route";
+import { createConsentReplacingActive } from "@/db/consent-test-support";
 
 const PATIENT_1_ID = "22222222-2222-4222-8222-222222222101"; // Pasien Contoh 1
 const PATIENT_2_ID = "22222222-2222-4222-8222-222222222102"; // Pasien Contoh 2
 const STAFF_A_ID = "22222222-2222-4222-8222-222222222301"; // Petugas Aktif A
 const FACILITY_A_ID = "11111111-1111-4111-8111-111111111101"; // Puskesmas Contoh A
+const FACILITY_B_ID = "11111111-1111-4111-8111-111111111102"; // Klinik Contoh B
 
 function getAdminTestDbUrl(): string {
   return (
@@ -194,7 +195,7 @@ describe("Prompt 12: Riwayat Akses, QR Aktif, dan Cabut (P18–P20)", () => {
 
   it("isolasi riwayat: pasien A hanya melihat miliknya, pasien B tidak melihat A, non-pasien mengembalikan 0 baris", async () => {
     // 1. Buat ConsentQR untuk Pasien 1 lalu pindai sebagai Petugas A
-    const created = await createConsent(
+    const created = await createConsentReplacingActive(
       { userId: PATIENT_1_ID, role: "patient" },
       {
         facilityId: FACILITY_A_ID,
@@ -258,7 +259,7 @@ describe("Prompt 12: Riwayat Akses, QR Aktif, dan Cabut (P18–P20)", () => {
 
   it("listOwnActiveQrs: tidak memuat QR kedaluwarsa, dicabut, atau milik pasien lain", async () => {
     // 1. Buat 1 QR baru untuk Pasien 1
-    const qr1 = await createConsent(
+    const qr1 = await createConsentReplacingActive(
       { userId: PATIENT_1_ID, role: "patient" },
       {
         facilityId: FACILITY_A_ID,
@@ -310,7 +311,7 @@ describe("Prompt 12: Riwayat Akses, QR Aktif, dan Cabut (P18–P20)", () => {
 
   it("revokeQr dan revokeAllActive -> scanToken berikutnya ditolak (422) dan qr_revoked muncul di riwayat", async () => {
     // 1. Buat 2 ConsentQR aktif untuk Pasien 1
-    const c1 = await createConsent(
+    const c1 = await createConsentReplacingActive(
       { userId: PATIENT_1_ID, role: "patient" },
       {
         facilityId: FACILITY_A_ID,
@@ -318,10 +319,10 @@ describe("Prompt 12: Riwayat Akses, QR Aktif, dan Cabut (P18–P20)", () => {
         sharedFields: ["komunikasi"],
       }
     );
-    const c2 = await createConsent(
+    const c2 = await createConsentReplacingActive(
       { userId: PATIENT_1_ID, role: "patient" },
       {
-        facilityId: FACILITY_A_ID,
+        facilityId: FACILITY_B_ID,
         duration: "1 jam",
         sharedFields: ["mobilitas"],
       }
@@ -357,7 +358,7 @@ describe("Prompt 12: Riwayat Akses, QR Aktif, dan Cabut (P18–P20)", () => {
     });
     const revokedEvents = history.filter((e) => e.eventType === "qr_revoked");
     expect(revokedEvents.length).toBeGreaterThanOrEqual(2);
-    expect(revokedEvents[0].title).toBe("Anda mencabut QR untuk Puskesmas Contoh A");
+    expect(revokedEvents.map((e) => e.title)).toContain("Anda mencabut QR untuk Puskesmas Contoh A");
 
     const rejectedEvents = history.filter((e) => e.eventType === "qr_scan_rejected");
     expect(rejectedEvents.length).toBeGreaterThanOrEqual(2);
@@ -366,7 +367,7 @@ describe("Prompt 12: Riwayat Akses, QR Aktif, dan Cabut (P18–P20)", () => {
 
   it("akses silang via API: sesi Pasien 2 tidak dapat melihat atau mencabut QR Pasien 1", async () => {
     // 1. Buat ConsentQR untuk Pasien 1
-    const c1 = await createConsent(
+    const c1 = await createConsentReplacingActive(
       { userId: PATIENT_1_ID, role: "patient" },
       {
         facilityId: FACILITY_A_ID,

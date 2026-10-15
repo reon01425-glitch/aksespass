@@ -8,7 +8,12 @@ import { ConsentQrFlowClient } from "@/app/pasien/kunjungan/qr/consent-qr-flow-c
 import { COOKIE_NAME, SECURE_COOKIE_NAME } from "@/lib/auth/constants";
 import { verifySessionCookie } from "@/lib/auth/session";
 import { getLinkedPatientByLinkId } from "@/lib/companions";
-import { countActiveConsents, getLastConsentSharedFields } from "@/lib/consent";
+import {
+  countActiveConsents,
+  getLastConsentSharedFields,
+  listOwnActiveQrs,
+} from "@/lib/consent";
+import { CompanionActiveQrList } from "./companion-active-qr-list";
 import { getActiveFacilities } from "@/lib/facility";
 import { getAppOrigin } from "@/lib/http";
 import { getNeedsCatalog, getOwnPassport } from "@/lib/passport";
@@ -87,8 +92,11 @@ export default async function CompanionQrPage({
   const { fasilitas: facilityId } = await searchParams;
   const facilities = await getActiveFacilities(session);
 
-  // Jika belum memilih fasilitas, tampilkan pemilih faskes
+  // Jika belum memilih fasilitas, tampilkan QR aktif dan pemilih faskes
   if (!facilityId) {
+    const activeQrs = await listOwnActiveQrs(session, {
+      targetPatientUserId: patient.patientUserId,
+    });
     return (
       <PageShell
         title={`Pilih Fasilitas — ${patient.preferredName}`}
@@ -96,6 +104,10 @@ export default async function CompanionQrPage({
         backLabel="Kembali ke Beranda Pendamping"
       >
         <div className="flex flex-col gap-4 max-w-full w-full">
+          <CompanionActiveQrList
+            initialQrs={activeQrs}
+            patientName={patient.preferredName}
+          />
           <p className="text-sm text-secondary">
             Pilih fasilitas tempat Anda mendampingi {patient.preferredName} untuk membuat ConsentQR.
           </p>

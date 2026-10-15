@@ -104,6 +104,48 @@ interface FilterDropdownProps {
   onChange: (value: string) => void;
 }
 
+const PAGE_SIZE = 10;
+
+function PaginationControls({
+  page,
+  totalPages,
+  onChange,
+  label,
+}: {
+  page: number;
+  totalPages: number;
+  onChange: (page: number) => void;
+  label: string;
+}) {
+  if (totalPages <= 1) return null;
+  return (
+    <nav
+      aria-label={label}
+      className="mt-3 flex items-center justify-between gap-3"
+    >
+      <button
+        type="button"
+        onClick={() => onChange(page - 1)}
+        disabled={page <= 1}
+        className={`min-h-12 rounded-xl bg-cyan-100 px-4 py-2 font-bold text-cyan-900 disabled:opacity-50 ${FOCUS_RING}`}
+      >
+        Sebelumnya
+      </button>
+      <span className="text-sm font-bold text-secondary">
+        Halaman {page} dari {totalPages}
+      </span>
+      <button
+        type="button"
+        onClick={() => onChange(page + 1)}
+        disabled={page >= totalPages}
+        className={`min-h-12 rounded-xl bg-cyan-100 px-4 py-2 font-bold text-cyan-900 disabled:opacity-50 ${FOCUS_RING}`}
+      >
+        Berikutnya
+      </button>
+    </nav>
+  );
+}
+
 function FilterDropdown({
   id,
   labelId,
@@ -288,6 +330,21 @@ export function RiwayatAksesClient({
     [initialVisits, periodFilter, facilityFilter, nowTimestamp]
   );
 
+  const [historyPage, setHistoryPage] = useState(1);
+  const [visitPage, setVisitPage] = useState(1);
+  const historyPages = Math.max(1, Math.ceil(filteredHistory.length / PAGE_SIZE));
+  const visitPages = Math.max(1, Math.ceil(filteredVisits.length / PAGE_SIZE));
+  const safeHistoryPage = Math.min(historyPage, historyPages);
+  const safeVisitPage = Math.min(visitPage, visitPages);
+  const pagedHistory = filteredHistory.slice(
+    (safeHistoryPage - 1) * PAGE_SIZE,
+    safeHistoryPage * PAGE_SIZE
+  );
+  const pagedVisits = filteredVisits.slice(
+    (safeVisitPage - 1) * PAGE_SIZE,
+    safeVisitPage * PAGE_SIZE
+  );
+
   const handleRevokeAll = async () => {
     if (isRevokingAll) return;
     setIsRevokingAll(true);
@@ -432,9 +489,11 @@ export function RiwayatAksesClient({
                       { value: "30d", label: "30 Hari Terakhir" },
                     ]}
                     value={periodFilter}
-                    onChange={(value) =>
-                      setPeriodFilter(value as "all" | "7d" | "30d")
-                    }
+                    onChange={(value) => {
+                      setPeriodFilter(value as "all" | "7d" | "30d");
+                      setHistoryPage(1);
+                      setVisitPage(1);
+                    }}
                   />
                 </div>
                 <div className="flex flex-col gap-1">
@@ -456,7 +515,11 @@ export function RiwayatAksesClient({
                       })),
                     ]}
                     value={facilityFilter}
-                    onChange={setFacilityFilter}
+                    onChange={(value) => {
+                      setFacilityFilter(value);
+                      setHistoryPage(1);
+                      setVisitPage(1);
+                    }}
                   />
                 </div>
               </div>
@@ -480,7 +543,7 @@ export function RiwayatAksesClient({
                 aria-label="Daftar kronologis aktivitas akses"
                 className="flex flex-col gap-3"
               >
-                {filteredHistory.map((item, index) => {
+                {pagedHistory.map((item, index) => {
                   const wasRead = item.eventType === "profile_read";
                   const badgeLabel = wasRead
                     ? "Terbaca via ConsentQR"
@@ -543,6 +606,12 @@ export function RiwayatAksesClient({
                 })}
               </ol>
             )}
+            <PaginationControls
+              page={safeHistoryPage}
+              totalPages={historyPages}
+              onChange={setHistoryPage}
+              label="Halaman riwayat akses"
+            />
           </section>
 
           <section aria-labelledby="heading-riwayat-kunjungan">
@@ -567,7 +636,7 @@ export function RiwayatAksesClient({
               </div>
             ) : (
               <ul className="flex flex-col gap-3">
-                {filteredVisits.map((visit) => (
+                {pagedVisits.map((visit) => (
                   <li
                     key={visit.visitId}
                     className="rounded-2xl border border-cyan-100 bg-white p-4 shadow-sm"
@@ -624,6 +693,12 @@ export function RiwayatAksesClient({
                 ))}
               </ul>
             )}
+            <PaginationControls
+              page={safeVisitPage}
+              totalPages={visitPages}
+              onChange={setVisitPage}
+              label="Halaman kunjungan tercatat"
+            />
           </section>
 
           <section

@@ -54,6 +54,13 @@ interface PassportFormClientProps {
   activeQrs: ActiveQrItem[];
   /** Id pengguna, dipakai sebagai kunci draft di perangkat ini. */
   ownerId: string;
+  /** Diisi saat pendamping mengelola paspor atas nama pasien (D5): alamat simpan dan tujuan khusus. */
+  companion?: {
+    patientName: string;
+    submitUrl: string;
+    backHref: string;
+    qrHref: string;
+  };
 }
 
 const PATIENT_NAV_ITEMS: {
@@ -76,6 +83,7 @@ export function PassportFormClient({
   initialPassport,
   activeQrs,
   ownerId,
+  companion,
 }: PassportFormClientProps) {
   const router = useRouter();
   const exitButtonRef = useRef<HTMLButtonElement>(null);
@@ -240,6 +248,8 @@ export function PassportFormClient({
     codes: Set<string>,
     note: string | null
   ) => {
+    // Ringkasan offline hanya milik perangkat pasien sendiri, bukan perangkat pendamping.
+    if (companion) return;
     refreshOfflineSummary({
       preferredName: name,
       note,
@@ -274,7 +284,7 @@ export function PassportFormClient({
       resetToSaved();
       setIsEditing(false);
     } else {
-      router.push("/pasien");
+      router.push(companion?.backHref ?? "/pasien");
     }
   };
 
@@ -404,7 +414,7 @@ export function PassportFormClient({
     setSaveError(null);
 
     try {
-      const response = await fetch("/api/pasien/paspor", {
+      const response = await fetch(companion?.submitUrl ?? "/api/pasien/paspor", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -460,22 +470,24 @@ export function PassportFormClient({
             </div>
             <div className="flex min-w-0 flex-1 flex-col">
               <span className="text-xs font-bold uppercase tracking-wider text-secondary">
-                AKSESPASS Pasien
+                {companion ? "AKSESPASS Pendamping" : "AKSESPASS Pasien"}
               </span>
               <h1 className="truncate text-xl font-bold leading-7 text-main">
                 Paspor Kesehatan
               </h1>
             </div>
+            {!companion && (
+              <Link
+                href="/pasien/akses/riwayat"
+                aria-label="Riwayat akses"
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-main focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900"
+              >
+                <Bell aria-hidden="true" className="h-6 w-6" />
+              </Link>
+            )}
             <Link
-              href="/pasien/akses/riwayat"
-              aria-label="Riwayat akses"
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-main focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900"
-            >
-              <Bell aria-hidden="true" className="h-6 w-6" />
-            </Link>
-            <Link
-              href="/pasien"
-              aria-label="Beranda pasien"
+              href={companion?.backHref ?? "/pasien"}
+              aria-label={companion ? "Beranda pendamping" : "Beranda pasien"}
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-cyan-800 text-white focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900 focus-visible:ring-offset-2"
             >
               <UserRound aria-hidden="true" className="h-6 w-6" />
@@ -490,6 +502,12 @@ export function PassportFormClient({
             isEditing ? "gap-6" : "gap-4"
           }`}
         >
+          {companion && (
+            <p className="rounded-xl border border-cyan-700 bg-cyan-100 px-4 py-3 text-sm font-bold text-cyan-900">
+              Atas nama {companion.patientName}
+            </p>
+          )}
+
           {!isEditing && (
             <>
               <section className="flex flex-col gap-3">
@@ -512,6 +530,15 @@ export function PassportFormClient({
                         {formatDateTimeWib(new Date(savedAt))}
                       </strong>
                     </span>
+                  </p>
+                )}
+                {initialPassport?.lastUpdatedByCompanion && (
+                  <p className="text-xs italic text-secondary">
+                    Terakhir diubah oleh pendamping{" "}
+                    {initialPassport.lastUpdatedByCompanion.companionName},{" "}
+                    {formatDateTimeWib(
+                      new Date(initialPassport.lastUpdatedByCompanion.updatedAt)
+                    )}
                   </p>
                 )}
               </section>
@@ -600,6 +627,16 @@ export function PassportFormClient({
               )}
 
               <section className="flex flex-col gap-3">
+                {companion ? (
+                  <Link
+                    href={companion.qrHref}
+                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-cyan-700 px-4 py-3 text-center font-bold text-white focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900 focus-visible:ring-offset-2"
+                  >
+                    <QrCode aria-hidden="true" className="h-5 w-5" />
+                    Buat ConsentQR atas nama {companion.patientName}
+                  </Link>
+                ) : (
+                  <>
                 <div className="flex items-center gap-3 rounded-2xl bg-cyan-900 p-4 text-white">
                   <span
                     aria-hidden="true"
@@ -643,6 +680,8 @@ export function PassportFormClient({
                   <QrCode aria-hidden="true" className="h-5 w-5" />
                   Buat ConsentQR Sekarang
                 </Link>
+                  </>
+                )}
                 <button
                   type="button"
                   onClick={startEditing}
@@ -991,6 +1030,7 @@ export function PassportFormClient({
           )}
         </main>
 
+        {!companion && (
         <nav
           aria-label="Navigasi utama pasien"
           className="fixed bottom-0 left-1/2 z-50 w-full max-w-md -translate-x-1/2 border-t border-cyan-200 bg-page/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl"
@@ -1026,6 +1066,7 @@ export function PassportFormClient({
             })}
           </ul>
         </nav>
+        )}
       </div>
 
       <ActionDialog
@@ -1053,17 +1094,30 @@ export function PassportFormClient({
         title="Paspor tersimpan"
         description="Perubahan langsung berlaku, termasuk untuk ConsentQR yang masih aktif."
         onClose={() => setShowSuccessDialog(false)}
-        actions={[
-          {
-            label: "Atur Kartu Cetak",
-            onClick: () => router.push("/pasien/kartu-cetak"),
-          },
-          {
-            label: "Ke Beranda",
-            onClick: () => router.push("/pasien"),
-            variant: "primary",
-          },
-        ]}
+        actions={
+          companion
+            ? [
+                {
+                  label: "Ke Beranda Pendamping",
+                  onClick: () => {
+                    setShowSuccessDialog(false);
+                    router.push(companion.backHref);
+                  },
+                  variant: "primary",
+                },
+              ]
+            : [
+                {
+                  label: "Atur Kartu Cetak",
+                  onClick: () => router.push("/pasien/kartu-cetak"),
+                },
+                {
+                  label: "Ke Beranda",
+                  onClick: () => router.push("/pasien"),
+                  variant: "primary",
+                },
+              ]
+        }
       />
     </div>
   );

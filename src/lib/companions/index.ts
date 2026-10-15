@@ -482,7 +482,10 @@ export interface ActivePatientLinkItem {
 
 export interface ListLinkedPatientsResult {
   activePatients: ActivePatientLinkItem[];
+  /** Tautan berakhir yang belum pernah dilihat pendamping (banner tampil sekali). */
   revokedCount: number;
+  /** Permintaan tautan yang masih menunggu persetujuan pasien (tanpa identitas pasien). */
+  pendingCount: number;
 }
 
 /**
@@ -494,7 +497,7 @@ export async function listLinkedPatients(
   session: CompanionActor
 ): Promise<ListLinkedPatientsResult> {
   if (session.role !== "companion") {
-    return { activePatients: [], revokedCount: 0 };
+    return { activePatients: [], revokedCount: 0, pendingCount: 0 };
   }
 
   return await withContext(
@@ -509,8 +512,12 @@ export async function listLinkedPatients(
         id: string;
         patient_user_id: string;
         status: "pending" | "active" | "revoked";
+        unseen_revoked: boolean;
       }>(
-        `SELECT id, patient_user_id, status
+        `SELECT id, patient_user_id, status,
+                (status = 'revoked'
+                 AND (companion_seen_revoked_at IS NULL
+                      OR revoked_at > companion_seen_revoked_at)) AS unseen_revoked
          FROM companions
          WHERE companion_user_id = $1
          ORDER BY requested_at DESC;`,
@@ -518,16 +525,18 @@ export async function listLinkedPatients(
       );
 
       let revokedCount = 0;
+      let pendingCount = 0;
       const activeLinks = companionsRes.rows.filter((r) => {
         if (r.status === "revoked") {
-          revokedCount += 1;
+          if (r.unseen_revoked) revokedCount += 1;
           return false;
         }
+        if (r.status === "pending") pendingCount += 1;
         return r.status === "active";
       });
 
       if (activeLinks.length === 0) {
-        return { activePatients: [], revokedCount };
+        return { activePatients: [], revokedCount, pendingCount };
       }
 
       const activePatients: ActivePatientLinkItem[] = [];
@@ -551,6 +560,7 @@ export async function listLinkedPatients(
       return {
         activePatients,
         revokedCount,
+        pendingCount,
       };
     }
   );
@@ -660,4 +670,24 @@ export async function getPatientConfirmableVisitForCompanion(
     throw new CompanionError("Kunjungan tidak ditemukan.", 404, "NOT_FOUND");
   }
   return { patient, visit: found };
+}
+
+/** Menandai tautan berakhir sebagai sudah dilihat pendamping, agar banner D4 tidak muncul lagi. */
+export async function markRevokedLinksSeen(
+  session: CompanionActor
+): Promise<number> {
+  if (session.role !== "companion") return 0;
+  return await withContext(
+    {
+      userId: session.userId,
+      role: session.role,
+      facilityId: session.facilityId,
+    },
+    async (tx) => {
+      const res = await tx.query<{ n: number }>(
+        "SELECT mark_revoked_links_seen() AS n;"
+      );
+      return res.rows[0]?.n ?? 0;
+    }
+  );
 }
