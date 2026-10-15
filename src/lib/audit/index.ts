@@ -23,6 +23,13 @@ export const AUDIT_EVENT_TYPES = [
   "delegation_signed_off",
   "access_reported",
   "account_deleted",
+  "staff_invited",
+  "staff_activated",
+  "staff_updated",
+  "staff_deactivated",
+  "staff_reactivated",
+  "facility_action_created",
+  "facility_action_updated",
 ] as const;
 
 export type AuditEventType = (typeof AUDIT_EVENT_TYPES)[number];

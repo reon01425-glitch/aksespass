@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { withContext, type AppDbRole, type TransactionClient } from "../../db";
 import { logger } from "../privacy";
+import { recordAuditEvent } from "../audit";
 import {
   OTP_EXPIRY_MS,
   OTP_MAX_ATTEMPTS,
@@ -69,6 +70,13 @@ async function checkAndIncrementRateLimit(
  * Mengimplementasikan rate limiting per HMAC(telepon) dan per HMAC(IP) di Postgres.
  * Respons identik untuk nomor terdaftar maupun belum.
  */
+export class OtpRateLimitError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "OtpRateLimitError";
+  }
+}
+
 export async function requestOtp(
   rawPhone: string,
   meta?: { ip?: string }
@@ -109,7 +117,7 @@ export async function requestOtp(
       OTP_RATE_LIMIT_WINDOW_MS
     );
     if (!phoneLimit.allowed) {
-      throw new Error(
+      throw new OtpRateLimitError(
         "Terlalu banyak permintaan OTP untuk nomor ini. Silakan coba beberapa saat lagi."
       );
     }
@@ -122,7 +130,7 @@ export async function requestOtp(
       OTP_RATE_LIMIT_WINDOW_MS
     );
     if (!ipLimit.allowed) {
-      throw new Error(
+      throw new OtpRateLimitError(
         "Terlalu banyak permintaan OTP dari jaringan ini. Silakan coba beberapa saat lagi."
       );
     }
@@ -265,6 +273,7 @@ export async function verifyOtp(
   };
 
   let otpError: string | null = null;
+  let activatedStaffId: string | null = null;
 
   await withContext({}, async (tx) => {
     otpError = await consumeOtpInTx(tx, phoneHash, expectedCodeHash);
@@ -284,6 +293,19 @@ export async function verifyOtp(
 
     if (existingRes.rows.length > 0) {
       const existing = existingRes.rows[0];
+
+      if (existing.role === "staff" && existing.membership_status === "invited") {
+        // Aktivasi login pertama (A2): nomor didaftarkan admin, OTP sudah valid.
+        const act = await tx.query<{ ok: boolean }>(
+          "SELECT activate_invited_staff_pre_session($1) AS ok;",
+          [existing.id]
+        );
+        if (act.rows[0]?.ok) {
+          existing.status = "active";
+          existing.membership_status = "active";
+          activatedStaffId = existing.id;
+        }
+      }
 
       if (existing.status !== "active") {
         throw new Error("Tidak dapat masuk. Hubungi admin fasilitas.");
@@ -404,6 +426,15 @@ export async function verifyOtp(
           expiresAt,
         ]
       );
+      if (activatedStaffId) {
+        await recordAuditEvent(sessTx, {
+          eventType: "staff_activated",
+          actorId: verifiedUser!.id,
+          actorRole: verifiedUser!.role,
+          subjectRef: verifiedUser!.audit_subject_id,
+          facilityId: verifiedUser!.facility_id,
+        });
+      }
     }
   );
 

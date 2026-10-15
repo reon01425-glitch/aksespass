@@ -6,6 +6,7 @@ import {
   SECURE_COOKIE_NAME,
 } from "@/lib/auth/constants";
 import { verifySessionCookie } from "@/lib/auth/session";
+import { requireActiveInstitutionPage } from "@/lib/auth/page-guard";
 import { getStaffFacilityInfo } from "@/lib/facility";
 import {
   LogoutButton,
@@ -36,6 +37,7 @@ export default async function PetugasPage() {
   if (!session || session.role !== "staff") {
     redirect("/masuk/petugas");
   }
+  await requireActiveInstitutionPage("staff");
 
   const facilityInfo = await getStaffFacilityInfo(session);
   const todayVisits = await listTodayVisits(session);
@@ -51,6 +53,9 @@ export default async function PetugasPage() {
             <span className="text-base font-bold text-main">
               {facilityInfo?.facilityName || "Fasilitas Kesehatan"}
             </span>
+            {facilityInfo?.staffName ? (
+              <span className="text-sm text-secondary">Masuk sebagai {facilityInfo.staffName}</span>
+            ) : null}
           </div>
         </div>
 

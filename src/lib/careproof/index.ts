@@ -721,7 +721,33 @@ export interface OwnFollowUpItem {
   status: FollowUpStatus;
   createdAt: string;
   updatedAt: string;
+  /** Catatan langkah dari tindak lanjut fasilitas (A8) untuk kategori ini, bila ada. */
+  stepNote: string | null;
 }
+
+/**
+ * Status efektif tindak lanjut: bila fasilitas punya tindak lanjut (A8) untuk kategori kebutuhan
+ * ini di fasilitas kunjungan (yang masih berjalan, atau selesai setelah laporan dibuat), status
+ * dan catatannya yang ditampilkan; selain itu status laporan sendiri.
+ */
+const EFFECTIVE_ACTION_JOIN = `
+  LEFT JOIN LATERAL (
+    SELECT fa.status, fa.step_note
+    FROM facility_actions fa
+    WHERE fa.facility_id = v.facility_id
+      AND fa.need_category = nc.category
+      AND (fa.status <> 'selesai' OR fa.completed_at >= fu.created_at)
+    ORDER BY (fa.status <> 'selesai') DESC, fa.updated_at DESC
+    LIMIT 1
+  ) act ON true`;
+
+const EFFECTIVE_STATUS_SQL = `
+  CASE act.status
+    WHEN 'baru' THEN 'diterima'
+    WHEN 'dikerjakan' THEN 'ditindaklanjuti'
+    WHEN 'selesai' THEN 'selesai'
+    ELSE fu.status
+  END`;
 
 /**
  * P17: status tindak lanjut kebutuhan yang belum terpenuhi, hanya milik pasien sendiri
@@ -744,15 +770,18 @@ export async function listOwnFollowUps(
       label: string;
       icon_name: string;
       status: FollowUpStatus;
+      step_note: string | null;
       created_at: string;
       updated_at: string;
     }>(
       `SELECT fu.visit_id, f.name AS facility_name, fu.need_code,
-              nc.label, nc.icon_name, fu.status, fu.created_at, fu.updated_at
+              nc.label, nc.icon_name, ${EFFECTIVE_STATUS_SQL} AS status,
+              NULLIF(act.step_note, '') AS step_note, fu.created_at, fu.updated_at
        FROM follow_ups fu
        JOIN visits v ON v.id = fu.visit_id
        JOIN facilities f ON f.id = v.facility_id
        JOIN needs_catalog nc ON nc.code = fu.need_code
+       ${EFFECTIVE_ACTION_JOIN}
        WHERE v.patient_user_id = $1
          AND ($2::uuid IS NULL OR fu.visit_id = $2::uuid)
        ORDER BY fu.updated_at DESC, nc.sort_order ASC;`,
@@ -765,6 +794,7 @@ export async function listOwnFollowUps(
       needLabel: r.label,
       iconName: r.icon_name,
       status: r.status,
+      stepNote: r.step_note,
       createdAt: new Date(r.created_at).toISOString(),
       updatedAt: new Date(r.updated_at).toISOString(),
     }));
@@ -781,7 +811,9 @@ export async function countOpenFollowUps(
       `SELECT count(*)::text AS n
        FROM follow_ups fu
        JOIN visits v ON v.id = fu.visit_id
-       WHERE v.patient_user_id = $1 AND fu.status <> 'selesai';`,
+       JOIN needs_catalog nc ON nc.code = fu.need_code
+       ${EFFECTIVE_ACTION_JOIN}
+       WHERE v.patient_user_id = $1 AND (${EFFECTIVE_STATUS_SQL}) <> 'selesai';`,
       [session.userId]
     );
     return Number(res.rows[0]?.n ?? 0);

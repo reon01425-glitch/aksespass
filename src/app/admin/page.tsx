@@ -7,9 +7,10 @@ import {
   SECURE_COOKIE_NAME,
 } from "@/lib/auth/constants";
 import { verifySessionCookie } from "@/lib/auth/session";
+import { requireActiveInstitutionPage } from "@/lib/auth/page-guard";
 import { getFacilityDashboard, currentJakartaPeriod } from "@/lib/dashboard";
 import { LogoutButton, PageShell } from "@/components";
-import { ShieldCheck, ChevronRight, BarChart3 } from "lucide-react";
+import { ShieldCheck, ChevronRight, BarChart3, Users, TriangleAlert, ClipboardList } from "lucide-react";
 
 export const instant = false;
 
@@ -32,6 +33,7 @@ export default async function AdminPage() {
   if (!session || session.role !== "facility_admin") {
     redirect("/masuk/petugas");
   }
+  await requireActiveInstitutionPage("facility_admin");
 
   const period = currentJakartaPeriod();
   const result = await getFacilityDashboard(session, period);
@@ -84,7 +86,9 @@ export default async function AdminPage() {
               </div>
               <div className="p-4 rounded-xl bg-surface border border-cyan-100 flex flex-col gap-1">
                 <span className="text-sm text-secondary">Accommodation Fulfillment Rate</span>
-                <span className="text-2xl font-bold text-main">{selected.afr ?? 0}%</span>
+                <span className="text-2xl font-bold text-main">
+                  {selected.afrHidden ? "Disembunyikan" : `${selected.afr ?? 0}%`}
+                </span>
               </div>
               <div className="p-4 rounded-xl bg-surface border border-cyan-100 flex flex-col gap-1">
                 <span className="text-sm text-secondary">Kebutuhan Belum Terpenuhi</span>
@@ -101,12 +105,42 @@ export default async function AdminPage() {
         <nav aria-label="Menu Admin" className="flex flex-col gap-3">
           <div className="flex flex-col divide-y divide-cyan-100 border border-cyan-200 rounded-xl bg-surface overflow-hidden">
             <Link
+              href="/admin/petugas"
+              className="flex items-center justify-between p-4 min-h-[48px] hover:bg-cyan-200 focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <Users aria-hidden="true" className="w-5 h-5 text-cyan-800 shrink-0" />
+                <span className="text-base font-bold text-main">Akun Petugas</span>
+              </div>
+              <ChevronRight aria-hidden="true" className="w-5 h-5 text-secondary shrink-0" />
+            </Link>
+            <Link
               href="/admin/dashboard"
               className="flex items-center justify-between p-4 min-h-[48px] hover:bg-cyan-200 focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900 transition-colors"
             >
               <div className="flex items-center gap-3">
                 <BarChart3 aria-hidden="true" className="w-5 h-5 text-cyan-800 shrink-0" />
                 <span className="text-base font-bold text-main">Dashboard</span>
+              </div>
+              <ChevronRight aria-hidden="true" className="w-5 h-5 text-secondary shrink-0" />
+            </Link>
+            <Link
+              href="/admin/belum-terpenuhi"
+              className="flex items-center justify-between p-4 min-h-[48px] hover:bg-cyan-200 focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <TriangleAlert aria-hidden="true" className="w-5 h-5 text-cyan-800 shrink-0" />
+                <span className="text-base font-bold text-main">Belum Terpenuhi</span>
+              </div>
+              <ChevronRight aria-hidden="true" className="w-5 h-5 text-secondary shrink-0" />
+            </Link>
+            <Link
+              href="/admin/tindak-lanjut"
+              className="flex items-center justify-between p-4 min-h-[48px] hover:bg-cyan-200 focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <ClipboardList aria-hidden="true" className="w-5 h-5 text-cyan-800 shrink-0" />
+                <span className="text-base font-bold text-main">Tindak Lanjut</span>
               </div>
               <ChevronRight aria-hidden="true" className="w-5 h-5 text-secondary shrink-0" />
             </Link>

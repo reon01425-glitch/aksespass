@@ -55,6 +55,11 @@ export function FollowUpList({ items, showFacility = false }: FollowUpListProps)
               {meta.hint}
               {showFacility ? ` ${item.facilityName}.` : ""}
             </p>
+            {item.stepNote && (
+              <p className="text-base text-main break-words">
+                <span className="font-bold">Langkah fasilitas:</span> {item.stepNote}
+              </p>
+            )}
           </li>
         );
       })}

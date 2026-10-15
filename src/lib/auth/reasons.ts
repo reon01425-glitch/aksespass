@@ -1,5 +1,6 @@
 export const VALID_AUTH_REASONS = {
   "sesi-berakhir": "Sesi Anda berakhir. Silakan masuk lagi.",
+  "akses-ditutup": "Akses akun ini ditutup. Hubungi admin fasilitas.",
 } as const;
 
 export type AuthReasonKey = keyof typeof VALID_AUTH_REASONS;

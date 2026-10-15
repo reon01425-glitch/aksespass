@@ -21,6 +21,8 @@ export interface DashboardTrendMonth {
   hidden: boolean;
   totalVisits?: number;
   afr?: number | null;
+  /** true bila AFR disembunyikan karena membuka sel kecil (jumlah pasien terlalu sedikit). */
+  afrHidden?: boolean;
 }
 
 export interface DashboardSelectedMonth {
@@ -28,6 +30,8 @@ export interface DashboardSelectedMonth {
   hidden: boolean;
   totalVisits?: number;
   afr?: number | null;
+  /** true bila AFR disembunyikan karena membuka sel kecil (jumlah pasien terlalu sedikit). */
+  afrHidden?: boolean;
   statusBreakdown?: Record<DashboardStatusKey, DashboardCell>;
   answererBreakdown?: Record<DashboardAnswererKey, DashboardCell>;
   categoryBreakdown?: Record<NeedCategory, DashboardCell>;

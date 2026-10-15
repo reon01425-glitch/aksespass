@@ -4,6 +4,7 @@ import type { SessionClaims } from "../auth/session";
 export interface StaffFacilityInfo {
   facilityId: string;
   facilityName: string;
+  staffName: string | null;
 }
 
 /**
@@ -24,9 +25,11 @@ export async function getStaffFacilityInfo(
       facilityId: session.facilityId,
     },
     async (tx) => {
-      const res = await tx.query<{ name: string }>(
-        "SELECT name FROM facilities WHERE id = $1;",
-        [session.facilityId]
+      const res = await tx.query<{ name: string; staff_name: string | null }>(
+        `SELECT f.name,
+                (SELECT u.display_name FROM users u WHERE u.id = $2) AS staff_name
+         FROM facilities f WHERE f.id = $1;`,
+        [session.facilityId, session.userId]
       );
 
       if (res.rows.length === 0) {
@@ -36,6 +39,7 @@ export async function getStaffFacilityInfo(
       return {
         facilityId: session.facilityId!,
         facilityName: res.rows[0].name,
+        staffName: res.rows[0].staff_name,
       };
     }
   );
