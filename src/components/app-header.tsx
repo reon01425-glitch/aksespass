@@ -34,7 +34,7 @@ export function AppHeader({
   const ICON =
     "inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900";
   return (
-    <header className="w-full border-b border-cyan-100 bg-white px-4 py-3">
+    <header className="sticky top-0 z-40 w-full border-b border-cyan-100 bg-white px-4 py-3">
       <div className="mx-auto flex w-full max-w-2xl min-w-0 items-center gap-3">
         {backHref && (
           <Link
