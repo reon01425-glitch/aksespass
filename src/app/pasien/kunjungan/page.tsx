@@ -66,7 +66,7 @@ export default async function PasienKunjunganPage() {
       backLabel="Kembali ke Beranda"
     >
       <div className="flex flex-col gap-6 max-w-full w-full">
-        <KunjunganClient facilities={facilities} />
+        <KunjunganClient facilities={facilities} showPatientShortcuts />
       </div>
     </PageShell>
   );

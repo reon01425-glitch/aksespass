@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import QRCode from "qrcode";
 import {
@@ -55,6 +56,8 @@ export interface ConsentQrFlowClientProps {
   patientLabel?: string;
   cancelHref?: string;
   homeHref?: string;
+  /** Bila diisi, setelah QR dipindai pasien diarahkan ke layar Menunggu Dipanggil (P13). */
+  waitingHrefBase?: string;
 }
 
 export function ConsentQrFlowClient({
@@ -67,7 +70,9 @@ export function ConsentQrFlowClient({
   patientLabel,
   cancelHref = "/pasien/kunjungan",
   homeHref = "/pasien",
+  waitingHrefBase,
 }: ConsentQrFlowClientProps) {
+  const router = useRouter();
   // 1. Kategori yang benar-benar ada di paspor
   const availableCategories = Array.from(
     new Set(passport.needs.map((n) => n.category))
@@ -102,6 +107,7 @@ export function ConsentQrFlowClient({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isRevokeDialogOpen, setIsRevokeDialogOpen] = useState(false);
+  const [isRejectedDialogOpen, setIsRejectedDialogOpen] = useState(false);
   const [now, setNow] = useState<Date>(() => new Date());
 
   // Hitung kategori kebutuhan yang sedang aktif (di luar catatan)
@@ -174,6 +180,9 @@ export function ConsentQrFlowClient({
 
         if (data.status === "dipindai") {
           setQrStatus("dipindai");
+          if (waitingHrefBase && typeof data.visitId === "string") {
+            router.push(`${waitingHrefBase}/${encodeURIComponent(data.visitId)}`);
+          }
         } else if (data.status === "dicabut") {
           setQrStatus("dicabut");
           setToken(null);
@@ -202,7 +211,7 @@ export function ConsentQrFlowClient({
       clearInterval(interval);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [step, qrId, qrStatus]);
+  }, [step, qrId, qrStatus, router, waitingHrefBase]);
 
   // Handler Buat QR (P11 -> P12)
   const handleCreateQr = async (e: React.FormEvent) => {
@@ -275,6 +284,29 @@ export function ConsentQrFlowClient({
         setQrStatus("dicabut");
         setToken(null);
         setQrSvg(null);
+      } else {
+        setErrorMessage(data.error || "Gagal mencabut QR.");
+      }
+    } catch {
+      setErrorMessage("Gagal mencabut QR. Periksa koneksi Anda.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Petugas melaporkan QR ditolak: cabut QR lama lalu arahkan pasien membuat QR baru (P12 -> P11)
+  const handleRejectedByStaff = async () => {
+    if (!qrId) return;
+    setIsRejectedDialogOpen(false);
+    setIsSubmitting(true);
+    try {
+      const res = await fetch(
+        `/api/pasien/qr/${encodeURIComponent(qrId)}/revoke`,
+        { method: "POST", headers: { "Content-Type": "application/json" } }
+      );
+      const data = await res.json();
+      if (data.ok) {
+        handleResetToConfigure();
       } else {
         setErrorMessage(data.error || "Gagal mencabut QR.");
       }
@@ -630,6 +662,16 @@ export function ConsentQrFlowClient({
           >
             Cabut Sekarang
           </Button>
+          {qrStatus === "aktif" && (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setIsRejectedDialogOpen(true)}
+              className="w-full sm:w-auto"
+            >
+              Petugas bilang QR ditolak
+            </Button>
+          )}
         </div>
       )}
 
@@ -642,6 +684,16 @@ export function ConsentQrFlowClient({
         cancelLabel="Batal"
         onConfirm={handleRevoke}
         onClose={() => setIsRevokeDialogOpen(false)}
+      />
+
+      <ConfirmDialog
+        isOpen={isRejectedDialogOpen}
+        title="QR ditolak petugas?"
+        description="QR ini akan dicabut, lalu Anda diarahkan membuat QR baru."
+        confirmLabel="Cabut dan Buat QR Baru"
+        cancelLabel="Batal"
+        onConfirm={handleRejectedByStaff}
+        onClose={() => setIsRejectedDialogOpen(false)}
       />
     </div>
   );

@@ -112,6 +112,7 @@ export default async function PasienKunjunganQrPage({
         lastSharedFields={lastSharedFields}
         initialActiveCount={activeQrCount}
         appOrigin={appOrigin}
+        waitingHrefBase="/pasien/menunggu"
       />
     </PageShell>
   );

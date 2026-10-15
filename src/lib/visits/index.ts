@@ -2,6 +2,7 @@ import { withContext } from "../../db";
 import type { SessionClaims } from "../auth";
 
 export * from "./format";
+export * from "./call";
 import { formatVisitTimeWIB, mapVisitStatus, type TodayVisit } from "./format";
 
 export interface VisitSessionParam {

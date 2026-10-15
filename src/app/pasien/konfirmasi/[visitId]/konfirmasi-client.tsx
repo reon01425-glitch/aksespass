@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Button,
@@ -8,10 +9,12 @@ import {
   ChoiceChip,
   ChoiceGroup,
   PageShell,
+  PendingConfirmationSync,
   StatusBanner,
   type CareProofValue,
 } from "@/components";
 import { getNeedSummaryIcon } from "@/components/patient-needs-summary";
+import { enqueueConfirmation } from "@/lib/careproof/offline-queue";
 
 interface AssistanceItem {
   ruleId: string;
@@ -38,6 +41,7 @@ export interface KonfirmasiClientProps {
   assistance: AssistanceItem[];
   unmetChoices: UnmetChoice[];
   currentAnswer: CurrentAnswer | null;
+  userId: string;
 }
 
 const BY_LABEL: Record<string, string> = {
@@ -61,6 +65,7 @@ export function KonfirmasiClient({
   assistance,
   unmetChoices,
   currentAnswer,
+  userId,
 }: KonfirmasiClientProps) {
   const router = useRouter();
   const [value, setValue] = useState<CareProofValue | undefined>(
@@ -71,6 +76,7 @@ export function KonfirmasiClient({
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [queuedOffline, setQueuedOffline] = useState(false);
 
   const previousAnswerByLabel =
     currentAnswer && currentAnswer.confirmedBy !== "patient"
@@ -102,13 +108,46 @@ export function KonfirmasiClient({
 
       const unmetParam =
         value === "terpenuhi" ? "" : Array.from(unmetSelected).join(",");
-      const query = new URLSearchParams({ status: value });
+      const query = new URLSearchParams({ status: value, visit: visitId });
       if (unmetParam) query.set("unmet", unmetParam);
       router.push(`/pasien/konfirmasi/selesai?${query.toString()}`);
     } catch {
+      // Offline atau jaringan putus: simpan ke antrean lokal, kirim otomatis saat online.
+      const queued = enqueueConfirmation(userId, {
+        visitId,
+        status: value,
+        unmetNeedCodes: value === "terpenuhi" ? [] : Array.from(unmetSelected),
+      });
+      if (queued) {
+        // Halaman berikutnya dirender di server dan tidak bisa dibuka saat offline,
+        // jadi status antrean ditampilkan di sini tanpa berpindah halaman.
+        setQueuedOffline(true);
+        setIsSubmitting(false);
+        return;
+      }
       setError("Gagal menyimpan jawaban. Periksa koneksi internet Anda.");
       setIsSubmitting(false);
     }
+  }
+
+  if (queuedOffline) {
+    return (
+      <PageShell title="Konfirmasi Kebutuhan">
+        <div className="flex flex-col gap-6 max-w-full w-full">
+          <p className="text-base text-main">
+            Anda sedang offline. Jawaban disimpan di perangkat ini dan terkirim
+            otomatis saat Anda online. Tetap buka aplikasi atau kembali nanti.
+          </p>
+          <PendingConfirmationSync userId={userId} />
+          <Link
+            href="/pasien/tindak-lanjut"
+            className="text-base font-bold text-cyan-900 underline focus:ring-4 focus:ring-cyan-900 rounded"
+          >
+            Lihat status tindak lanjut (saat online)
+          </Link>
+        </div>
+      </PageShell>
+    );
   }
 
   return (

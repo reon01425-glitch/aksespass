@@ -7,9 +7,9 @@ import {
 } from "@/lib/auth/constants";
 import { verifySessionCookie } from "@/lib/auth/session";
 import { getOwnPassportStatus } from "@/lib/passport";
-import { listOwnConfirmations } from "@/lib/careproof";
+import { countOpenFollowUps, listOwnConfirmations } from "@/lib/careproof";
 import { formatDateTimeWib } from "@/lib/consent/time";
-import { LogoutButton, StatusBanner } from "@/components";
+import { LogoutButton, PendingConfirmationSync, StatusBanner } from "@/components";
 import {
   ArrowRight,
   Bell,
@@ -17,6 +17,8 @@ import {
   ClipboardCheck,
   FileText,
   History,
+  ListChecks,
+  MessageSquareText,
   Printer,
   Settings,
   House,
@@ -69,9 +71,10 @@ export default async function PasienPage() {
     redirect("/masuk");
   }
 
-  const [passport, pendingConfirmations] = await Promise.all([
+  const [passport, pendingConfirmations, openFollowUps] = await Promise.all([
     getOwnPassportStatus(session),
     listOwnConfirmations(session),
+    countOpenFollowUps(session),
   ]);
   const isComplete = passport.status === "complete";
   const pendingCount = pendingConfirmations.length;
@@ -115,6 +118,21 @@ export default async function PasienPage() {
       title: "Kartu Cetak",
       subtitle: "Cetak atau simpan offline",
       Icon: Printer,
+    },
+    {
+      href: "/pasien/komunikacare",
+      title: "KomunikaCare",
+      subtitle: "Bantu bicara dengan petugas",
+      Icon: MessageSquareText,
+    },
+    {
+      href: "/pasien/tindak-lanjut",
+      title: "Tindak Lanjut",
+      subtitle:
+        openFollowUps > 0
+          ? `${openFollowUps} kebutuhan sedang ditanggapi`
+          : "Status kebutuhan belum terpenuhi",
+      Icon: ListChecks,
     },
     {
       href: "/pasien/akun",
@@ -249,6 +267,8 @@ export default async function PasienPage() {
               <ArrowRight aria-hidden="true" className="h-5 w-5" />
             </Link>
           </section>
+
+          <PendingConfirmationSync userId={session.userId} />
 
           {/* Kartu Konfirmasi Kunjungan (P16) */}
           {pendingCount > 0 && (

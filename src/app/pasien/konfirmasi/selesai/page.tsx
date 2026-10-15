@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { PageShell, StatusBanner } from "@/components";
+import { FollowUpList, PageShell, PendingConfirmationSync, StatusBanner } from "@/components";
+import { listOwnFollowUps } from "@/lib/careproof";
 import { COOKIE_NAME, SECURE_COOKIE_NAME } from "@/lib/auth/constants";
 import { verifySessionCookie } from "@/lib/auth/session";
 import { getNeedsCatalog } from "@/lib/passport";
@@ -21,7 +22,7 @@ const STATUS_LABEL: Record<string, string> = {
 export default async function PasienKonfirmasiSelesaiPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; unmet?: string }>;
+  searchParams: Promise<{ status?: string; unmet?: string; visit?: string; pending?: string }>;
 }) {
   const cookieStore = await cookies();
   const sessionCookie =
@@ -54,15 +55,29 @@ export default async function PasienKonfirmasiSelesaiPage({
   }
 
   const statusLabel = status ? STATUS_LABEL[status] : null;
+  const isPending = params.pending === "1";
+  const followUps =
+    !isPending && params.visit
+      ? await listOwnFollowUps(session, { visitId: params.visit })
+      : [];
 
   return (
     <PageShell title="Jawaban Tersimpan">
       <div className="flex flex-col gap-6 max-w-full w-full">
-        <StatusBanner
-          variant="success"
-          title="Terima kasih, jawaban tersimpan"
-          message="Jawaban Anda telah tercatat."
-        />
+        {isPending ? (
+          <StatusBanner
+            variant="warning"
+            title="Menunggu sinkron"
+            message="Anda sedang offline. Jawaban tersimpan di perangkat dan terkirim otomatis saat online."
+          />
+        ) : (
+          <StatusBanner
+            variant="success"
+            title="Terima kasih, jawaban tersimpan"
+            message="Jawaban Anda telah tercatat."
+          />
+        )}
+        <PendingConfirmationSync userId={session.userId} />
 
         {statusLabel && (
           <section aria-labelledby="heading-ringkasan" className="flex flex-col gap-3">
@@ -89,6 +104,24 @@ export default async function PasienKonfirmasiSelesaiPage({
                 </ul>
               </div>
             )}
+          </section>
+        )}
+
+        {followUps.length > 0 && (
+          <section aria-labelledby="heading-tindak-lanjut" className="flex flex-col gap-3">
+            <h2
+              id="heading-tindak-lanjut"
+              className="text-base font-bold text-main border-b border-cyan-100 pb-2"
+            >
+              Status Tindak Lanjut
+            </h2>
+            <FollowUpList items={followUps} />
+            <Link
+              href="/pasien/tindak-lanjut"
+              className="text-base font-bold text-cyan-900 underline focus:ring-4 focus:ring-cyan-900 rounded"
+            >
+              Lihat semua tindak lanjut
+            </Link>
           </section>
         )}
 

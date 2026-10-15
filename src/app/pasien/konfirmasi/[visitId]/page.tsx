@@ -76,6 +76,7 @@ export default async function PasienKonfirmasiDetailPage({
       assistance={visit.assistance}
       unmetChoices={unmetChoices}
       currentAnswer={visit.currentAnswer}
+      userId={session.userId}
     />
   );
 }

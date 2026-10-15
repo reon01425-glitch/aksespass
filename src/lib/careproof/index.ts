@@ -209,6 +209,24 @@ export async function confirmVisit(
         );
       }
 
+      // 3b. Sinkronkan tindak lanjut (P17): satu baris 'diterima' per kebutuhan yang belum terpenuhi.
+      // Baris yang sudah berstatus lain (ditindaklanjuti/selesai) tidak disentuh.
+      await tx.query(
+        `DELETE FROM follow_ups
+         WHERE visit_id = $1
+           AND status = 'diterima'
+           AND NOT (need_code = ANY($2::text[]));`,
+        [visitId, unmetNeedCodes]
+      );
+      if (unmetNeedCodes.length > 0) {
+        await tx.query(
+          `INSERT INTO follow_ups (visit_id, need_code)
+           SELECT $1, code FROM unnest($2::text[]) AS code
+           ON CONFLICT (visit_id, need_code) DO NOTHING;`,
+          [visitId, unmetNeedCodes]
+        );
+      }
+
       // 4. Catat kejadian audit visit_confirmed (tanpa isi jawaban/kebutuhan)
       await recordAuditEvent(tx, {
         eventType: "visit_confirmed",
@@ -690,4 +708,82 @@ export async function listConfirmableVisitsForPatient(
       });
     }
   );
+}
+
+export type FollowUpStatus = "diterima" | "ditindaklanjuti" | "selesai";
+
+export interface OwnFollowUpItem {
+  visitId: string;
+  facilityName: string;
+  needCode: string;
+  needLabel: string;
+  iconName: string;
+  status: FollowUpStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * P17: status tindak lanjut kebutuhan yang belum terpenuhi, hanya milik pasien sendiri
+ * (dijaga RLS lewat kunjungan induk). Opsional dibatasi ke satu kunjungan.
+ * Perubahan status dilakukan di luar aplikasi sampai layar admin (A8) tersedia.
+ */
+export async function listOwnFollowUps(
+  session: { userId: string; role: string } | SessionClaims,
+  options?: { visitId?: string }
+): Promise<OwnFollowUpItem[]> {
+  if (session.role !== "patient") return [];
+  const visitId = options?.visitId;
+  if (visitId !== undefined && !/^[0-9a-f-]{36}$/i.test(visitId)) return [];
+
+  return withContext({ userId: session.userId, role: "patient" }, async (tx) => {
+    const res = await tx.query<{
+      visit_id: string;
+      facility_name: string;
+      need_code: string;
+      label: string;
+      icon_name: string;
+      status: FollowUpStatus;
+      created_at: string;
+      updated_at: string;
+    }>(
+      `SELECT fu.visit_id, f.name AS facility_name, fu.need_code,
+              nc.label, nc.icon_name, fu.status, fu.created_at, fu.updated_at
+       FROM follow_ups fu
+       JOIN visits v ON v.id = fu.visit_id
+       JOIN facilities f ON f.id = v.facility_id
+       JOIN needs_catalog nc ON nc.code = fu.need_code
+       WHERE v.patient_user_id = $1
+         AND ($2::uuid IS NULL OR fu.visit_id = $2::uuid)
+       ORDER BY fu.updated_at DESC, nc.sort_order ASC;`,
+      [session.userId, visitId ?? null]
+    );
+    return res.rows.map((r) => ({
+      visitId: r.visit_id,
+      facilityName: r.facility_name,
+      needCode: r.need_code,
+      needLabel: r.label,
+      iconName: r.icon_name,
+      status: r.status,
+      createdAt: new Date(r.created_at).toISOString(),
+      updatedAt: new Date(r.updated_at).toISOString(),
+    }));
+  });
+}
+
+/** Jumlah kebutuhan yang masih berjalan (belum selesai), untuk penanda di beranda. */
+export async function countOpenFollowUps(
+  session: { userId: string; role: string } | SessionClaims
+): Promise<number> {
+  if (session.role !== "patient") return 0;
+  return withContext({ userId: session.userId, role: "patient" }, async (tx) => {
+    const res = await tx.query<{ n: string }>(
+      `SELECT count(*)::text AS n
+       FROM follow_ups fu
+       JOIN visits v ON v.id = fu.visit_id
+       WHERE v.patient_user_id = $1 AND fu.status <> 'selesai';`,
+      [session.userId]
+    );
+    return Number(res.rows[0]?.n ?? 0);
+  });
 }
