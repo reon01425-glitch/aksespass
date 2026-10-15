@@ -32,7 +32,7 @@ Kode bertanda hubung (`P-05`) = user story. Kode tanpa tanda hubung (`P16`, `T4b
 | Saran tindakan, aturan kurator | §2, §6 | — | Layar T6, K1–K6 |
 | Dashboard, tindak lanjut | §2, §6 | — | Layar A3, A6–A8, P17 |
 | Brief | §8 | — | Layar P10, T3 |
-| UI atau komponen apa pun | §14 | §1–§5 | Layar yang dibangun |
+| UI atau komponen apa pun | §14 | §1–§6 (§6 = gaya seragam semua peran) | Layar yang dibangun |
 | Hapus akun | §6, §11, §13 | — | Layar P22–P23 |
 | Tes atau verifikasi | §15 | §1 | — |
 
@@ -66,8 +66,10 @@ Kode bertanda hubung (`P-05`) = user story. Kode tanpa tanda hubung (`P16`, `T4b
 
 ### UI dan aksesibilitas
 - Ikuti `design.md` untuk token warna, Atkinson Hyperlegible Next, skala tipografi, target sentuh 48 × 48 px, input minimal 16 px, focus ring, reduced motion, viewport 320 px, dan pembesaran teks 200%.
-- Status selalu menggunakan ikon + teks + warna.
-- Gunakan komponen bersama untuk pola berulang, terutama banner status.
+- Status disampaikan lewat `StatusBanner` dengan judul teks yang bermakna (palet Cyan tanpa ikon sejak 16 Okt 2026, `design.md` §2B); jangan hanya mengandalkan warna dan jangan menambah warna status inline.
+- Gunakan komponen bersama untuk pola berulang, terutama banner status. Halaman baru dibungkus `PageShell` (otomatis memakai `AppHeader`) dengan salah satu `patientNav`, `companionNav`, `petugasNav`, atau `adminNav` bila itu layar awal peran; kartu teal utama beranda memakai `HeroCard`; kode OTP memakai `OtpCodeInput`.
+- Ikuti gaya seragam di `design.md` §6: kartu putih bergaris `border-cyan-800`, daftar dua kolom dengan kartu ganjil terakhir memanjang (`[&>*:last-child:nth-child(odd)]:col-span-2`), tanpa ikon dekoratif, pilihan terpilih = border tebal (bukan isian biru). Jangan menaruh `legend` sebagai anak langsung grid.
+- Lapisan CSS global (`globals.css`) tidak berlapis: aturan elemen `p`, `h1`–`h3` mengalahkan utilitas Tailwind seperti `text-sm`; gunakan akhiran `!` (mis. `text-xl!`) bila perlu menimpa.
 - Jangan menyatakan WCAG 2.2 AA terverifikasi tanpa pengujian yang mendukung klaim tersebut.
 
 ## Pemeriksaan

@@ -12,6 +12,11 @@ Sebelum demo dimulai, pastikan dependensi siap dan basis data lokal berada dalam
 # 1. Reset, migrasi, dan isi data sintetis deterministik
 pnpm db:reset && pnpm db:migrate && pnpm db:seed
 
+# 1b. (Opsional, disarankan sebelum demo dashboard) data contoh tambahan: 48 pasien
+#     sintetis dan sekitar 590 kunjungan Jun-Okt 2026 untuk Puskesmas Contoh A dan Klinik Contoh B.
+#     Aman dijalankan berulang (tidak menggandakan data).
+pnpm db:seed:dummy
+
 # 2. Jalankan server lokal Next.js
 pnpm dev
 ```
@@ -34,6 +39,10 @@ Aplikasi dapat diakses melalui peramban di `http://localhost:3000`.
 | **Petugas** | Petugas Nonaktif A | `+620000000012` | `/masuk/petugas` | Puskesmas Contoh A (status nonaktif — ditolak) |
 | **Admin** | Admin Fasilitas A | `+620000000021` | `/masuk/petugas` | Puskesmas Contoh A (admin fasilitas) |
 | **Pendamping**| Pendamping Contoh 1 | `+620000000005` | `/masuk` | Tertaut aktif ke Pasien Contoh 4 & 7 |
+| **Pasien** | Pasien Contoh 6–9 | `+620000000006` sampai `+620000000009` | `/masuk` | Pasien tambahan untuk uji tautan dan kunjungan |
+| **Petugas** | Petugas Klinik B | `+620000000013` | `/masuk/petugas` | Klinik Contoh B (fasilitas kedua; untuk uji isolasi antarfasilitas) |
+| **Admin** | Admin Fasilitas B | `+620000000022` | `/masuk/petugas` | Klinik Contoh B |
+| **Kurator** | Kurator Aturan | `+620000000031` | `/masuk/petugas` | Hanya halaman awal; layar kurator K2–K6 belum dibangun |
 
 ---
 
@@ -89,8 +98,10 @@ Disarankan menggunakan dua jendela peramban terpisah (misalnya Jendela Reguler u
 ### Langkah 8: Dashboard Agregat Admin Fasilitas
 1. Keluar dari akun petugas, lalu masuk ke `/masuk/petugas` menggunakan akun Admin Fasilitas `+620000000021`.
 2. Buka **Dashboard Fasilitas** (`/admin/dashboard`).
-3. Tinjau metrik agregat: *Accommodation Fulfillment Rate (AFR)*, tren bulanan, dan sebaran kategori bantuan.
+3. Tinjau metrik agregat: *Accommodation Fulfillment Rate (AFR)*, grafik garis tren kunjungan dan tren AFR, serta batang status konfirmasi, penjawab, dan kebutuhan belum terpenuhi. Tanpa `pnpm db:seed:dummy`, hanya data seed awal yang ada sehingga sebagian bulan tampil "(disembunyikan)".
 4. Perhatikan proteksi privasi k-anonymity: sel data dengan jumlah pasien di bawah ambang batas (kurang dari 5 pasien berbeda) otomatis berlabel *"Disembunyikan (kurang dari 5 pasien)"*. Admin tidak memiliki akses melihat profil individual pasien.
+
+> **Tampilan:** semua peran memakai header putih yang menempel di atas, kartu teal utama di beranda, dan navigasi bawah melayang (lihat `design.md` §6). Kode verifikasi di semua layar memakai enam kotak OTP.
 
 ### Langkah 9: Pendampingan Pasien
 1. Buka jendela Pasien, keluar dan masuk kembali menggunakan akun Pendamping `+620000000005`.
@@ -130,7 +141,7 @@ Bagian ini merangkum klaim teknis yang didukung bukti konkret dalam hasil penguj
    - Setiap peristiwa pembacaan data dan penolakan pemindaian dicatat dalam tabel audit log append-only dengan pengenal pseudonim.
    - Modul privasi menyaring data sensitif sehingga tidak bocor ke log aplikasi peramban maupun server.
 4. **Verifikasi Kualitas Kode Otomatis:**
-   - 217 tes unit dan integrasi pada 25 berkas tes lolos 100% (`pnpm test`).
+   - Pada pencatatan awal (Catatan Hasil Bagian 1–10A): 217 tes unit dan integrasi pada 25 berkas tes lolos 100% (`pnpm test`). **Angka ini historis; jalankan ulang sebelum dikutip**, karena kode bertambah sejak itu.
    - Pengecekan statis lulus tanpa kesalahan (`pnpm lint`, `pnpm typecheck`, dan `pnpm build`).
 
 ### Batasan Penting (Hal yang TIDAK Diklaim)

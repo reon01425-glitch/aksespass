@@ -61,6 +61,27 @@
 
 **Garis potong bila waktu mepet** (dibuang dari belakang): Bagian 10 → bagian Should di 8 (A-03, A-04, P-08) → Bagian 9. **Tidak boleh dipotong:** Bagian 0–8 inti, terutama P-05, P-06, T-01, A-02.
 
+## Catatan pembaruan 16 Okt 2026: yang berubah sejak jalur 13 Okt
+
+> Rencana di atas ditulis 13 Okt dan **sengaja tidak ditulis ulang**. Bagian ini mencatat apa yang di kode sudah melampaui rencana. Kotak ☐ di tabel status berarti **verifikasi belum dicentang dengan bukti**, bukan fitur belum dibangun. Jangan mencentang tanpa bukti.
+
+**Dibangun setelah 13 Okt (menurut riwayat commit; verifikasi belum dicentang):**
+
+| Area | Yang ada di kode | Rujukan |
+| :--- | :--- | :--- |
+| Bagian 9 (sebagian) | Kartu Cetak tanpa QR dan ringkasan offline (PWA) P7/P8, termasuk Kode Kartu; T4b kunjungan dari kartu cetak (migrasi 018). **Belum:** antrean pencatatan offline T-05 penuh, PDF kartu cetak sungguhan | `2feaf73`, `02e3b36`, `6c8129a` |
+| 10A pendamping | D4 beranda, D5 memakai editor paspor, D6 daftar QR aktif dengan cabut (migrasi 017), D8 konfirmasi, pemulihan nomor akun pasien lewat pendamping D9 (migrasi 023) | `23db40a`, `ee35f94` |
+| 10B KomunikaCare | P15 papan bergambar dan teks-ke-suara; T7 sinkron dua perangkat dengan polling 2 detik (migrasi 019); P13 menunggu dan P14 panggilan | `5fa9fd0`, `43bd01d` |
+| Pasien lain | P9 pencarian fasilitas, P12 QR ditolak petugas, P16 antrean offline, P17 status tindak lanjut, P22 ubah kontak dan P23 hapus data dan akun (migrasi 015) | `40bf78a`, `5fa9fd0`, `25ae410` |
+| Admin | A2 aktivasi login pertama, A4/A5 kelola petugas, A7/A8 tindak lanjut fasilitas (migrasi 020-022), dashboard bergrafik garis, data contoh `pnpm db:seed:dummy` | `b0fb6cf`, `30eb16a` |
+| Akses | Akun petugas, admin, dan kurator ditolak di halaman masuk pasien/pendamping | `1b4ad8c` |
+
+**Perubahan UI/UX lintas peran (16 Okt, atas permintaan pemilik produk):** semua layar memakai gaya seragam yang kini dirinci di `design.md` §6: `AppHeader` menempel di atas, navigasi bawah untuk pasien, pendamping, petugas, dan admin (`PatientBottomNav`, `CompanionBottomNav`, `PetugasBottomNav`, `AdminBottomNav`), satu `HeroCard` teal per beranda, daftar kartu dua kolom dengan kartu ganjil memanjang, `OtpCodeInput` enam kotak di semua layar kode verifikasi, notifikasi `StatusBanner` melayang tanpa ikon, dan paragraf selebar kolom (batas 60ch dicabut). Perubahan ini hanya tampilan; tidak mengubah izin, RLS, atau alur data.
+
+**Masih di luar cakupan (roadmap):** layar kurator K2–K6 (hanya halaman awal `src/app/kurator/page.tsx`), Pre-Arrival Brief P10, frasa BISINDO P15.4, Smart Queue Alert penuh, antrean offline T-05 penuh, PDF Kartu Cetak, diagnosis lokal.
+
+**Keputusan yang masih menunggu pemilik produk:** daftar kunjungan petugas per petugas atau seluruh fasilitas; apakah "Kirim Undangan" petugas perlu pesan salinan atau SMS; kolom "Petugas menulis di sini" di Teks Langsung; sisa label hijau/kuning/merah inline; apakah galat berhenti hilang otomatis (WCAG 2.2.1); ubah nama tampilan pendamping; tombol "Laporkan" di riwayat akses (P19); pemberitahuan "QR sudah diganti"; baris status pemulihan di sisi pasien; pesan galat generik untuk nomor petugas di halaman pasien; tujuan ikon notifikasi dan akun di header untuk pendamping, petugas, dan admin.
+
 **Di luar rencana ini (roadmap, kecuali K-6 memutuskan lain):** Pre-Arrival Brief (P10), Smart Queue Alert (P13–P14), frasa BISINDO (P15.4), editor kurator (K4–K6), hapus akun (P22–P23), delegasi darurat dan pemulihan penuh (`architecture.md` §10), diagnosis lokal.
 
 ---

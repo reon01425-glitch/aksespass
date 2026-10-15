@@ -1,6 +1,6 @@
 # AKSESPASS Design System & UI Specifications (`design.md`)
 
-**Versi:** 0.5 (Atkinson Hyperlegible Next, Mobile PWA)
+**Versi:** 0.6 (Atkinson Hyperlegible Next, Mobile PWA; gaya tampilan seragam §6, 16 Okt 2026)
 **Target Kompatibilitas:** WCAG 2.2 Level AA — **target, belum diverifikasi**. Kepatuhan baru boleh diklaim setelah pengujian otomatis dan manual (`architecture.md` §15).
 **Tech Stack:** Next.js (App Router), TypeScript, Tailwind CSS, Lucide React (Ikon)
 **Penanda status:** sama dengan `architecture.md` — **[Diputuskan]**, **[Usulan]**, **[Verifikasi]**. Bagian tanpa penanda di dokumen ini dianggap spesifikasi yang berlaku.
@@ -154,12 +154,58 @@ Belum ada spesifikasi visual final. Aturan di bawah hanya menurunkan prinsip §1
 
 | Komponen | Dipakai di | Aturan minimum |
 | :--- | :--- | :--- |
-| Input teks / kode OTP | P3, D2, T2, A5 | Teks 16 px; `border-input`; tinggi ≥ 48 px; label terlihat di luar input (bukan placeholder); pesan galat di bawah input dengan ikon + teks |
-| Pilihan bergambar / chip | P5, P7 | Area ≥ 48 × 48 px; state terpilih memakai `bg-surface` **dan** ikon centang (bukan warna saja); dapat dioperasikan keyboard |
+| Input teks / kode OTP | P3, D2, T2, A5, P22, P23 | Teks 16 px; `border-input`; tinggi ≥ 48 px; label terlihat di luar input (bukan placeholder); pesan galat memakai `StatusBanner` (lihat §2B). **[Diubah 16 Okt 2026]** Kode OTP selalu memakai `OtpCodeInput` (§6.6): enam kotak `rounded-2xl` di atas satu input asli, sama di semua peran |
+| Pilihan bergambar / chip | P5, P7 | Area ≥ 48 × 48 px; dapat dioperasikan keyboard. **[Diubah 16 Okt 2026, atas permintaan pemilik produk]** state terpilih = latar putih, border tebal `border-2 border-cyan-800`, teks tebal; tidak terpilih = `border-cyan-200`. Tanpa ikon centang dan tanpa isian biru (lihat §6.3). **[Verifikasi]** keterbacaan state terpilih dengan pengguna low-vision |
 | Tombol geser (toggle) | P11 | Area sentuh ≥ 48 × 48 px; label teks di sebelahnya; status Aktif/Nonaktif ditulis, bukan hanya posisi |
 | Skala ikon CareProof | P16, D8, T9 | Tiga tombol besar berlabel teks, satu palet Cyan tanpa warna status **[Diubah 16 Okt 2026, atas permintaan pemilik produk]**: belum dipilih `bg-white border-cyan-800 text-cyan-900`, terpilih `bg-cyan-900 text-white`. Pembeda tetap ikon dan teks: Terpenuhi (`CircleCheck`), Sebagian (`TriangleAlert`), Belum (`CircleX`). **[Verifikasi]** keterbacaan tanpa warna dengan pengguna |
 | Pop-up konfirmasi tindakan merusak | P20, P21, P23, A4, K4 | Fokus pindah ke pop-up; tombol batal selalu ada; tombol aksi menyebut tindakannya ("Ya, Cabut"), bukan "OK" |
-| Navigasi bawah petugas | T3, T4, T4b | Bar melayang membulat, 3 tab (Beranda, Pindai, Kartu) dengan ikon + teks, tinggi ≥ 56 px, tab aktif `bg-cyan-700` teks putih dan `aria-current="page"`; hanya di layar awal alur petugas, tidak di langkah pencatatan |
+| Navigasi bawah (semua peran) | T3, T4, T4b, P4, D4, A3 | **[Diubah 16 Okt 2026]** Bar melayang membulat (`fixed bottom-3`, `rounded-2xl border border-cyan-800 bg-white shadow-lg`) dengan ikon 22 px + teks 11 px, tinggi 64 px, tab aktif `font-bold text-cyan-700` dan `aria-current="page"`; gayanya identik untuk semua peran (§6.5). Hanya di layar awal tiap peran, tidak di langkah alur sementara |
 | Kartu dan notifikasi melayang (alur petugas) | T3–T4b | Kartu `rounded-2xl` dengan ikon dalam kotak `bg-cyan-100`, tanpa foto; notifikasi tetap `StatusBanner` (opsi `floating`: menempel di atas saat digulir, bayangan) dengan palet Cyan tanpa ikon (lihat §2B) |
 
 *Catatan implementasi:* Seluruh komponen turunan di atas telah diimplementasikan sebagai komponen bersama di `src/components/` pada Prompt 8 (status spesifikasi tetap **[Usulan]** hingga seluruh alur diverifikasi penuh).
+
+---
+
+## 6. Gaya Tampilan Seragam ("Gaya Petugas") **[Diubah 16 Okt 2026, atas permintaan pemilik produk]**
+
+Seluruh layar pasien, pendamping, petugas, dan admin memakai satu bahasa visual yang sama, mengikuti beranda petugas. Aturan ini menggantikan tampilan lama yang berbeda per peran (header melayang pasien, kartu tanpa garis, ikon dekoratif). Kode acuan ada di `src/components/`.
+
+### 6.1 Kartu
+* **Kartu putih:** `rounded-2xl border border-cyan-800 bg-white p-4 shadow-sm`. Untuk penekanan memakai `border-2`. Setiap butir isi berada di kartunya sendiri; tidak ada kotak bertumpuk di dalam kartu.
+* **Kartu teal terisi:** `bg-cyan-700 text-white shadow-md`, hanya untuk satu ringkasan atau aksi utama per layar (§6.4) dan angka ringkasan dashboard.
+* **Paragraf sebagai kartu** tidak perlu `max-w-none`; aturan global `p` memakai `max-width: 100%` (§3A).
+* Bila `fieldset` berlegenda dibingkai, bingkai dipasang pada `div` pembungkus dan `fieldset` dibuat tanpa border agar legenda tidak memotong garis.
+
+### 6.2 Daftar kartu dua kolom
+Daftar kartu memakai `grid grid-cols-2 gap-3 [&>*:last-child:nth-child(odd)]:col-span-2`: dua kolom, dan bila jumlahnya ganjil kartu terakhir memanjang penuh. Di kartu setengah lebar, ikon di atas dan teks di bawah. Aturan hitungan anak: jangan menaruh `legend` atau elemen lain sebagai anak langsung grid, karena ikut terhitung dan menggeser ganjil-genap. Jarak antarbagian halaman `gap-5`.
+
+### 6.3 Ikon dan pilihan
+* Tidak ada ikon dekoratif (centang, silang, panah, chevron, perisai, mata, dan sejenisnya) pada tombol, kartu, atau teks bantu. Ikon hanya dipakai bila membawa makna: ikon kebutuhan (`getNeedSummaryIcon`), ikon navigasi bawah, ikon skala CareProof (§5), dan logo header.
+* Pilihan (chip, radio, kartu pilih): terpilih = putih dengan `border-2 border-cyan-800` dan teks tebal; tidak terpilih = `border-cyan-200`. Tidak ada isian biru dan tidak ada kotak centang. Untuk persetujuan opsional (mis. statistik anonim di halaman masuk), kartu pilih yang sama dipakai dan keadaannya juga ditulis ("Dipilih"/"Tidak dipilih").
+* Tidak ada warna status inline (hijau, kuning, merah); status disampaikan lewat teks dan `StatusBanner`.
+
+### 6.4 `HeroCard` (kartu teal utama)
+Satu per beranda tiap peran. Susunan tetap: ubin ikon putih `h-14 w-14 rounded-xl` berisi ikon `h-8 w-8 text-cyan-800`, judul `text-lg font-bold`, lalu keterangan kecil `text-sm`; seluruhnya putih di atas `bg-cyan-700`. Bila diberi `href`, kartu menjadi tautan. Komponen: `HeroCard` (`src/components/hero-card.tsx`).
+
+| Peran | Isi kartu |
+| :--- | :--- |
+| Pasien | Mulai Kunjungan (ikon QR) atau Lengkapi Paspor Layanan (ikon dokumen); baris kecil "Aplikasi ini tidak meminta diagnosis medis Anda." Juga di Kontrol Akses dan Pendamping |
+| Pendamping | "N Pasien Tertaut Aktif" |
+| Petugas | Pindai ConsentQR |
+| Admin | Dashboard Fasilitas |
+
+### 6.5 Header dan navigasi bawah
+* **`AppHeader`** (`src/components/app-header.tsx`, dipakai `PageShell`): putih, **menempel di atas saat halaman digulir** (`sticky top-0 z-40`). Isinya: tombol kembali (bila ada), logo perisai dalam lingkaran `bg-cyan-200`, label kecil "AKSESPASS" (sama di semua peran), judul halaman `text-xl`, lalu ikon notifikasi dan akun di kanan. Tujuan ikon ditentukan dari awalan alamat: pasien → Riwayat Akses dan Akun; pendamping → Beranda Pendamping; petugas → Beranda Petugas; admin → Tindak Lanjut dan Beranda Admin. **[Usulan]** tujuan pendamping, petugas, dan admin masih sementara karena belum ada halaman notifikasi atau akun untuk peran itu. Ikon tidak muncul di halaman tanpa peran (masuk, pengaturan awal).
+* Label kecil "AKSESPASS" memakai huruf kapital dan `tracking-wider`, satu-satunya pengecualian dari "hindari ALL CAPS" di §3A (label merek, bukan isi). **[Verifikasi]** keterbacaannya.
+* **Navigasi bawah per peran:** pasien (Beranda, Paspor, QR Akses, Pendamping, Riwayat); pendamping (Beranda, Tautkan, Keluar); petugas (Beranda, Pindai, Kartu); admin (Beranda, Petugas, Dashboard, Kebutuhan, Tindak Lanjut). Gaya identik (lihat §5). `PageShell` menerima `patientNav`, `companionNav`, `petugasNav`, atau `adminNav` dan menambah `pb-28`. Layar alur sementara (menunggu, panggilan, detail konfirmasi, hapus akun, QR kunjungan) tidak menampilkannya.
+* **Halaman masuk** (`/masuk`, `/masuk/petugas`) dan **pengaturan awal** (`/mulai`) memakai tata letak tengah dengan lengkung dekoratif; hanya isi kartunya mengikuti §6.1–6.3.
+
+### 6.6 Kode verifikasi (OTP)
+`OtpCodeInput` (`src/components/otp-code-input.tsx`): satu input asli `inputMode="numeric"` `autoComplete="one-time-code"` (mendukung isi otomatis SMS dan tempel) dengan enam kotak tampilan `rounded-2xl` di bawahnya, di dalam kartu bergaris. `DemoOtpNote` menampilkan kotak "Mode demo: SMS belum aktif. Kode Anda: …" dengan gaya yang sama. Dipakai di login pasien dan pendamping, login petugas, ubah kontak, hapus akun, dan pemulihan akun oleh pendamping (lewat `OtpActionForm`).
+
+### 6.7 Grafik dashboard admin
+Grafik garis SVG `viewBox 640×260`, garis cyan tebal, di dalam kartu (Tren Kunjungan dan Tren AFR); rincian status, penjawab, dan kebutuhan belum terpenuhi sebagai batang horizontal (`BarList`). Setiap grafik memakai `role="img"` dengan `aria-label` ringkasan teks. Bulan yang disembunyikan (kurang dari 5 pasien berbeda) digambar sebagai lingkaran putus-putus berlabel "(disembunyikan)", bukan titik nol. Data contoh untuk demo: `pnpm db:seed:dummy`.
+
+### 6.8 Batasan yang diketahui
+* **[Verifikasi]** Notifikasi yang hilang sendiri (WCAG 2.2.1), keterbacaan pilihan tanpa isian biru, dan pembeda status tanpa warna belum diuji dengan pengguna.
+* Seluruh gaya ini belum diuji dengan pembaca layar maupun pembesaran teks 200% pada semua layar; jangan klaim kepatuhan WCAG 2.2 AA.

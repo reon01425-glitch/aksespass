@@ -27,6 +27,7 @@ Format tiap layar: Tampilan, Aksi Utama, Aksi Alternatif atau Error, Navigasi, U
 - Bahasa sederhana dengan ikon pendamping teks.
 - Tombol kembali dan batal selalu tersedia; tindakan merusak (cabut, hapus) selalu meminta konfirmasi.
 - Semua pembukaan data tercatat di audit log.
+- **Tampilan seragam [Diubah 16 Okt 2026]:** semua layar pasien, pendamping, petugas, dan admin memakai header putih yang menempel di atas (logo, label AKSESPASS, judul, ikon notifikasi dan akun), satu kartu teal utama di beranda (`HeroCard`), navigasi bawah melayang per peran, daftar kartu dua kolom (kartu ganjil terakhir memanjang penuh), dan kode OTP enam kotak. Aturan lengkap di `design.md` §6; teks di bawah menyebut hanya perbedaan per layar.
 
 ---
 
@@ -58,11 +59,11 @@ Pasien memulai dari splash screen, menyesuaikan aksesibilitas, mendaftar, lalu m
   - Penyesuaian alur: akun baru mendarat di [P4] dengan ajakan utama "Isi Paspor" (bukan langsung melompat ke [P5]), agar tombol [Keluar] tetap terjangkau dan pengguna memiliki orientasi beranda yang jelas.
 
 ### [P4] Beranda Pasien
-- **Tampilan:** kartu status paspor (lengkap atau belum), tombol utama besar [Mulai Kunjungan] (jika paspor lengkap) atau [Isi Paspor] (jika belum diisi), menu: Paspor Saya, Kartu Cetak, Kontrol Akses, Pendamping, Akun. Jika ada draft, banner [Lanjutkan draft paspor].
+- **Tampilan:** kartu sapaan, notifikasi status paspor (lengkap atau belum), kartu teal utama [Mulai Kunjungan] (jika paspor lengkap) atau [Lengkapi Paspor Layanan] (jika belum diisi) dengan baris "Aplikasi ini tidak meminta diagnosis medis Anda.", kartu Konfirmasi Kunjungan bila ada permintaan menunggu, dan menu dua kolom: Paspor Saya, Pendamping, Kontrol Akses, Riwayat Akses, Kartu Cetak, KomunikaCare, Tindak Lanjut, Akun, lalu [Keluar]. Navigasi bawah: Beranda, Paspor, QR Akses, Pendamping, Riwayat. Jika ada draft, banner [Lanjutkan draft paspor].
 - **Aksi Utama:** pasien memilih menu atau [Mulai Kunjungan] / [Isi Paspor].
 - **Navigasi:** [Mulai Kunjungan] → [P9]; [Isi Paspor] / Paspor Saya → [P5]; Kartu Cetak → [P7]; Kontrol Akses → [P18]; Pendamping → [P21]; Akun → [P22].
 - **US:** P-02, P-03 (pintu masuk).
-- **Catatan implementasi (Prompt 9):** Menu "Kartu Cetak" dan "Akun" belum ditampilkan hari ini (di luar cakupan Prompt 9). Tombol [Keluar] tersedia di bagian bawah menu.
+- **Catatan implementasi (diperbarui 16 Okt 2026):** menu Kartu Cetak [P7], KomunikaCare [P15], Tindak Lanjut [P17], dan Akun [P22] kini tersedia. Tombol [Keluar] ada di kartu tersendiri di bawah menu.
 
 ### [P5] Editor MyCare Passport
 Satu kelompok kebutuhan per layar, dengan indikator langkah (misalnya 2 dari 5).
@@ -244,7 +245,7 @@ Pendamping bertindak atas nama pasien hanya setelah pasien menyetujui tautan, da
 - **US:** D-01.
 
 ### [D4] Beranda Pendamping
-- **Tampilan:** daftar kartu pasien yang didampingi dengan status paspor dan jumlah konfirmasi CareProof menunggu, tombol [Tautkan Pasien]. Bila ada tautan yang berakhir: banner "Satu tautan telah berakhir." (tanpa identitas pasien).
+- **Tampilan:** kartu teal "N Pasien Tertaut Aktif", lalu kartu pasien yang didampingi dua kolom dengan status paspor dan jumlah konfirmasi CareProof menunggu, tombol [Tautkan Pasien]. Navigasi bawah: Beranda, Tautkan, Keluar. Bila ada tautan yang berakhir: banner "Satu tautan telah berakhir." (tanpa identitas pasien).
 - **Aksi Utama:** pilih kartu pasien untuk mengelola paspor, QR, atau konfirmasi CareProof.
 - **Aksi Alternatif:** jika tautan dicabut pasien, kartu pasien langsung hilang dan akses DB seketika 0 baris.
 - **Navigasi:** Paspor → [D5]; QR → [D6]; Konfirmasi CareProof → [D8].
@@ -386,10 +387,10 @@ Mengelola akun petugas dan menindaklanjuti kebutuhan yang belum terpenuhi, tanpa
 - **US:** A-01.
 
 ### [A3] Beranda Admin
-- **Tampilan:** ringkasan bulan berjalan: jumlah kunjungan ber-AKSESPASS, Accommodation Fulfillment Rate, jumlah kebutuhan belum terpenuhi.
+- **Tampilan:** kartu fasilitas, kartu teal [Dashboard Fasilitas], ringkasan bulan berjalan sebagai kartu teal dua kolom (jumlah kunjungan ber-AKSESPASS, Accommodation Fulfillment Rate, jumlah kebutuhan belum terpenuhi), dan menu kartu. Navigasi bawah: Beranda, Petugas, Dashboard, Kebutuhan, Tindak Lanjut.
 - **Navigasi:** Akun Petugas → [A4]; Dashboard → [A6]; Belum Terpenuhi → [A7].
 - **US:** A-02.
-- **Cakupan (diperbarui 15 Okt 2026):** ringkasan bulan berjalan (3 angka di atas, dari `get_facility_dashboard`; AFR tertulis "Disembunyikan" bila membuka kelompok kecil), menu Akun Petugas [A4], Dashboard [A6], Belum Terpenuhi [A7], Tindak Lanjut [A8], dan [Keluar].
+- **Cakupan (diperbarui 15 Okt 2026):** ringkasan bulan berjalan (3 angka di atas, dari `get_facility_dashboard`; AFR tertulis "Disembunyikan" bila membuka kelompok kecil), menu Akun Petugas [A4], Belum Terpenuhi [A7], Tindak Lanjut [A8], dan [Keluar]; Dashboard [A6] dibuka dari kartu teal di atas (diperbarui 16 Okt 2026).
 
 ### [A4] Kelola Akun Petugas
 - **Tampilan:** daftar petugas fasilitas ini (semua dibuat oleh admin; petugas tidak mendaftar mandiri): nama, peran, unit, nomor HP disamarkan, status "Menunggu aktivasi", "Aktif", atau "Nonaktif" (ikon + teks). [Tambah Petugas].
@@ -413,7 +414,7 @@ Mengelola akun petugas dan menindaklanjuti kebutuhan yang belum terpenuhi, tanpa
 - **Navigasi:** → [A7] untuk rincian kebutuhan belum terpenuhi.
 - **US:** A-02.
 - **Privasi sel kecil (diperbarui 15 Okt 2026):** AFR tertulis "Disembunyikan" bila kelompok "terpenuhi" atau komplemennya berasal dari kurang dari 5 pasien berbeda, karena AFR akan membuka sel yang disembunyikan. Pada rincian status, bila tepat satu sel disembunyikan, sel terlihat terkecil ikut disembunyikan agar tidak dapat dihitung dari total. Judul layar dipersingkat menjadi "Dashboard Aksesibilitas".
-- **Cakupan Bagian 8 (13 Okt 2026) [Diputuskan untuk rilis ini]:** filter periode terbatas pada bulan berjalan dan 2 bulan sebelumnya (tanpa filter kategori terpisah — rincian kategori sudah tampil sebagai satu tabel). AFR besar (angka + teks), tren bulanan sebagai tabel ber-caption dengan batang CSS (`aria-hidden`, angka selalu tertulis), rincian status, rincian penjawab (pasien/pendamping/di tempat, dengan keterangan tetap "Jawaban pendamping dan di tempat ditandai terpisah"), dan rincian per kategori. Sel di bawah ambang K-10 tertulis "Disembunyikan (kurang dari 5 pasien)"; periode tanpa kunjungan tertulis "Belum ada data kunjungan". Tombol [Lihat Kebutuhan Belum Terpenuhi] → [A7] (ditambahkan 15 Okt 2026).
+- **Cakupan Bagian 8 (13 Okt 2026) [Diputuskan untuk rilis ini]:** filter periode terbatas pada bulan berjalan dan 2 bulan sebelumnya (tanpa filter kategori terpisah — rincian kategori sudah tampil sebagai satu tabel). AFR besar (angka + teks), tren kunjungan dan tren AFR sebagai grafik garis SVG (`role="img"` dengan `aria-label` ringkasan angka; bulan yang disembunyikan digambar sebagai lingkaran putus-putus berlabel "(disembunyikan)" **[Diubah 16 Okt 2026]**), lalu status konfirmasi, penjawab (pasien/pendamping/di tempat, dengan keterangan tetap "Jawaban pendamping dan di tempat ditandai terpisah"), dan kebutuhan belum terpenuhi per kategori sebagai batang horizontal dengan angka tertulis. Sel di bawah ambang K-10 tertulis "Disembunyikan (kurang dari 5 pasien)"; periode tanpa kunjungan tertulis "Belum ada data kunjungan". Tombol [Lihat Kebutuhan Belum Terpenuhi] → [A7] (ditambahkan 15 Okt 2026).
 
 ### [A7] Kebutuhan Belum Terpenuhi
 - **Tampilan:** enam kategori kebutuhan, terurut dari yang paling sering belum terpenuhi, dengan jumlah kunjungan dan tren dibanding bulan lalu (naik/turun/sama; "belum tersedia" bila salah satu bulan disembunyikan). Filter periode: bulan berjalan dan 2 bulan sebelumnya. Agregat anonim; kelompok kurang dari 5 pasien disembunyikan (memakai fungsi dashboard yang sama).

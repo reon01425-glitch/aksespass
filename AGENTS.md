@@ -59,7 +59,8 @@ Ikuti struktur repository yang benar-benar ada. Struktur `src/app`, `src/compone
 - Target sentuh minimum 48 × 48 px sesuai spesifikasi proyek.
 - Input form minimal 16 px.
 - Fokus keyboard harus terlihat dan `prefers-reduced-motion` harus dihormati.
-- Status tidak boleh disampaikan hanya dengan warna. Gunakan ikon, teks, dan warna melalui pola komponen status yang konsisten.
+- Status tidak boleh disampaikan hanya dengan warna. Gunakan teks (judul yang bermakna), ikon bila ada, dan warna melalui pola komponen status yang konsisten. Sejak 16 Okt 2026 `StatusBanner` memakai palet Cyan tanpa ikon dengan makna di judul teks (`design.md` §2B); jangan menambah warna status inline.
+- Ikuti gaya tampilan seragam semua peran di `design.md` §6 dan pakai komponen bersama (`PageShell`/`AppHeader`, navigasi bawah per peran, `HeroCard`, `OtpCodeInput`) alih-alih membuat header, navigasi, atau kotak OTP sendiri. Jangan menambah ikon dekoratif.
 - Gunakan token warna dari `design.md`; jangan memilih warna berdasarkan perkiraan kontras.
 - Pertahankan font weight dan skala tipografi sesuai `design.md`.
 - Jangan menyatakan WCAG 2.2 AA telah terpenuhi hanya karena token atau komponen sudah dibuat. Lakukan pengujian otomatis dan manual yang relevan.

@@ -389,6 +389,7 @@ Nama kejadian baru di atas **[Usulan]**; maknanya mengikuti `docs/user-flows.md`
 - Semua ukuran berbasis `rem`; uji pada text scaling 200% dan lebar 320 px.
 - Komponen status (`StatusBanner`) satu-satunya cara menampilkan status, agar tampilan selalu konsisten (sejak 16 Okt 2026: palet Cyan, tanpa ikon, makna lewat judul teks; lihat `design.md` §2B).
 - Fokus keyboard terlihat; hormati `prefers-reduced-motion`.
+- Tampilan lintas peran memakai komponen bersama di `src/components/` agar tidak berbeda per layar: `PageShell` dengan `AppHeader` (menempel di atas) dan navigasi bawah per peran, `HeroCard`, `OtpCodeInput`, `StatusBanner`. Aturan visualnya di `design.md` §6 (16 Okt 2026); perubahan ini hanya lapisan tampilan dan tidak mengubah batas akses atau alur data.
 - Input 16 px untuk mencegah auto-zoom iOS Safari.
 - Pesan galat memberi langkah lanjut (contoh: "Minta pasien memperbarui ConsentQR di aplikasinya.").
 
