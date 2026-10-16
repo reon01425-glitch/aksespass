@@ -1,64 +1,49 @@
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
-import {
-  COOKIE_NAME,
-  SECURE_COOKIE_NAME,
-} from "@/lib/auth/constants";
-import { verifySessionCookie } from "@/lib/auth/session";
-import { LogoutButton, PageShell } from "@/components";
-import { BookOpen } from "lucide-react";
+import Link from "next/link";
+import { ClipboardCheck } from "lucide-react";
+import { HeroCard, PageShell, StatusBanner } from "@/components";
+import { CURATION_NOTICES, listRuleLines } from "@/lib/curation";
+import { requireCuratorSession } from "@/lib/curation/page";
+import { RuleLibraryClient } from "./rule-library-client";
 
 export const instant = false;
 
 export const metadata: Metadata = {
-  title: "Kurator — AKSESPASS",
-  description: "Layanan kurator pustaka aturan dan akomodasi AKSESPASS.",
+  title: "Pustaka Aturan — AKSESPASS",
+  description: "Pustaka aturan saran tindakan untuk petugas, dikurasi komunitas.",
 };
 
-export default async function KuratorPage() {
-  const cookieStore = await cookies();
-  const sessionCookie =
-    cookieStore.get(SECURE_COOKIE_NAME)?.value ||
-    cookieStore.get(COOKIE_NAME)?.value;
-
-  if (!sessionCookie) {
-    redirect("/masuk/petugas");
-  }
-
-  const session = await verifySessionCookie(sessionCookie);
-  if (!session || session.role !== "curator") {
-    redirect("/masuk/petugas");
-  }
+/** K3: pustaka aturan, dikelompokkan menurut kategori kebutuhan. */
+export default async function KuratorPage({ searchParams }: { searchParams: Promise<{ info?: string }> }) {
+  const session = await requireCuratorSession();
+  const lines = await listRuleLines(session);
+  const { info } = await searchParams;
+  const notice = info ? CURATION_NOTICES[info] : undefined;
+  const waiting = lines.filter((l) => l.open?.status === "in_review" && !l.open.isMine && !l.open.iVoted).length;
 
   return (
-    <PageShell title="Kurator Aturan">
-      <div className="flex flex-col gap-6">
-        <div className="p-4 rounded-xl border border-cyan-800 bg-surface flex items-center gap-3">
-          <BookOpen aria-hidden="true" className="w-6 h-6 text-cyan-800 shrink-0" />
-          <div className="flex flex-col">
-            <span className="text-xs text-secondary">Peran Pengguna:</span>
-            <span className="text-base font-bold text-main">Kurator Aturan</span>
-          </div>
-        </div>
+    <PageShell title="Pustaka Aturan" curatorNav>
+      <div className="flex flex-col gap-5">
+        {notice && <StatusBanner variant="success" title={notice.title} message={notice.message} />}
+        <HeroCard
+          Icon={ClipboardCheck}
+          title={`${waiting} Aturan Menunggu Tinjauan Anda`}
+          description={
+            waiting > 0
+              ? "Buka untuk menyetujui atau meminta revisi."
+              : "Tidak ada aturan yang menunggu suara Anda."
+          }
+          href="/kurator/tinjau"
+        />
 
-        <section aria-labelledby="heading-kurator-info" className="flex flex-col gap-3">
-          <h2 id="heading-kurator-info" className="text-base font-bold text-main border-b border-cyan-100 pb-2">
-            Status Prototipe
-          </h2>
-          <div className="p-4 rounded-xl border border-dashed border-cyan-400 bg-surface flex flex-col gap-2">
-            <p className="text-sm font-bold text-main">
-              Fitur kurator belum tersedia di prototipe.
-            </p>
-            <p className="text-xs text-secondary">
-              Pustaka katalog kebutuhan dan aturan akomodasi saat ini dimuat secara statis dari skema awal.
-            </p>
-          </div>
-        </section>
+        <Link
+          href="/kurator/editor/baru"
+          className="flex min-h-12 items-center justify-center rounded-2xl border-2 border-cyan-800 bg-white px-4 font-bold text-cyan-900 focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-900"
+        >
+          Aturan Baru
+        </Link>
 
-        <div className="pt-4 border-t border-cyan-100">
-          <LogoutButton redirectTo="/masuk/petugas" className="w-full" />
-        </div>
+        <RuleLibraryClient lines={lines} />
       </div>
     </PageShell>
   );

@@ -33,6 +33,10 @@ export const AUDIT_EVENT_TYPES = [
   "recovery_requested",
   "recovery_cancelled",
   "recovery_completed",
+  "rule_draft_saved",
+  "rule_submitted",
+  "rule_reviewed",
+  "rule_published",
 ] as const;
 
 export type AuditEventType = (typeof AUDIT_EVENT_TYPES)[number];

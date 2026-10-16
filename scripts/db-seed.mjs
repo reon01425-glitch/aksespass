@@ -82,6 +82,8 @@ const IDS = {
     adminA: "22222222-2222-4222-8222-222222222401",
     adminB: "22222222-2222-4222-8222-222222222402",
     curator1: "22222222-2222-4222-8222-222222222501",
+    curator2: "22222222-2222-4222-8222-222222222502",
+    curator3: "22222222-2222-4222-8222-222222222503",
   },
   auditSubjects: {
     p1: "aaaa1111-1111-4111-8111-111111111101",
@@ -99,6 +101,8 @@ const IDS = {
     adminA: "aaaa1111-1111-4111-8111-111111111401",
     adminB: "aaaa1111-1111-4111-8111-111111111402",
     curator1: "aaaa1111-1111-4111-8111-111111111501",
+    curator2: "aaaa1111-1111-4111-8111-111111111502",
+    curator3: "aaaa1111-1111-4111-8111-111111111503",
   },
   profiles: {
     p1: "33333333-3333-4333-8333-333333333101",
@@ -304,6 +308,26 @@ async function main() {
         "active",
         false,
         IDS.auditSubjects.curator1,
+      ],
+      [
+        IDS.users.curator2,
+        "curator",
+        "+620000000032",
+        "kurator2@contoh.lokal",
+        "Kurator Contoh 2",
+        "active",
+        false,
+        IDS.auditSubjects.curator2,
+      ],
+      [
+        IDS.users.curator3,
+        "curator",
+        "+620000000033",
+        "kurator3@contoh.lokal",
+        "Kurator Contoh 3",
+        "active",
+        false,
+        IDS.auditSubjects.curator3,
       ],
     ];
 
@@ -700,6 +724,47 @@ async function main() {
         r
       );
     }
+
+    // 6b. Kurasi aturan (K3-K6): draf versi 2 masuk garis versi aturan terbit antrean visual
+    // (id ...103 v1 bila ada), ditulis Kurator 1; satu aturan baru dalam tinjauan dengan satu suara setuju.
+    await client.query(
+      `
+      UPDATE accommodation_rules SET created_by = $1, author_name = 'Kurator Contoh 1', change_note = 'Usulan: sinkronkan layar nomor antrean.'
+      WHERE id = '66666666-6666-4666-8666-666666666113';
+      `,
+      [IDS.users.curator1]
+    );
+    await client.query(
+      `
+      UPDATE accommodation_rules d SET rule_key = p.rule_key
+      FROM accommodation_rules p
+      WHERE d.id = '66666666-6666-4666-8666-666666666113'
+        AND p.status = 'published' AND p.trigger_need_code = d.trigger_need_code
+        AND p.version < d.version;
+      `
+    );
+    await client.query(
+      `
+      INSERT INTO accommodation_rules (
+        id, trigger_need_code, action_text, icon_name, rationale, version, status,
+        created_by, author_name, change_note, submitted_at, review_round, created_at, updated_at
+      ) VALUES (
+        '66666666-6666-4666-8666-666666666114', 'lingkungan_tenang',
+        'Contoh aturan dalam tinjauan: tawarkan ruang tunggu terpisah bila area tunggu ramai.',
+        'Users', 'Usulan komunitas autistik untuk mengurangi beban sensorik di ruang tunggu.',
+        1, 'in_review', $1, 'Kurator Contoh 1', 'Aturan baru dari masukan komunitas.',
+        '2026-10-15T09:00:00+07:00', 1, '2026-10-15T08:30:00+07:00', '2026-10-15T09:00:00+07:00'
+      );
+      `,
+      [IDS.users.curator1]
+    );
+    await client.query(
+      `
+      INSERT INTO rule_reviews (rule_id, round, reviewer_id, reviewer_name, decision, note, created_at)
+      VALUES ('66666666-6666-4666-8666-666666666114', 1, $1, 'Kurator Contoh 2', 'approve', '', '2026-10-15T10:00:00+07:00');
+      `,
+      [IDS.users.curator2]
+    );
 
     // 7. Companions (1 active link: Pendamping Contoh 1 -> Pasien Contoh 4)
     await client.query(

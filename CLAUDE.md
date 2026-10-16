@@ -67,7 +67,7 @@ Kode bertanda hubung (`P-05`) = user story. Kode tanpa tanda hubung (`P16`, `T4b
 ### UI dan aksesibilitas
 - Ikuti `design.md` untuk token warna, Atkinson Hyperlegible Next, skala tipografi, target sentuh 48 × 48 px, input minimal 16 px, focus ring, reduced motion, viewport 320 px, dan pembesaran teks 200%.
 - Status disampaikan lewat `StatusBanner` dengan judul teks yang bermakna (palet Cyan tanpa ikon sejak 16 Okt 2026, `design.md` §2B); jangan hanya mengandalkan warna dan jangan menambah warna status inline.
-- Gunakan komponen bersama untuk pola berulang, terutama banner status. Halaman baru dibungkus `PageShell` (otomatis memakai `AppHeader`) dengan salah satu `patientNav`, `companionNav`, `petugasNav`, atau `adminNav` bila itu layar awal peran; kartu teal utama beranda memakai `HeroCard`; kode OTP memakai `OtpCodeInput`.
+- Gunakan komponen bersama untuk pola berulang, terutama banner status. Halaman baru dibungkus `PageShell` (otomatis memakai `AppHeader`) dengan salah satu `patientNav`, `companionNav`, `petugasNav`, `adminNav`, atau `curatorNav` bila itu layar awal peran; kartu teal utama beranda memakai `HeroCard`; kode OTP memakai `OtpCodeInput`.
 - Ikuti gaya seragam di `design.md` §6: kartu putih bergaris `border-cyan-800`, daftar dua kolom dengan kartu ganjil terakhir memanjang (`[&>*:last-child:nth-child(odd)]:col-span-2`), tanpa ikon dekoratif, pilihan terpilih = border tebal (bukan isian biru). Jangan menaruh `legend` sebagai anak langsung grid.
 - Lapisan CSS global (`globals.css`) tidak berlapis: aturan elemen `p`, `h1`–`h3` mengalahkan utilitas Tailwind seperti `text-sm`; gunakan akhiran `!` (mis. `text-xl!`) bila perlu menimpa.
 - Jangan menyatakan WCAG 2.2 AA terverifikasi tanpa pengujian yang mendukung klaim tersebut.

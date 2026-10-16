@@ -445,35 +445,36 @@ Kurator adalah perwakilan komunitas disabilitas dan tenaga kesehatan yang menyus
 - **Navigasi:** berhasil → [K3].
 - **US:** K-01.
 
-### [K3] Pustaka Aturan
-- **Tampilan:** aturan dikelompokkan menurut profil kebutuhan (Tuli, autistik, low vision atau tunanetra, mobilitas). Tiap aturan menampilkan status (Draft, Dalam Tinjauan, Terbit) dan nomor versi.
-- **Aksi Utama:** buka aturan, atau [Aturan Baru].
-- **Navigasi:** baru atau ubah → [K4]; Dalam Tinjauan → [K5]; riwayat → [K6].
+### [K3] Pustaka Aturan **[Dibangun, 16 Okt 2026]**
+- **Tampilan:** `/kurator`. Kartu teal "N Aturan Menunggu Tinjauan Anda" (menghitung aturan dalam tinjauan yang bukan tulisan sendiri dan belum Anda beri suara), tombol [Aturan Baru], lalu aturan dikelompokkan menurut kategori kebutuhan dalam kartu dua kolom (kartu ganjil memanjang). Tiap kartu: kebutuhan, "Terbit, versi N" atau "Belum terbit", cuplikan saran terbit, dan baris "Draft versi N" atau "Versi N dalam tinjauan, X dari 2 setuju". Navigasi bawah: Pustaka, Tinjau, Keluar.
+- **Aksi Utama:** buka kartu aturan.
+- **Navigasi:** kartu → [K6] riwayat aturan; [Aturan Baru] → [K4]; kartu teal → [K5] daftar tinjauan.
 - **US:** K-01.
 
-### [K4] Editor Aturan
-- **Tampilan:** formulir: profil kebutuhan pemicu, saran tindakan untuk petugas (teks pendek dan ikon), sumber atau alasan, catatan perubahan.
-- **Aksi Utama:** susun aturan lalu [Ajukan Tinjauan].
-- **Simpan Draft:** perubahan tersimpan otomatis sebagai draft. Draft tidak memengaruhi saran yang dilihat petugas sampai disetujui.
-- **Aksi Alternatif:** [Buang Draft] meminta konfirmasi.
-- **Navigasi:** setelah diajukan → [K5].
+### [K4] Editor Aturan **[Dibangun, 16 Okt 2026]**
+- **Tampilan:** `/kurator/editor/baru` dan `/kurator/editor/[id]`. Kebutuhan pemicu (daftar pilihan; terkunci pada versi lanjutan), saran tindakan (maks 240 karakter), ikon (12 pilihan yang dikenali tampilan petugas, terpilih = border tebal), sumber atau alasan (maks 400), catatan perubahan (maks 280, wajib untuk versi lanjutan), dan pratinjau "seperti dilihat petugas". Bila ada permintaan revisi dari peninjau, ditampilkan di atas.
+- **Aksi Utama:** [Simpan Draft]; [Ajukan Tinjauan] (menyimpan lalu mengajukan). Draft tidak memengaruhi saran yang dilihat petugas sampai terbit.
+- **Aksi Alternatif:** [Buang Draft] membuka konfirmasi "Ya, Buang". Hanya penulis yang dapat mengubah atau membuang drafnya. Aturan dalam tinjauan tidak dapat diubah.
+- **Versi:** mengubah aturan terbit = [Buat Versi Baru] di [K6]; isinya disalin dari versi terbit sebagai draft versi N+1. Satu draft atau tinjauan terbuka per aturan.
+- **Navigasi:** setelah diajukan → [K5] detail.
 - **US:** K-01.
 
-### [K5] Tinjau dan Setujui
-- **Tampilan:** isi aturan, komentar komunitas dan tenaga kesehatan, status persetujuan tiap peninjau.
-- **Aksi Utama:** setelah peninjau menyetujui, [Setujui dan Terbitkan] dengan nomor versi, tanggal, dan pengesah. Aturan langsung dipakai Smart Accommodation Engine.
-- **Aksi Alternatif:** [Minta Revisi] → [K4] dengan komentar. Versi lama tetap dipakai sampai versi baru terbit.
-- **Navigasi:** terbit → [K3]; revisi → [K4].
+### [K5] Tinjau dan Setujui **[Dibangun, 16 Okt 2026]**
+- **Tampilan:** `/kurator/tinjau` (daftar) dan `/kurator/tinjau/[id]`. Detail: kartu teal (kebutuhan, versi, status, "X dari 2 persetujuan", penulis), isi aturan dengan pratinjau, catatan perubahan, dan suara peninjau putaran ini (nama, setuju atau minta revisi, catatan, waktu).
+- **Aturan terbit [Diputuskan, 16 Okt 2026]:** butuh **2 peninjau kurator berbeda, keduanya bukan penulis**, yang menyetujui putaran peninjauan saat ini. Penulis tidak dapat meninjau aturannya sendiri. Satu suara [Minta revisi] (alasan wajib, maks 280) mengembalikan aturan ke draft penulis dan putaran berikutnya mulai dari nol. Setelah terbit, versi lama berstatus "Digantikan" dan pengesah (nama kedua peninjau) tercatat. Aturan ini ditegakkan oleh trigger database, bukan hanya aplikasi.
+- **Aksi Utama:** pilih Setuju atau Minta revisi, lalu [Kirim Suara].
+- **Aksi Alternatif:** penulis dan kurator yang sudah memberi suara hanya melihat keterangan; aturan yang tidak dalam tinjauan menampilkan tautan ke riwayat. Komentar komunitas terpisah **tidak dibuat** (hanya catatan alasan revisi).
+- **Navigasi:** terbit → [K3]; revisi diminta → daftar tinjauan; suara pertama → tetap di layar.
 - **US:** K-01.
 
-### [K6] Riwayat Perubahan
-- **Tampilan:** daftar versi dengan tanggal, pengesah, ringkasan perubahan; perbandingan antarversi.
+### [K6] Riwayat Perubahan **[Dibangun sebagian, 16 Okt 2026]**
+- **Tampilan:** `/kurator/riwayat/[ruleKey]`. Kartu teal (kebutuhan, jumlah versi, versi terbit), tindakan sesuai keadaan ([Lanjutkan Draft], [Buka Tinjauan], atau [Buat Versi Baru]), lalu daftar versi terbaru di atas: status, penulis, waktu terbit, pengesah, pratinjau saran, catatan perubahan, permintaan revisi, dan suara peninjau.
 - **Aksi Utama:** memeriksa jejak versi.
-- **Aksi Alternatif:** [Pulihkan Versi Ini] setelah konfirmasi (dicatat sebagai versi baru).
+- **Belum dibuat:** perbandingan antarversi dan [Pulihkan Versi Ini] (cakupan "inti" dipilih 16 Okt 2026).
 - **Navigasi:** → [K3].
 - **US:** K-02.
 
-> Di prototipe, `architecture.md` §2 dan §16 menetapkan K3 baca-saja dengan aturan bawaan; K4–K6 masuk roadmap.
+> K3–K6 dibangun 16 Okt 2026 (migrasi 024). Rencana awal `architecture.md` §2 dan §16 (K3 baca-saja, K4–K6 roadmap) sudah dilampaui; K1 dan K2 memakai halaman masuk petugas.
 
 ---
 
