@@ -62,7 +62,7 @@ Rincian per layar: `docs/user-flows.md`.
 
 ## Rencana Validasi dan Metrik Dampak
 
-Pengujian teknis: 142 tes fungsional otomatis (Playwright) menjalankan semua peran, baik alur sah maupun yang melanggar aturan (lihat `docs/testing-e2e.md`); ini bukan pengganti uji dengan pengguna. Prototipe diuji dengan pengguna dari tiap profil (Tuli, autistik, low vision, mobilitas) dan petugas Puskesmas. Metrik pilot yang diusulkan (**target, bukan hasil**): Accommodation Fulfillment Rate, waktu petugas memahami kebutuhan pasien, skor kegunaan (SUS) pasien dan petugas, serta persentase kebutuhan belum terpenuhi yang berhasil ditindaklanjuti.
+Pengujian teknis: 143 tes fungsional otomatis (Playwright) menjalankan semua peran, baik alur sah maupun yang melanggar aturan (lihat `docs/testing-e2e.md`); ini bukan pengganti uji dengan pengguna. Prototipe diuji dengan pengguna dari tiap profil (Tuli, autistik, low vision, mobilitas) dan petugas Puskesmas. Metrik pilot yang diusulkan (**target, bukan hasil**): Accommodation Fulfillment Rate, waktu petugas memahami kebutuhan pasien, skor kegunaan (SUS) pasien dan petugas, serta persentase kebutuhan belum terpenuhi yang berhasil ditindaklanjuti.
 
 ## Tech Stack di Proposal (sebagian sudah digantikan)
 

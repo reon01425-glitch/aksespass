@@ -119,7 +119,7 @@ const IDS = {
 };
 
 async function main() {
-  const { connectionString, dbName } = resolveAdminDatabaseUrl();
+  const { connectionString, dbName } = resolveAdminDatabaseUrl({ allowRemote: true });
   const client = new pg.Client({ connectionString });
   await client.connect();
 

@@ -671,16 +671,17 @@ export function PetugasPindaiClient({
             </div>
 
             <div
-              id="qr-reader-container"
               className={`w-full overflow-hidden rounded-2xl border border-dashed border-cyan-800 bg-white ${
-                isCameraActive ? "min-h-64" : "min-h-16 flex items-center justify-center"
+                isCameraActive ? "min-h-64" : "min-h-16"
               }`}
             >
               {!isCameraActive && (
-                <p className="text-sm text-secondary p-4 text-center">
+                <p className="w-full text-sm text-secondary p-4 text-center">
                   Kamera tidak menyala otomatis. Ketuk tombol di bawah untuk memulai.
                 </p>
               )}
+              {/* Kotak ini sengaja tanpa anak React: html5-qrcode menulis dan mengosongkan isinya sendiri. */}
+              <div id="qr-reader-container" className="w-full" />
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3">

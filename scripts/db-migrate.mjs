@@ -8,7 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const migrationsDir = path.resolve(__dirname, "..", "src", "db", "migrations");
 
 async function main() {
-  const { connectionString, dbName } = resolveAdminDatabaseUrl();
+  const { connectionString, dbName } = resolveAdminDatabaseUrl({ allowRemote: true });
   const client = new pg.Client({ connectionString });
   await client.connect();
 

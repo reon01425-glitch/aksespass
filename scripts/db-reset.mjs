@@ -23,7 +23,12 @@ function loadEnvLocal() {
   }
 }
 
-export function resolveAdminDatabaseUrl() {
+/**
+ * allowRemote hanya dipakai oleh db:migrate dan db:seed untuk database DEMO di Supabase.
+ * Syaratnya semua terpenuhi: opsi allowRemote, DB_ALLOW_REMOTE_DEMO=yes, dan host *.supabase.com / *.supabase.co.
+ * db:reset TIDAK pernah memakai opsi ini, jadi tetap hanya bisa menyentuh localhost.
+ */
+export function resolveAdminDatabaseUrl({ allowRemote = false } = {}) {
   loadEnvLocal();
   const useTest =
     process.env.DB_TARGET === "test" || process.argv.includes("--test");
@@ -48,6 +53,15 @@ export function resolveAdminDatabaseUrl() {
 
   const host = parsed.hostname;
   const dbName = decodeURIComponent(parsed.pathname.replace(/^\//, ""));
+
+  const remoteDemoOk =
+    allowRemote &&
+    process.env.DB_ALLOW_REMOTE_DEMO === "yes" &&
+    /\.supabase\.(com|co)$/.test(host);
+  if (remoteDemoOk) {
+    console.warn(`[db-safety] PERINGATAN: memakai database DEMO jarak jauh (${host}, ${dbName}). Jangan arahkan ke data nyata.`);
+    return { connectionString: rawUrl, dbName, host };
+  }
 
   if (host !== "localhost" && host !== "127.0.0.1") {
     console.error(
