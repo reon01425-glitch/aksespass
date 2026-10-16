@@ -14,16 +14,31 @@ export function getAppOrigin(): string {
 export function getAllowedOrigins(): string[] {
   const primary = getAppOrigin();
   const rawList = process.env.APP_ORIGINS;
-  if (!rawList) {
-    return [primary];
-  }
   const origins = rawList
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
+    ? rawList
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : [primary];
+
   if (!origins.includes(primary)) {
     origins.unshift(primary);
   }
+
+  if (process.env.VERCEL_URL) {
+    const vercelOrigin = `https://${process.env.VERCEL_URL}`;
+    if (!origins.includes(vercelOrigin)) {
+      origins.push(vercelOrigin);
+    }
+  }
+
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+    const prodOrigin = `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+    if (!origins.includes(prodOrigin)) {
+      origins.push(prodOrigin);
+    }
+  }
+
   return origins;
 }
 
