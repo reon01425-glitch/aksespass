@@ -154,6 +154,7 @@ export async function requestOtp(
     count: 1,
   });
 
+  // BARU
   if (mode === "dev-display") {
     return {
       success: true,
@@ -162,10 +163,13 @@ export async function requestOtp(
     };
   }
 
-  return {
-    success: true,
-    message: "Kode verifikasi telah dikirim.",
-  };
+  if (mode === "fonnte") {
+    const { sendOtpFonnte } = await import("./providers/fonnte");
+    await sendOtpFonnte(phone, code);
+    return { success: true, message: "Kode verifikasi telah dikirim via WhatsApp." };
+  }
+
+  throw new Error(`OTP_MODE tidak dikenali: ${mode}`);
 }
 
 /**
