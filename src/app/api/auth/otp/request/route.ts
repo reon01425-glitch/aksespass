@@ -1,4 +1,8 @@
-import { OtpRateLimitError, requestOtp } from "../../../../../lib/auth";
+import {
+  OtpRateLimitError,
+  requestOtp,
+  WhatsAppDeliveryError,
+} from "../../../../../lib/auth";
 import { jsonResponse, wrapRouteHandler } from "../../../../../lib/http";
 
 export const POST = wrapRouteHandler(async (request: Request) => {
@@ -28,6 +32,16 @@ export const POST = wrapRouteHandler(async (request: Request) => {
   } catch (err) {
     if (err instanceof OtpRateLimitError) {
       return jsonResponse({ error: err.message }, { status: 429 });
+    }
+    if (err instanceof WhatsAppDeliveryError) {
+      return jsonResponse({ error: err.message }, { status: 502 });
+    }
+    if (
+      err instanceof Error &&
+      (err.message.includes("Nomor telepon") ||
+        err.message.includes("Format nomor telepon"))
+    ) {
+      return jsonResponse({ error: err.message }, { status: 400 });
     }
     throw err;
   }

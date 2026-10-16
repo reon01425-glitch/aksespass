@@ -57,7 +57,7 @@ export function resolveAdminDatabaseUrl({ allowRemote = false } = {}) {
   const remoteDemoOk =
     allowRemote &&
     process.env.DB_ALLOW_REMOTE_DEMO === "yes" &&
-    /\.supabase\.(com|co)$/.test(host);
+    /(\.supabase\.(com|co)|\.neon\.tech|\.vercel-storage\.com)$/.test(host);
   if (remoteDemoOk) {
     console.warn(`[db-safety] PERINGATAN: memakai database DEMO jarak jauh (${host}, ${dbName}). Jangan arahkan ke data nyata.`);
     return { connectionString: rawUrl, dbName, host };

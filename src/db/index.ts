@@ -123,12 +123,12 @@ function resolveAppConnectionString(): string {
   ensureEnvLoaded();
   const connectionString =
     process.env.NODE_ENV === "test"
-      ? (process.env.DATABASE_URL_TEST ?? process.env.DATABASE_URL)
-      : process.env.DATABASE_URL;
+      ? (process.env.DATABASE_URL_TEST ?? process.env.DATABASE_URL ?? process.env.POSTGRES_URL)
+      : (process.env.DATABASE_URL ?? process.env.POSTGRES_URL);
 
   if (!connectionString) {
     throw new Error(
-      "DATABASE_URL (atau DATABASE_URL_TEST saat tes) belum diatur di variabel lingkungan."
+      "DATABASE_URL atau POSTGRES_URL belum diatur di variabel lingkungan."
     );
   }
   return connectionString;
@@ -140,9 +140,14 @@ function getInternalPool(): Pool {
     !globalForDb.aksespassPool ||
     globalForDb.aksespassPoolUrl !== connectionString
   ) {
+    const isRemote =
+      connectionString.includes("sslmode=require") ||
+      (!connectionString.includes("localhost") &&
+        !connectionString.includes("127.0.0.1"));
     globalForDb.aksespassPool = new Pool({
       connectionString,
       max: 10,
+      ...(isRemote ? { ssl: { rejectUnauthorized: false } } : {}),
     });
     globalForDb.aksespassPoolUrl = connectionString;
   }

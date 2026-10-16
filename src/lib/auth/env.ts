@@ -2,9 +2,6 @@ import fs from "node:fs";
 import path from "node:path";
 
 function ensureEnvLoaded(): void {
-  if (process.env.SESSION_SECRET && process.env.HASH_PEPPER) {
-    return;
-  }
   const envPath = path.resolve(process.cwd(), ".env.local");
   if (!fs.existsSync(envPath)) {
     return;
@@ -51,6 +48,11 @@ export function getHashPepper(): string {
 export function getOtpMode(): string {
   ensureEnvLoaded();
   return (process.env.OTP_MODE || "").trim();
+}
+
+export function getFonnteToken(): string {
+  ensureEnvLoaded();
+  return (process.env.FONNTE_TOKEN || "").trim();
 }
 
 export function getVercelEnv(): string {

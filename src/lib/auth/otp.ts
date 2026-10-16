@@ -22,6 +22,7 @@ import {
   getOtpMode,
   isProduction,
 } from "./env";
+import { sendWhatsAppOtp } from "./whatsapp";
 import {
   buildSessionCookieHeader,
   type SessionClaims,
@@ -153,6 +154,14 @@ export async function requestOtp(
     event: "otp_requested",
     count: 1,
   });
+
+  if (mode === "whatsapp") {
+    await sendWhatsAppOtp(phone, code);
+    return {
+      success: true,
+      message: "Kode verifikasi telah dikirim ke nomor WhatsApp Anda.",
+    };
+  }
 
   if (mode === "dev-display") {
     return {
