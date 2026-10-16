@@ -25,6 +25,11 @@ BEGIN
 END
 $$;
 
+-- Pemilik baru suatu tabel atau fungsi wajib punya hak CREATE pada schema-nya. Superuser (Postgres lokal)
+-- melewati syarat ini, tetapi peran admin non-superuser (mis. "postgres" di Supabase) tidak.
+-- aksespass_owner NOLOGIN, jadi aplikasi tidak pernah bisa memakai hak ini.
+GRANT CREATE ON SCHEMA public TO aksespass_owner;
+
 -- Alihkan kepemilikan seluruh tabel dan sequence aplikasi ke aksespass_owner
 ALTER TABLE IF EXISTS schema_migrations OWNER TO aksespass_owner;
 ALTER TABLE facilities OWNER TO aksespass_owner;
