@@ -28,7 +28,7 @@ export const POST = wrapRouteHandler(
         linkId
       );
 
-      const body = (await req.json().catch(() => ({}))) as {
+      const body = ((await req.json().catch(() => ({}))) ?? {}) as {
         facilityId?: unknown;
         sharedFields?: unknown;
         duration?: unknown;

@@ -28,7 +28,7 @@ export const POST = wrapRouteHandler(
         linkId
       );
 
-      const body = (await req.json().catch(() => ({}))) as unknown;
+      const body = ((await req.json().catch(() => ({}))) ?? {}) as unknown;
 
       const updated = await saveOwnPassport(sessionRes.session, body, {
         targetPatientUserId: patient.patientUserId,

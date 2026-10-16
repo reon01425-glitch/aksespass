@@ -12,7 +12,7 @@ export const POST = wrapRouteHandler(async (req) => {
     );
   }
 
-  const body = (await req.json().catch(() => ({}))) as { needCodes?: unknown };
+  const body = ((await req.json().catch(() => ({}))) ?? {}) as { needCodes?: unknown };
   if (!Array.isArray(body.needCodes)) {
     return NextResponse.json(
       { ok: false, error: "Parameter needCodes harus berupa array string" },

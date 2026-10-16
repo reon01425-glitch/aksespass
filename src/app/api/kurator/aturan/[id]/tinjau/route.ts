@@ -9,7 +9,7 @@ export const POST = wrapRouteHandler(
     const s = await requireSession(req, { roles: ["curator"] });
     if (!s.ok) return NextResponse.json({ ok: false, error: "Sesi tidak valid" }, { status: 401 });
     const { id } = await context.params;
-    const b = (await req.json().catch(() => ({}))) as { decision?: unknown; note?: unknown };
+    const b = ((await req.json().catch(() => ({}))) ?? {}) as { decision?: unknown; note?: unknown };
     try {
       const r = await reviewRule(s.session, id, { decision: b.decision, note: b.note });
       return NextResponse.json({ ok: true, ...r });

@@ -10,7 +10,7 @@ export const POST = wrapRouteHandler(async (req) => {
     return NextResponse.json({ ok: false, error: "Sesi tidak valid" }, { status: 401 });
   }
 
-  const body = (await req.json().catch(() => ({}))) as {
+  const body = ((await req.json().catch(() => ({}))) ?? {}) as {
     cardCode?: unknown;
     needCodes?: unknown;
     ruleIds?: unknown;

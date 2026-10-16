@@ -12,7 +12,7 @@ export const POST = wrapRouteHandler(async (req) => {
     );
   }
 
-  const body = (await req.json().catch(() => ({}))) as {
+  const body = ((await req.json().catch(() => ({}))) ?? {}) as {
     visitId?: unknown;
     status?: unknown;
     unmetNeedCodes?: unknown;

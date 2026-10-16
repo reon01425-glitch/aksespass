@@ -9,7 +9,7 @@ export const POST = wrapRouteHandler(async (req: Request) => {
   const auth = await requireSession(req, { roles: ["companion"] });
   if (!auth.ok) return NextResponse.json({ ok: false, error: "Sesi tidak valid" }, { status: 401 });
 
-  const body = (await req.json().catch(() => ({}))) as { linkId?: unknown; phone?: unknown; code?: unknown };
+  const body = ((await req.json().catch(() => ({}))) ?? {}) as { linkId?: unknown; phone?: unknown; code?: unknown };
   if (typeof body.linkId !== "string" || typeof body.phone !== "string" || typeof body.code !== "string") {
     return NextResponse.json({ ok: false, error: "Nomor baru dan kode verifikasi wajib diisi." }, { status: 400 });
   }

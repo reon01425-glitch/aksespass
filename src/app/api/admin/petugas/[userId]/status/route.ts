@@ -8,7 +8,7 @@ export const POST = wrapRouteHandler(
     const s = await requireSession(req, { roles: ["facility_admin"] });
     if (!s.ok) return NextResponse.json({ ok: false, error: "Sesi tidak valid" }, { status: 401 });
     const { userId } = await context.params;
-    const b = (await req.json().catch(() => ({}))) as { active?: unknown };
+    const b = ((await req.json().catch(() => ({}))) ?? {}) as { active?: unknown };
     if (typeof b.active !== "boolean") {
       return NextResponse.json({ ok: false, error: "Permintaan tidak valid" }, { status: 400 });
     }

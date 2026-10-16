@@ -8,7 +8,7 @@ export const PATCH = wrapRouteHandler(
     const s = await requireSession(req, { roles: ["facility_admin"] });
     if (!s.ok) return NextResponse.json({ ok: false, error: "Sesi tidak valid" }, { status: 401 });
     const { userId } = await context.params;
-    const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+    const b = ((await req.json().catch(() => ({}))) ?? {}) as Record<string, unknown>;
     try {
       await updateStaff(s.session, { userId, name: b.name, unit: b.unit });
       return NextResponse.json({ ok: true });

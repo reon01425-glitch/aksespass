@@ -8,7 +8,7 @@ export const POST = wrapRouteHandler(async (req: Request) => {
   const auth = await requireSession(req, { roles: ["companion"] });
   if (!auth.ok) return NextResponse.json({ ok: false, error: "Sesi tidak valid" }, { status: 401 });
 
-  const body = (await req.json().catch(() => ({}))) as { phone?: unknown };
+  const body = ((await req.json().catch(() => ({}))) ?? {}) as { phone?: unknown };
   if (typeof body.phone !== "string" || !body.phone.trim()) {
     return NextResponse.json({ ok: false, error: "Nomor telepon wajib diisi." }, { status: 400 });
   }

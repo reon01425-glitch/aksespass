@@ -16,7 +16,7 @@ export const PATCH = wrapRouteHandler(
     const s = await requireSession(req, { roles: ["curator"] });
     if (!s.ok) return NextResponse.json({ ok: false, error: "Sesi tidak valid" }, { status: 401 });
     const { id } = await context.params;
-    const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+    const b = ((await req.json().catch(() => ({}))) ?? {}) as Record<string, unknown>;
     try {
       await saveDraft(s.session, id, b);
       return NextResponse.json({ ok: true });

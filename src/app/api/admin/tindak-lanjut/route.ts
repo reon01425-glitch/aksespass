@@ -6,7 +6,7 @@ import { createFacilityAction, FacilityActionError } from "@/lib/facility-action
 export const POST = wrapRouteHandler(async (req: Request) => {
   const s = await requireSession(req, { roles: ["facility_admin"] });
   if (!s.ok) return NextResponse.json({ ok: false, error: "Sesi tidak valid" }, { status: 401 });
-  const b = (await req.json().catch(() => ({}))) as { category?: unknown };
+  const b = ((await req.json().catch(() => ({}))) ?? {}) as { category?: unknown };
   try {
     const r = await createFacilityAction(s.session, { category: b.category });
     return NextResponse.json({ ok: true, ...r });

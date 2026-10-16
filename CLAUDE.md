@@ -73,7 +73,7 @@ Kode bertanda hubung (`P-05`) = user story. Kode tanpa tanda hubung (`P16`, `T4b
 - Jangan menyatakan WCAG 2.2 AA terverifikasi tanpa pengujian yang mendukung klaim tersebut.
 
 ## Pemeriksaan
-Jalankan skrip yang tersedia di repository untuk lint, typecheck, test, dan build sesuai relevansi. Temukan perintah dari `package.json` atau dokumentasi proyek; jangan mengarang nama skrip. Jika tidak dapat menjalankan suatu pemeriksaan, sebutkan secara eksplisit.
+Jalankan skrip yang tersedia di repository untuk lint, typecheck, test, dan build sesuai relevansi. Tes fungsional Playwright: `pnpm test:e2e` (panduan `docs/testing-e2e.md`). Temukan perintah dari `package.json` atau dokumentasi proyek; jangan mengarang nama skrip. Jika tidak dapat menjalankan suatu pemeriksaan, sebutkan secara eksplisit.
 
 ## Saat menyelesaikan tugas
 Laporkan:

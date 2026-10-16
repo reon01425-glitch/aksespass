@@ -6,7 +6,7 @@ import { createStaff, StaffAdminError } from "@/lib/staff";
 export const POST = wrapRouteHandler(async (req: Request) => {
   const s = await requireSession(req, { roles: ["facility_admin"] });
   if (!s.ok) return NextResponse.json({ ok: false, error: "Sesi tidak valid" }, { status: 401 });
-  const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+  const b = ((await req.json().catch(() => ({}))) ?? {}) as Record<string, unknown>;
   try {
     const r = await createStaff(s.session, { name: b.name, phone: b.phone, unit: b.unit });
     return NextResponse.json({ ok: true, ...r });

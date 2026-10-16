@@ -12,7 +12,7 @@ export const POST = wrapRouteHandler(async (req: Request) => {
     );
   }
 
-  const body = (await req.json().catch(() => ({}))) as { code?: unknown };
+  const body = ((await req.json().catch(() => ({}))) ?? {}) as { code?: unknown };
   if (typeof body.code !== "string" || !body.code.trim()) {
     return NextResponse.json(
       {

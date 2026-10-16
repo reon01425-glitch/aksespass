@@ -94,6 +94,12 @@ export function wrapRouteHandler(
       response.headers.set("Cache-Control", "no-store");
       return response;
     } catch (err) {
+      // Id pada path/body yang bukan UUID memicu galat Postgres 22P02 (invalid_text_representation).
+      // Itu masukan klien yang salah, bukan galat server: jawab 404 generik tanpa membocorkan detail.
+      if (typeof err === "object" && err !== null && (err as { code?: unknown }).code === "22P02") {
+        return jsonResponse({ ok: false, error: "Data tidak ditemukan." }, { status: 404 });
+      }
+
       const serialized = serializeError(err);
       let routePath = "/";
       try {

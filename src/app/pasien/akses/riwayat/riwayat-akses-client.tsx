@@ -92,7 +92,7 @@ function PaginationControls({
   return (
     <nav
       aria-label={label}
-      className="mt-3 flex items-center justify-between gap-3"
+      className="mt-3 flex flex-wrap items-center justify-between gap-3"
     >
       <button
         type="button"

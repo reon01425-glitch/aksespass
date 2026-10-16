@@ -12,7 +12,7 @@ export const POST = wrapRouteHandler(async (req) => {
     );
   }
 
-  const body = (await req.json().catch(() => ({}))) as { visitId?: unknown };
+  const body = ((await req.json().catch(() => ({}))) ?? {}) as { visitId?: unknown };
   if (typeof body.visitId !== "string" || !body.visitId.trim()) {
     return NextResponse.json(
       { ok: false, error: "visitId wajib diisi" },

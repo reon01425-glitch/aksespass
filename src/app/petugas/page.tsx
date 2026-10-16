@@ -116,7 +116,7 @@ export default async function PetugasPage() {
                       {visit.time}
                     </span>
                   </div>
-                  <div className="flex items-center gap-3 text-sm font-bold text-main">
+                  <div className="flex min-w-0 flex-col items-start gap-2 text-sm font-bold text-main">
                     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cyan-100">
                       {visit.statusCode === "unrecorded" && (
                         <FileEdit aria-hidden="true" className="w-5 h-5 text-cyan-800" />
@@ -128,7 +128,7 @@ export default async function PetugasPage() {
                         <CheckCheck aria-hidden="true" className="w-5 h-5 text-cyan-800" />
                       )}
                     </span>
-                    <span className="break-words">{visit.statusText}</span>
+                    <span className="min-w-0 [overflow-wrap:anywhere]">{visit.statusText}</span>
                   </div>
                 </li>
               ))}

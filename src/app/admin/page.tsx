@@ -93,7 +93,7 @@ export default async function AdminPage() {
               </div>
               <div className={STAT}>
                 <span className="text-xs text-white">Accommodation Fulfillment Rate</span>
-                <span className="text-2xl font-bold text-white">
+                <span className={`font-bold text-white break-words ${selected.afrHidden ? "text-base" : "text-2xl"}`}>
                   {selected.afrHidden ? "Disembunyikan" : `${selected.afr ?? 0}%`}
                 </span>
               </div>

@@ -376,13 +376,13 @@ export async function approveCompanionLink(
          SET status = 'active',
              approved_at = $1,
              revoked_at = NULL
-         WHERE id = $2 AND patient_user_id = $3
+         WHERE id = $2 AND patient_user_id = $3 AND status = 'pending'
          RETURNING companion_user_id, patient_subject_ref;`,
         [now.toISOString(), linkId, session.userId]
       );
 
       if (updateRes.rows.length === 0) {
-        throw new CompanionError("Tautan tidak ditemukan.", 404, "NOT_FOUND");
+        throw new CompanionError("Tidak ada permintaan tautan yang menunggu persetujuan.", 404, "NOT_FOUND");
       }
 
       const row = updateRes.rows[0];

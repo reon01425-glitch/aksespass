@@ -38,7 +38,7 @@ export const POST = wrapRouteHandler(async (req: Request) => {
   if (!s.ok) {
     return NextResponse.json({ ok: false, error: "Sesi tidak valid" }, { status: 401 });
   }
-  const b = (await req.json().catch(() => ({}))) as {
+  const b = ((await req.json().catch(() => ({}))) ?? {}) as {
     visitId?: unknown;
     kind?: unknown;
     body?: unknown;

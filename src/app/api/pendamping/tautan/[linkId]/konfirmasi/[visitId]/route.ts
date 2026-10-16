@@ -32,12 +32,15 @@ export const POST = wrapRouteHandler(
         { status: 400 }
       );
     }
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(linkId) || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(visitId)) {
+      return NextResponse.json({ ok: false, error: "Data tidak ditemukan." }, { status: 404 });
+    }
 
     try {
       // Pastikan tautan aktif dan milik pendamping ini
       await getLinkedPatientByLinkId(sessionRes.session, linkId);
 
-      const body = (await req.json().catch(() => ({}))) as {
+      const body = ((await req.json().catch(() => ({}))) ?? {}) as {
         status?: unknown;
         unmetNeedCodes?: unknown;
       };

@@ -20,6 +20,9 @@ export const POST = wrapRouteHandler(
         { status: 400 }
       );
     }
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(linkId)) {
+      return NextResponse.json({ ok: false, error: "Tautan tidak ditemukan." }, { status: 404 });
+    }
 
     try {
       const result = await rejectCompanionLink(sessionRes.session, linkId);
