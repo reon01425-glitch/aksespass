@@ -6,12 +6,14 @@
  * aplikasi tidak pernah disimpan. Data ringkasan kebutuhan ada di
  * localStorage perangkat (dibaca oleh offline.html), bukan di cache ini.
  */
-const CACHE_NAME = "aksespass-shell-v2";
+const CACHE_NAME = "aksespass-shell-v3";
 const SHELL_URLS = [
   "/offline.html",
   "/manifest.webmanifest",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
+  "/logo-aksespass.png",
+  "/logo-ikon.png",
 ];
 
 self.addEventListener("install", (event) => {

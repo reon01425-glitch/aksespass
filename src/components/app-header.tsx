@@ -1,9 +1,10 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowLeft, Bell, ShieldPlus, UserRound } from "lucide-react";
+import { ArrowLeft, Bell, UserRound } from "lucide-react";
 
 /** Tujuan ikon notifikasi dan profil per peran, ditentukan dari awalan alamat halaman. */
 function roleLinks(pathname: string): { bell: string; profile: string } | null {
@@ -46,12 +47,15 @@ export function AppHeader({
             <ArrowLeft aria-hidden="true" className="h-6 w-6" />
           </Link>
         )}
-        <span
+        <Image
+          src="/logo-ikon.png"
+          alt=""
           aria-hidden="true"
-          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-cyan-200 text-cyan-900"
-        >
-          <ShieldPlus className="h-6 w-6" />
-        </span>
+          width={192}
+          height={177}
+          unoptimized
+          className="h-10 w-auto shrink-0"
+        />
         <div className="flex min-w-0 flex-1 flex-col">
           <span className="text-xs font-bold uppercase tracking-wider text-secondary">
             AKSESPASS

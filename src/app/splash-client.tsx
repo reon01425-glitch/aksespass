@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useEffect } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { HeartHandshake, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 /** Lama tampil splash sebelum pindah otomatis (milidetik). Dapat dilewati kapan saja. */
 export const SPLASH_DURATION_MS = 1200;
@@ -36,14 +37,18 @@ export function SplashClient({ destination }: SplashClientProps) {
       className="min-h-dvh bg-page text-main focus:outline-none"
     >
       <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col items-center justify-center gap-6 px-6 text-center">
-        <div
+        <Image
+          src="/logo-aksespass.png"
+          alt=""
           aria-hidden="true"
-          className="flex h-24 w-24 items-center justify-center rounded-3xl bg-cyan-700 text-white"
-        >
-          <HeartHandshake className="h-12 w-12" />
-        </div>
+          width={800}
+          height={178}
+          priority
+          unoptimized
+          className="h-auto w-full max-w-xs"
+        />
 
-        <h1 className="text-main">AKSESPASS</h1>
+        <h1 className="sr-only">AKSESPASS</h1>
 
         <p className="text-base text-main">
           Sampaikan kebutuhan layanan kesehatan Anda, dengan persetujuan tetap
