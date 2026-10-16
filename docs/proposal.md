@@ -45,6 +45,7 @@ Pendekatan: Human-Centered Design yang melibatkan komunitas disabilitas dan tena
    *Dampak:* pengelolaan berbasis data pengalaman pasien; dasar bukti bagi anggaran dan kebijakan; akuntabilitas fasilitas.
 8. **Community-Validated Accommodation Library** — "Aturan yang Disusun Bersama Pemilik Pengalaman". Setiap aturan panduan disusun bersama komunitas disabilitas dan tenaga kesehatan, memiliki versi, tanggal, dan pengesah, serta dapat diperbarui.
    *Dampak:* panduan dapat dipertanggungjawabkan; partisipasi bermakna komunitas; profil kebutuhan baru tanpa mengubah kode.
+   *Status prototipe (16 Okt 2026):* sudah dibangun untuk kurator: pustaka dengan tab Semua, Terbit, dan Draft; editor draft; peninjauan; riwayat versi. Aturan terbit hanya setelah **2 kurator berbeda, selain penulis,** menyetujui, ditegakkan trigger database. Belum ada: perbandingan antarversi, Pulihkan Versi, dan komentar komunitas terpisah.
 9. **Mode Offline dan Dukungan Pendamping** — "Tetap Bisa Dipakai Tanpa Sinyal dan Tanpa Smartphone". Kartu paspor cetak dengan ringkasan kebutuhan (tanpa QR, lihat catatan di atas), mode offline (PWA), dan akses pendamping resmi.
    *Dampak:* berfungsi di area koneksi terbatas; menjangkau literasi digital rendah; sesuai kondisi Puskesmas.
 
@@ -61,7 +62,7 @@ Rincian per layar: `docs/user-flows.md`.
 
 ## Rencana Validasi dan Metrik Dampak
 
-Prototipe diuji dengan pengguna dari tiap profil (Tuli, autistik, low vision, mobilitas) dan petugas Puskesmas. Metrik pilot yang diusulkan (**target, bukan hasil**): Accommodation Fulfillment Rate, waktu petugas memahami kebutuhan pasien, skor kegunaan (SUS) pasien dan petugas, serta persentase kebutuhan belum terpenuhi yang berhasil ditindaklanjuti.
+Pengujian teknis: 142 tes fungsional otomatis (Playwright) menjalankan semua peran, baik alur sah maupun yang melanggar aturan (lihat `docs/testing-e2e.md`); ini bukan pengganti uji dengan pengguna. Prototipe diuji dengan pengguna dari tiap profil (Tuli, autistik, low vision, mobilitas) dan petugas Puskesmas. Metrik pilot yang diusulkan (**target, bukan hasil**): Accommodation Fulfillment Rate, waktu petugas memahami kebutuhan pasien, skor kegunaan (SUS) pasien dan petugas, serta persentase kebutuhan belum terpenuhi yang berhasil ditindaklanjuti.
 
 ## Tech Stack di Proposal (sebagian sudah digantikan)
 
@@ -71,12 +72,12 @@ Prototipe diuji dengan pengguna dari tiap profil (Tuli, autistik, low vision, mo
 | Backend dan rule engine | Python (FastAPI), aturan berversi JSON/YAML | Digantikan monolit Next.js [Usulan A1] |
 | Database | PostgreSQL/MySQL | PostgreSQL [Usulan A2] |
 | ConsentQR | JWT berkedaluwarsa | Digantikan token acak + hash [Diputuskan A4] |
-| Teks langsung | Web Speech API, dengan peringatan akurasi istilah medis | Belum dirancang di arsitektur |
+| Teks langsung | Web Speech API, dengan peringatan akurasi istilah medis | Dibangun sebagian: teks langsung ada; kolom tulis petugas menunggu keputusan |
 | Notifikasi dan getar | Web Push, Vibration API; opsional ESP32 + LED | Belum dirancang; P-13 berstatus Could |
-| Dashboard | Chart.js/Recharts, data agregat anonim | Belum dirancang |
+| Dashboard | Chart.js/Recharts, data agregat anonim | Dibangun: dashboard admin fasilitas dengan grafik garis dan data agregat tanpa identitas pasien |
 | Target deploy | PWA pasien (Android/iOS), web dashboard petugas dan admin | Tetap |
 
 ## Catatan dari Proposal
 
 - **[Verifikasi]** Dukungan Web Speech API untuk bahasa Indonesia dan Web Push berbeda antarperangkat dan browser (misalnya iOS). Uji di perangkat demo; siapkan alternatif ketik manual.
-- Kalau waktu mepet, fitur 6 (bagian Smart Queue Alert dengan ESP32), fitur 8, dan pustaka frasa BISINDO bisa diturunkan ke roadmap. **Jangan dikorbankan: fitur 1, 2, 3, 5, dan 7.**
+- Kalau waktu mepet, fitur 6 (bagian Smart Queue Alert dengan ESP32) dan pustaka frasa BISINDO bisa diturunkan ke roadmap (fitur 8 sudah dibangun). **Jangan dikorbankan: fitur 1, 2, 3, 5, dan 7.**

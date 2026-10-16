@@ -446,17 +446,17 @@ Kurator adalah perwakilan komunitas disabilitas dan tenaga kesehatan yang menyus
 - **US:** K-01.
 
 ### [K3] Pustaka Aturan **[Dibangun, 16 Okt 2026]**
-- **Tampilan:** `/kurator`. Kartu teal "N Aturan Menunggu Tinjauan Anda" (menghitung aturan dalam tinjauan yang bukan tulisan sendiri dan belum Anda beri suara), tombol [Aturan Baru], lalu aturan dikelompokkan menurut kategori kebutuhan dalam kartu dua kolom (kartu ganjil memanjang). Tiap kartu: kebutuhan, "Terbit, versi N" atau "Belum terbit", cuplikan saran terbit, dan baris "Draft versi N" atau "Versi N dalam tinjauan, X dari 2 setuju". Navigasi bawah: Pustaka, Tinjau, Keluar.
-- **Aksi Utama:** buka kartu aturan.
+- **Tampilan:** `/kurator`. Kartu teal "N Aturan Menunggu Tinjauan Anda" (menghitung aturan dalam tinjauan yang bukan tulisan sendiri dan belum Anda beri suara), tombol [Aturan Baru], lalu aturan dikelompokkan menurut kategori kebutuhan dalam kartu dua kolom (kartu ganjil memanjang). Tiap kartu: kebutuhan, "Terbit, versi N" atau "Belum terbit", cuplikan saran terbit, dan baris "Draft versi N" atau "Versi N dalam tinjauan, X dari 2 setuju". Di atas daftar ada tab Semua, Terbit, dan Draft beserta jumlahnya (menyaring kartu). Bila beberapa aturan berbagi kebutuhan pemicu yang sama, kartunya berlabel "Saran N dari M". Semua kurator melihat semua aturan, termasuk draft; hanya penulis yang dapat mengubah drafnya. Navigasi bawah: Pustaka, Tinjau, Keluar.
+- **Aksi Utama:** buka kartu aturan. Banner pemberitahuan melayang muncul setelah aturan terbit atau draft dibuang.
 - **Navigasi:** kartu → [K6] riwayat aturan; [Aturan Baru] → [K4]; kartu teal → [K5] daftar tinjauan.
 - **US:** K-01.
 
 ### [K4] Editor Aturan **[Dibangun, 16 Okt 2026]**
 - **Tampilan:** `/kurator/editor/baru` dan `/kurator/editor/[id]`. Kebutuhan pemicu (daftar pilihan; terkunci pada versi lanjutan), saran tindakan (maks 240 karakter), ikon (12 pilihan yang dikenali tampilan petugas, terpilih = border tebal), sumber atau alasan (maks 400), catatan perubahan (maks 280, wajib untuk versi lanjutan), dan pratinjau "seperti dilihat petugas". Bila ada permintaan revisi dari peninjau, ditampilkan di atas.
-- **Aksi Utama:** [Simpan Draft]; [Ajukan Tinjauan] (menyimpan lalu mengajukan). Draft tidak memengaruhi saran yang dilihat petugas sampai terbit.
-- **Aksi Alternatif:** [Buang Draft] membuka konfirmasi "Ya, Buang". Hanya penulis yang dapat mengubah atau membuang drafnya. Aturan dalam tinjauan tidak dapat diubah.
+- **Aksi Utama:** [Simpan Draft]; [Ajukan Tinjauan] (menyimpan lalu mengajukan). Draft tidak memengaruhi saran yang dilihat petugas sampai terbit. Banner "Draft tersimpan" muncul setelah simpan; "Diajukan untuk tinjauan" muncul di layar tinjauan setelah diajukan.
+- **Aksi Alternatif:** [Buang Draft] membuka konfirmasi "Ya, Buang". Hanya penulis yang dapat mengubah atau membuang drafnya. Aturan dalam tinjauan tidak dapat diubah. Kurator lain yang membuka editor draft orang lain dialihkan.
 - **Versi:** mengubah aturan terbit = [Buat Versi Baru] di [K6]; isinya disalin dari versi terbit sebagai draft versi N+1. Satu draft atau tinjauan terbuka per aturan.
-- **Navigasi:** setelah diajukan → [K5] detail.
+- **Navigasi:** setelah diajukan → [K5] detail; setelah draft dibuang → [K3] (atau [K6] untuk versi lanjutan) dengan banner "Draft dibuang".
 - **US:** K-01.
 
 ### [K5] Tinjau dan Setujui **[Dibangun, 16 Okt 2026]**
@@ -464,7 +464,7 @@ Kurator adalah perwakilan komunitas disabilitas dan tenaga kesehatan yang menyus
 - **Aturan terbit [Diputuskan, 16 Okt 2026]:** butuh **2 peninjau kurator berbeda, keduanya bukan penulis**, yang menyetujui putaran peninjauan saat ini. Penulis tidak dapat meninjau aturannya sendiri. Satu suara [Minta revisi] (alasan wajib, maks 280) mengembalikan aturan ke draft penulis dan putaran berikutnya mulai dari nol. Setelah terbit, versi lama berstatus "Digantikan" dan pengesah (nama kedua peninjau) tercatat. Aturan ini ditegakkan oleh trigger database, bukan hanya aplikasi.
 - **Aksi Utama:** pilih Setuju atau Minta revisi, lalu [Kirim Suara].
 - **Aksi Alternatif:** penulis dan kurator yang sudah memberi suara hanya melihat keterangan; aturan yang tidak dalam tinjauan menampilkan tautan ke riwayat. Komentar komunitas terpisah **tidak dibuat** (hanya catatan alasan revisi).
-- **Navigasi:** terbit → [K3]; revisi diminta → daftar tinjauan; suara pertama → tetap di layar.
+- **Navigasi:** terbit → [K3] dengan banner "Aturan terbit"; revisi diminta → daftar tinjauan dengan banner "Permintaan revisi terkirim"; suara pertama → tetap di layar dengan banner "Suara tersimpan".
 - **US:** K-01.
 
 ### [K6] Riwayat Perubahan **[Dibangun sebagian, 16 Okt 2026]**
