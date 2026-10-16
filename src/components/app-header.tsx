@@ -11,6 +11,7 @@ function roleLinks(pathname: string): { bell: string; profile: string } | null {
   if (pathname.startsWith("/pendamping")) return { bell: "/pendamping", profile: "/pendamping" };
   if (pathname.startsWith("/petugas")) return { bell: "/petugas", profile: "/petugas" };
   if (pathname.startsWith("/admin")) return { bell: "/admin/tindak-lanjut", profile: "/admin" };
+  if (pathname.startsWith("/kurator")) return { bell: "/kurator/tinjau", profile: "/kurator" };
   return null;
 }
 

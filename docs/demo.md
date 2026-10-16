@@ -42,7 +42,7 @@ Aplikasi dapat diakses melalui peramban di `http://localhost:3000`.
 | **Pasien** | Pasien Contoh 6–9 | `+620000000006` sampai `+620000000009` | `/masuk` | Pasien tambahan untuk uji tautan dan kunjungan |
 | **Petugas** | Petugas Klinik B | `+620000000013` | `/masuk/petugas` | Klinik Contoh B (fasilitas kedua; untuk uji isolasi antarfasilitas) |
 | **Admin** | Admin Fasilitas B | `+620000000022` | `/masuk/petugas` | Klinik Contoh B |
-| **Kurator** | Kurator Aturan | `+620000000031` | `/masuk/petugas` | Hanya halaman awal; layar kurator K2–K6 belum dibangun |
+| **Kurator** | Kurator Aturan | `+620000000031` | `/masuk/petugas` | Kurator 1 (`+620000000031`) menulis, Kurator 2 (`+620000000032`) dan Kurator 3 (`+620000000033`) meninjau; layar K3–K6 tersedia |
 
 ---
 

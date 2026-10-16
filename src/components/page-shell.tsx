@@ -4,6 +4,7 @@ import { PetugasBottomNav } from "./petugas-bottom-nav";
 import { CompanionBottomNav } from "./companion-bottom-nav";
 import { AdminBottomNav } from "./admin-bottom-nav";
 import { PatientBottomNav } from "./patient-bottom-nav";
+import { CuratorBottomNav } from "./curator-bottom-nav";
 
 export interface PageShellProps {
   title: string;
@@ -21,6 +22,8 @@ export interface PageShellProps {
   adminNav?: boolean;
   /** Tampilkan navigasi bawah pasien. */
   patientNav?: boolean;
+  /** Tampilkan navigasi bawah kurator. */
+  curatorNav?: boolean;
 }
 
 export function PageShell({
@@ -35,6 +38,7 @@ export function PageShell({
   companionNav = false,
   adminNav = false,
   patientNav = false,
+  curatorNav = false,
 }: PageShellProps) {
   return (
     <div className="min-h-full flex flex-col w-full bg-page text-main">
@@ -48,7 +52,7 @@ export function PageShell({
       <main
         id="main-content"
         tabIndex={-1}
-        className={`flex-1 max-w-2xl w-full mx-auto px-4 py-6 focus:outline-none min-w-0 ${petugasNav || companionNav || adminNav || patientNav ? "pb-28" : ""} ${className}`.trim()}
+        className={`flex-1 max-w-2xl w-full mx-auto px-4 py-6 focus:outline-none min-w-0 ${petugasNav || companionNav || adminNav || patientNav || curatorNav ? "pb-28" : ""} ${className}`.trim()}
       >
         {children}
       </main>
@@ -56,6 +60,7 @@ export function PageShell({
       {companionNav && <CompanionBottomNav />}
       {adminNav && <AdminBottomNav />}
       {patientNav && <PatientBottomNav />}
+      {curatorNav && <CuratorBottomNav />}
     </div>
   );
 }

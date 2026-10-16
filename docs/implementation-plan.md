@@ -75,10 +75,11 @@
 | Pasien lain | P9 pencarian fasilitas, P12 QR ditolak petugas, P16 antrean offline, P17 status tindak lanjut, P22 ubah kontak dan P23 hapus data dan akun (migrasi 015) | `40bf78a`, `5fa9fd0`, `25ae410` |
 | Admin | A2 aktivasi login pertama, A4/A5 kelola petugas, A7/A8 tindak lanjut fasilitas (migrasi 020-022), dashboard bergrafik garis, data contoh `pnpm db:seed:dummy` | `b0fb6cf`, `30eb16a` |
 | Akses | Akun petugas, admin, dan kurator ditolak di halaman masuk pasien/pendamping | `1b4ad8c` |
+| Kurator | K3 pustaka, K4 editor draft, K5 tinjau (terbit butuh 2 peninjau berbeda selain penulis, ditegakkan trigger database), K6 riwayat versi; `accommodation_rules` berversi per `rule_key`, tabel `rule_reviews`, RLS tulis khusus kurator (migrasi 024); seed 3 kurator | commit lokal 16 Okt |
 
 **Perubahan UI/UX lintas peran (16 Okt, atas permintaan pemilik produk):** semua layar memakai gaya seragam yang kini dirinci di `design.md` §6: `AppHeader` menempel di atas, navigasi bawah untuk pasien, pendamping, petugas, dan admin (`PatientBottomNav`, `CompanionBottomNav`, `PetugasBottomNav`, `AdminBottomNav`), satu `HeroCard` teal per beranda, daftar kartu dua kolom dengan kartu ganjil memanjang, `OtpCodeInput` enam kotak di semua layar kode verifikasi, notifikasi `StatusBanner` melayang tanpa ikon, dan paragraf selebar kolom (batas 60ch dicabut). Perubahan ini hanya tampilan; tidak mengubah izin, RLS, atau alur data.
 
-**Masih di luar cakupan (roadmap):** layar kurator K2–K6 (hanya halaman awal `src/app/kurator/page.tsx`), Pre-Arrival Brief P10, frasa BISINDO P15.4, Smart Queue Alert penuh, antrean offline T-05 penuh, PDF Kartu Cetak, diagnosis lokal.
+**Masih di luar cakupan (roadmap):** perbandingan antarversi dan Pulihkan Versi di K6, komentar komunitas di K5, Pre-Arrival Brief P10, frasa BISINDO P15.4, Smart Queue Alert penuh, antrean offline T-05 penuh, PDF Kartu Cetak, diagnosis lokal.
 
 **Keputusan yang masih menunggu pemilik produk:** daftar kunjungan petugas per petugas atau seluruh fasilitas; apakah "Kirim Undangan" petugas perlu pesan salinan atau SMS; kolom "Petugas menulis di sini" di Teks Langsung; sisa label hijau/kuning/merah inline; apakah galat berhenti hilang otomatis (WCAG 2.2.1); ubah nama tampilan pendamping; tombol "Laporkan" di riwayat akses (P19); pemberitahuan "QR sudah diganti"; baris status pemulihan di sisi pasien; pesan galat generik untuk nomor petugas di halaman pasien; tujuan ikon notifikasi dan akun di header untuk pendamping, petugas, dan admin.
 

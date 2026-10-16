@@ -26,3 +26,5 @@ export { HeroCard } from "./hero-card";
 export { AppHeader } from "./app-header";
 export { OtpCodeInput, DemoOtpNote } from "./otp-code-input";
 export { RecoveryNotice } from "./recovery-notice";
+export { CuratorBottomNav } from "./curator-bottom-nav";
+export { RulePreview } from "./rule-preview";

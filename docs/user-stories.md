@@ -91,8 +91,8 @@ Berdasarkan kode di repository; **bukan** klaim terverifikasi (bukti pengujian d
 
 | Status di kode | Story |
 | :--- | :--- |
-| Dibangun | Semua Must (P-01, P-02, P-03, P-05, P-06, P-07, T-01, T-02, T-03, T-04, A-02); P-04, P-08, P-09, P-15, P-16; D-01–D-03; A-01, A-03, A-04 |
-| Dibangun sebagian | P-10 (teks langsung; kolom tulis petugas menunggu keputusan), P-14 dan T-05 (kartu cetak ringkasan tanpa QR dan ringkasan offline ada; antrean pencatatan offline penuh dan PDF belum) |
-| Belum dibangun | P-11, P-12, P-13, K-01, K-02 |
+| Dibangun | Semua Must (P-01, P-02, P-03, P-05, P-06, P-07, T-01, T-02, T-03, T-04, A-02); P-04, P-08, P-09, P-15, P-16; D-01–D-03; A-01, A-03, A-04; K-01 (K3–K5, terbit butuh 2 peninjau) |
+| Dibangun sebagian | K-02 (riwayat versi dengan pengesah ada; perbandingan antarversi dan Pulihkan Versi belum), P-10 (teks langsung; kolom tulis petugas menunggu keputusan), P-14 dan T-05 (kartu cetak ringkasan tanpa QR dan ringkasan offline ada; antrean pencatatan offline penuh dan PDF belum) |
+| Belum dibangun | P-11, P-12, P-13 |
 
 Tampilan semua story di atas mengikuti gaya seragam `design.md` §6.

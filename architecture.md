@@ -29,7 +29,7 @@ Batasan arsitektur yang menurun dari keputusan produk:
 | Pendamping | Akun sendiri (HP atau email + kode, D2), tertaut ke pasien **hanya setelah pasien menyetujui** (D3 → P21) | Membantu pasien sesuai izin; setiap tindakan ditandai "oleh pendamping" (D5, D8) |
 | Petugas | Akun terikat satu fasilitas, diaktivasi lewat undangan admin fasilitas (T2) | Pindai QR, lihat data yang dicentang, catat kunjungan (T4/T4b, T8), baca brief, mengesahkan delegasi darurat di tempat (bagian 10) |
 | Admin fasilitas | Akun terikat fasilitas, diaktivasi lewat undangan (A2) | Kelola petugas (A4–A5), lihat **data agregat saja** (A6–A7), kelola tindak lanjut (A8), **tidak** melihat brief |
-| Kurator | Akun internal, diundang admin sistem (K2) | Kelola katalog kebutuhan/bantuan dan aturan saran. Di prototipe: K3 hanya baca-saja, aturan bawaan; K4–K6 roadmap |
+| Kurator | Akun internal, diundang admin sistem (K2) | Kelola katalog kebutuhan/bantuan dan aturan saran. K3–K6 dibangun 16 Okt 2026: pustaka, editor draft, tinjau (terbit butuh 2 peninjau kurator berbeda selain penulis), riwayat versi |
 
 **Dokter bukan aktor.** Dokter melihat apa pun yang pasien tunjukkan di layar ponselnya. **[Diputuskan]**
 
@@ -101,7 +101,7 @@ src/
 │  ├─ (pasien)/            # profil, qr, brief, kartu, riwayat
 │  ├─ (petugas)/           # pindai, hasil, catat kunjungan, brief masuk
 │  ├─ (admin)/             # petugas, agregat
-│  ├─ (kurator)/           # katalog (K3 baca-saja di prototipe)
+│  ├─ (kurator)/           # pustaka, editor, tinjau, riwayat (K3-K6)
 │  ├─ pendamping/          # beranda pendamping (D4), tautkan (D3), kelola per pasien (D5, D6, D8)
 │  └─ api/                 # route handlers: qr, scan, brief, sync, recovery, pendamping
 ├─ components/             # komponen UI sesuai design.md (Button, StatusBanner, ...)
@@ -139,7 +139,7 @@ Rute pendamping menggunakan pola akun berotonomi (K-7):
 | `patient_profiles` | nama panggilan, kebutuhan terpilih, catatan bebas pasien (P5), penanda perubahan terakhir oleh pendamping (D5) | **Tanpa kolom diagnosis**. Draft editor (P5) hanya di perangkat, tidak di tabel ini |
 | `patient_profile_needs` | `profile_id`, `need_code` | Tabel penghubung `patient_profiles` ↔ `needs_catalog` untuk integritas referensi. **[Usulan]** |
 | `needs_catalog` | kebutuhan/bantuan baku | Dikelola kurator |
-| `accommodation_rules` | profil kebutuhan pemicu, saran tindakan (teks pendek + ikon), sumber/alasan, versi, status (Draft/Dalam Tinjauan/Terbit), tanggal, pengesah | Dasar Smart Accommodation Engine (T6, T-03). Prototipe: aturan bawaan, baca-saja (K3). **[Usulan]** |
+| `accommodation_rules` | profil kebutuhan pemicu, saran tindakan (teks pendek + ikon), sumber/alasan, versi, status (Draft/Dalam Tinjauan/Terbit), tanggal, pengesah | Dasar Smart Accommodation Engine (T6, T-03). Satu baris = satu versi; `rule_key` mengelompokkan versi, status Draft, Dalam Tinjauan, Terbit, Digantikan; suara peninjau di `rule_reviews`. Trigger database menegakkan: aturan terbit tidak dapat diubah, terbit butuh 2 persetujuan berbeda selain penulis. Penulisan hanya oleh peran `curator` (RLS). Migrasi 024 **[Diputuskan, 16 Okt 2026]** |
 | `consents` | pasien, fasilitas tujuan, **daftar field yang dicentang** (`shared_fields`), tanggal berlaku, `subject_ref`, `created_by_user_id` | Dasar aturan "hanya data yang dicentang". Nilai `shared_fields` yang diizinkan: `komunikasi`, `penglihatan`, `pendengaran`, `mobilitas`, `sensorik_lingkungan`, `pendampingan`, `catatan_pasien` (nama panggilan selalu ikut). Kolom `subject_ref` (UUID audit pasien) diisi saat consent dibuat agar audit pindai petugas tidak perlu membaca tabel `users` pasien. `created_by_user_id` mencatat pembuat (pasien atau pendamping). **[Usulan, 13 Okt 2026]** |
 | `consent_qr` | `token_hash`, consent_id, `expires_at`, `revoked_at` | Token asli tidak disimpan, hanya hash SHA-256 |
 | `companions` | `patient_user_id`, `companion_user_id`, `status` (`pending`/`active`/`revoked`), `patient_subject_ref`, `requested_at`, `approved_at`, `revoked_at` | Aktif hanya setelah pasien menyetujui (D3 → P21). Memiliki `patient_subject_ref` (pseudonim pasien) agar audit tindakan pendamping menyebut pasien tanpa membaca tabel `users`. UNIQUE(`patient_user_id`, `companion_user_id`). **[Usulan, 13 Okt 2026]** |
@@ -419,7 +419,7 @@ Nama kejadian baru di atas **[Usulan]**; maknanya mengikuti `docs/user-flows.md`
 
 **Prototipe (inti):** profil, ConsentQR, pindai + baca saat pindai, brief, kartu cetak tanpa QR (media fisik murni), pencatatan kunjungan offline (T4b berbasis ID pasien fisik), konfirmasi CareProof (pasien single source of truth), audit P19, delegasi darurat di tempat + pemulihan lewat pendamping.
 
-**Roadmap:** diagnosis lokal terenkripsi, K4-K6 (kurasi lanjutan), transfer antar-perangkat untuk pendamping.
+**Roadmap:** diagnosis lokal terenkripsi, perbandingan versi dan Pulihkan Versi di K6, transfer antar-perangkat untuk pendamping.
 
 **Keputusan yang diselesaikan / ditutup:**
 1. Kartu cetak adalah media fisik murni (teks ringkasan) **sama sekali tanpa QR code**, terbaca langsung tanpa gawai/daya/sinyal (A).
